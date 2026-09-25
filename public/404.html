@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecionando...</title>
+    <script type="text/javascript">
+      // GitHub Pages SPA Single Page App redirect handler
+      // This script takes the current URL and converts the path and query
+      // into a query parameter string that the index.html page can parse and route.
+      var pathSegmentsToKeep = 0;
+      var l = window.location;
+      
+      // Determine how many segments to keep if inside a subfolder/project repository page
+      // e.g. https://user.github.io/repo-name/ -> pathSegmentsToKeep = 1
+      var pathSegments = l.pathname.split('/').filter(Boolean);
+      // If we are at repo subfolder, we can keep the repo name segment
+      var repoBase = "";
+      if (pathSegments.length > 0 && l.hostname.endsWith('github.io')) {
+        pathSegmentsToKeep = 1;
+        repoBase = '/' + pathSegments[0];
+      }
+
+      var target = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+        repoBase + '/?' +
+        (l.pathname.slice(repoBase.length).replace(/^[\\/]+/, '')) +
+        (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+        l.hash;
+
+      l.replace(target);
+    </script>
+  </head>
+  <body>
+    <p>Redirecionando para a aplicação...</p>
+  </body>
+</html>
