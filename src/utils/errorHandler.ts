@@ -32,6 +32,9 @@ export function parseApiError(error: unknown): string {
       if (msg.includes('invalid login credentials')) {
         return 'Credenciais inválidas. Verifique seu e-mail e senha.'
       }
+      if (msg.includes('email not confirmed')) {
+        return 'Seu e-mail ainda não foi confirmado. Verifique o link de ativação enviado para sua caixa de entrada ou confirme o usuário no painel do Supabase (Authentication -> Users).'
+      }
       if (msg.includes('user already registered')) {
         return 'Este endereço de e-mail já está cadastrado no sistema.'
       }
