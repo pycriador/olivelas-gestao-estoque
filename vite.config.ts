@@ -3,17 +3,22 @@ import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
     },
   },
-  base: process.env.VITE_BASE_PATH || './',
+  base: command === 'serve' ? '/' : (process.env.VITE_BASE_PATH || './'),
+  server: {
+    port: 5173,
+    host: true,
+    open: false,
+  },
   build: {
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
   },
-})
+}))
