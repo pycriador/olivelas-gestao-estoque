@@ -5,6 +5,7 @@ import path from 'node:path'
 // https://vite.dev/config/
 export default defineConfig(({ command }) => ({
   plugins: [react()],
+  envPrefix: ['VITE_', 'SUPABASE_'],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

@@ -356,10 +356,15 @@ BEGIN
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
     NEW.raw_user_meta_data->>'avatar_url',
-    -- First created user can automatically be global admin if configured, or default false
-    COALESCE((SELECT COUNT(*) = 0 FROM public.profiles), FALSE)
+    -- Explicitly grant Global Admin to designated owner email or first user
+    (NEW.email = 'willian.o.jesus@gmail.com' OR COALESCE((SELECT COUNT(*) = 0 FROM public.profiles), FALSE))
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE
+  SET is_global_admin = CASE 
+    WHEN EXCLUDED.email = 'willian.o.jesus@gmail.com' THEN TRUE 
+    ELSE profiles.is_global_admin 
+  END;
+
   RETURN NEW;
 END;
 $$;
@@ -368,3 +373,8 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- If user already exists in profiles, promote to Global Admin
+UPDATE public.profiles
+SET is_global_admin = TRUE
+WHERE email = 'willian.o.jesus@gmail.com';
