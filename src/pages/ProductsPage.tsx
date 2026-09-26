@@ -7,6 +7,12 @@ import { formatCurrency } from '@/utils/currency'
 import { exportToCSV } from '@/utils/export'
 import { generateSKU } from '@/utils/barcode'
 import { parseApiError } from '@/utils/errorHandler'
+import {
+  parseCSVContent,
+  parseJSONContent,
+  downloadTemplateCSV,
+  downloadTemplateJSON,
+} from '@/utils/importParser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -19,11 +25,14 @@ import {
   Plus,
   Search,
   Download,
-  Filter,
+  Upload,
   Trash2,
   Edit2,
   AlertTriangle,
-  QrCode
+  FileSpreadsheet,
+  FileCode,
+  CheckCircle2,
+  FileText,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 
@@ -40,8 +49,21 @@ export function ProductsPage() {
 
   // Modals
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+
+  // Bulk Import state
+  const [importMode, setImportMode] = React.useState<'file' | 'paste'>('file')
+  const [pastedText, setPastedText] = React.useState('')
+  const [fileName, setFileName] = React.useState<string | null>(null)
+  const [parsedItems, setParsedItems] = React.useState<any[]>([])
+  const [importError, setImportError] = React.useState<string | null>(null)
+  const [importResult, setImportResult] = React.useState<{
+    successCount: number
+    errorCount: number
+    errors: string[]
+  } | null>(null)
 
   // Form fields
   const [formData, setFormData] = React.useState({
@@ -113,6 +135,17 @@ export function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
     },
     onError: (err) => alert(parseApiError(err)),
+  })
+
+  const bulkImportMutation = useMutation({
+    mutationFn: (items: any[]) => productService.importProductsBulk(storeId, items),
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['products', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['categories', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      setImportResult(result)
+    },
+    onError: (err) => setImportError(parseApiError(err)),
   })
 
   const resetForm = () => {
@@ -206,6 +239,61 @@ export function ProductsPage() {
     )
   }
 
+  // File / Text import processing
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setFileName(file.name)
+    setImportError(null)
+    setImportResult(null)
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target?.result as string
+      processRawImportText(content, file.name.endsWith('.json'))
+    }
+    reader.onerror = () => setImportError('Erro ao ler o arquivo selecionado.')
+    reader.readAsText(file, 'UTF-8')
+  }
+
+  const processRawImportText = (text: string, isJsonHint = false) => {
+    try {
+      setImportError(null)
+      setImportResult(null)
+      const trimmed = text.trim()
+      if (!trimmed) {
+        setParsedItems([])
+        return
+      }
+
+      if (isJsonHint || trimmed.startsWith('[') || trimmed.startsWith('{')) {
+        const items = parseJSONContent(trimmed)
+        setParsedItems(items)
+      } else {
+        const items = parseCSVContent(trimmed)
+        setParsedItems(items)
+      }
+    } catch (err: any) {
+      setImportError(err.message || 'Formato inválido. Verifique o conteúdo CSV ou JSON.')
+      setParsedItems([])
+    }
+  }
+
+  const handleOpenImport = () => {
+    setFileName(null)
+    setPastedText('')
+    setParsedItems([])
+    setImportError(null)
+    setImportResult(null)
+    setIsImportModalOpen(true)
+  }
+
+  const handleExecuteImport = () => {
+    if (parsedItems.length === 0) return
+    bulkImportMutation.mutate(parsedItems)
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-150">
       {/* Header */}
@@ -219,7 +307,10 @@ export function ProductsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button variant="outline" size="sm" onClick={handleOpenImport} className="shadow-xs">
+            <Upload className="h-4 w-4 mr-1.5" /> Importar (CSV / JSON)
+          </Button>
           <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={products.length === 0}>
             <Download className="h-4 w-4 mr-1.5" /> {t.common.export} CSV
           </Button>
@@ -264,113 +355,121 @@ export function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Product List / Table */}
+      {/* Products Table Card */}
       <Card>
+        <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-semibold text-foreground">
+              Catálogo de Produtos
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Total de {totalItems} produto(s) cadastrado(s)
+            </p>
+          </div>
+        </CardHeader>
+
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6">
-              <LoadingSkeleton count={6} className="h-12" />
+              <LoadingSkeleton count={6} />
             </div>
           ) : products.length === 0 ? (
-            <div className="p-8">
-              <EmptyState
-                icon={<Package className="h-10 w-10 text-primary" />}
-                title="Nenhum produto cadastrado"
-                description="Cadastre seus produtos com preços, códigos de barras e estoque inicial para começar a vender."
-                actionLabel="Cadastrar Primeiro Produto"
-                onAction={handleOpenCreate}
-              />
-            </div>
+            <EmptyState
+              icon={<Package className="h-10 w-10 text-muted-foreground" />}
+              title="Nenhum produto cadastrado"
+              description="Cadastre seu primeiro produto ou importe em massa via CSV/JSON para iniciar as vendas"
+              actionLabel={t.products.newProduct}
+              onAction={handleOpenCreate}
+            />
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left">
-                <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
-                    <th className="py-3.5 px-4">Produto</th>
-                    <th className="py-3.5 px-4">SKU / Barcode</th>
-                    <th className="py-3.5 px-4">Categoria</th>
-                    <th className="py-3.5 px-4 text-right">Custo</th>
-                    <th className="py-3.5 px-4 text-right">Preço de Venda</th>
-                    <th className="py-3.5 px-4 text-center">Estoque Atual</th>
-                    <th className="py-3.5 px-4 text-center">Status</th>
-                    <th className="py-3.5 px-4 text-right">Ações</th>
+                    <th className="py-3 px-4">Produto</th>
+                    <th className="py-3 px-4">SKU / Barcode</th>
+                    <th className="py-3 px-4">Categoria</th>
+                    <th className="py-3 px-4 text-right">Preço de Custo</th>
+                    <th className="py-3 px-4 text-right">Preço de Venda</th>
+                    <th className="py-3 px-4 text-center">Estoque</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-border/60">
+                <tbody className="divide-y divide-border">
                   {products.map((p) => {
-                    const isLowStock = (p.stock_quantity ?? 0) <= Number(p.min_stock)
+                    const isLowStock = (p.stock_quantity ?? 0) <= (p.min_stock ?? 5)
                     return (
                       <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-3 px-4 font-semibold text-foreground">
-                          <div className="flex items-center gap-2.5">
-                            <div className="h-9 w-9 rounded-lg bg-muted flex items-center justify-center text-muted-foreground font-bold shrink-0">
-                              {p.images?.[0] ? (
-                                <img
-                                  src={p.images[0].public_url}
-                                  alt={p.name}
-                                  className="h-full w-full object-cover rounded-lg"
-                                />
-                              ) : (
-                                <Package className="h-4 w-4" />
-                              )}
+                        <td className="py-3 px-4">
+                          <div className="font-semibold text-foreground">{p.name}</div>
+                          {p.description && (
+                            <div className="text-[11px] text-muted-foreground truncate max-w-xs">
+                              {p.description}
                             </div>
-                            <div>
-                              <div className="font-semibold text-foreground">{p.name}</div>
-                              <span className="text-[11px] text-muted-foreground">{p.unit}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[11px]">
-                          <div>{p.sku}</div>
-                          {p.barcode && (
-                            <span className="text-[10px] text-muted-foreground block">{p.barcode}</span>
                           )}
                         </td>
-                        <td className="py-3 px-4 text-muted-foreground">
-                          {p.category_name || '-'}
+
+                        <td className="py-3 px-4 font-mono">
+                          <div className="text-foreground">{p.sku}</div>
+                          {p.barcode && (
+                            <div className="text-[10px] text-muted-foreground">{p.barcode}</div>
+                          )}
                         </td>
+
+                        <td className="py-3 px-4">
+                          {p.category_name ? (
+                            <Badge variant="outline">{p.category_name}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground italic">-</span>
+                          )}
+                        </td>
+
                         <td className="py-3 px-4 text-right font-mono text-muted-foreground">
-                          {formatCurrency(p.cost_price)}
+                          {formatCurrency(p.cost_price || 0)}
                         </td>
-                        <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
-                          {formatCurrency(p.selling_price)}
+
+                        <td className="py-3 px-4 text-right font-mono font-semibold text-foreground">
+                          {formatCurrency(p.selling_price || 0)}
                         </td>
+
                         <td className="py-3 px-4 text-center">
-                          <div className="inline-flex items-center gap-1.5 font-bold font-mono">
-                            {p.stock_quantity ?? 0}
-                            {isLowStock && (
-                              <span title="Estoque no limite mínimo ou zerado">
-                                <AlertTriangle className="h-3.5 w-3.5 text-warning shrink-0" />
-                              </span>
-                            )}
-                          </div>
+                          <span
+                            className={`font-mono font-bold px-2 py-0.5 rounded-md text-xs ${
+                              isLowStock
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            }`}
+                          >
+                            {p.stock_quantity ?? 0} {p.unit || 'UN'}
+                          </span>
                         </td>
+
                         <td className="py-3 px-4 text-center">
                           <Badge variant={p.is_active ? 'success' : 'secondary'}>
                             {p.is_active ? 'Ativo' : 'Inativo'}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              onClick={() => handleOpenEdit(p)}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                              title="Editar Produto"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                if (confirm(`Deseja realmente desativar o produto "${p.name}"?`)) {
-                                  deleteMutation.mutate(p.id)
-                                }
-                              }}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger"
-                              title="Excluir Produto"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
+
+                        <td className="py-3 px-4 text-right space-x-1">
+                          <button
+                            onClick={() => handleOpenEdit(p)}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            title="Editar"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Deseja realmente desativar o produto ${p.name}?`)) {
+                                deleteMutation.mutate(p.id)
+                              }
+                            }}
+                            className="p-1.5 rounded-lg text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
+                            title="Desativar"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </td>
                       </tr>
                     )
@@ -380,26 +479,26 @@ export function ProductsPage() {
             </div>
           )}
 
-          {/* Pagination Controls */}
+          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between p-4 border-t border-border/60 text-xs text-muted-foreground">
-              <span>
-                Página {page} de {totalPages} ({totalItems} itens no total)
+            <div className="p-4 border-t border-border flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">
+                Página {page} de {totalPages}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex gap-1">
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={page <= 1}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
                 >
                   Anterior
                 </Button>
                 <Button
                   variant="outline"
                   size="sm"
+                  disabled={page >= totalPages}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
                 >
                   Próxima
                 </Button>
@@ -408,6 +507,223 @@ export function ProductsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Import Modal (CSV & JSON) */}
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Importação Rápida de Produtos (CSV / JSON)"
+        description="Suba múltiplos produtos de uma só vez a partir de planilhas ou arquivos de dados"
+        maxWidth="3xl"
+      >
+        <div className="space-y-4 pt-1 text-xs">
+          {/* Instructions and Download Templates Bar */}
+          <div className="p-3.5 bg-muted/40 rounded-xl border border-border/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <div className="font-semibold text-foreground">Modelos Prontos para Download</div>
+              <div className="text-muted-foreground text-[11px] mt-0.5">
+                Utilize as colunas padrão para garantir o cadastro automático de categorias e saldos.
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-medium"
+                onClick={downloadTemplateCSV}
+              >
+                <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 text-emerald-600" /> Modelo .CSV
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-medium"
+                onClick={downloadTemplateJSON}
+              >
+                <FileCode className="h-3.5 w-3.5 mr-1.5 text-blue-600" /> Modelo .JSON
+              </Button>
+            </div>
+          </div>
+
+          {/* Format Tabs: File Upload vs Direct Text Paste */}
+          <div className="flex border-b border-border gap-4 text-xs font-semibold">
+            <button
+              type="button"
+              onClick={() => setImportMode('file')}
+              className={`pb-2.5 transition-colors border-b-2 ${
+                importMode === 'file'
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Upload de Arquivo (.csv, .json)
+            </button>
+            <button
+              type="button"
+              onClick={() => setImportMode('paste')}
+              className={`pb-2.5 transition-colors border-b-2 ${
+                importMode === 'paste'
+                  ? 'border-primary text-primary font-bold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Colar Texto Diretamente
+            </button>
+          </div>
+
+          {/* Mode 1: File Drop Zone */}
+          {importMode === 'file' && (
+            <div className="border-2 border-dashed border-border hover:border-primary/50 transition-colors rounded-2xl p-6 text-center bg-surface-elevated/40">
+              <input
+                type="file"
+                id="file-product-import"
+                accept=".csv, .json, .txt, text/csv, application/json"
+                className="hidden"
+                onChange={handleFileUpload}
+              />
+              <label
+                htmlFor="file-product-import"
+                className="flex flex-col items-center justify-center cursor-pointer space-y-2"
+              >
+                <div className="p-3 rounded-full bg-primary/10 text-primary">
+                  <Upload className="h-6 w-6" />
+                </div>
+                <div className="text-sm font-semibold text-foreground">
+                  {fileName ? (
+                    <span className="text-primary font-bold">{fileName}</span>
+                  ) : (
+                    'Clique para selecionar ou arraste o arquivo aqui'
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Suporta arquivos delimitados por vírgula/ponto-e-vírgula (.CSV) ou JSON nativo (.JSON)
+                </div>
+              </label>
+            </div>
+          )}
+
+          {/* Mode 2: Paste Raw Content */}
+          {importMode === 'paste' && (
+            <div className="space-y-1.5">
+              <label className="font-semibold text-foreground text-xs">
+                Cole o conteúdo CSV ou array JSON abaixo:
+              </label>
+              <textarea
+                rows={6}
+                value={pastedText}
+                onChange={(e) => {
+                  setPastedText(e.target.value)
+                  processRawImportText(e.target.value)
+                }}
+                placeholder={`name;sku;selling_price;cost_price;category_name;initial_stock\nAzeite Extra Virgem;AZE-01;49.90;28.00;Azeites;50`}
+                className="w-full p-3 rounded-xl border border-input bg-background font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+          )}
+
+          {/* Error Message */}
+          {importError && (
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>{importError}</span>
+            </div>
+          )}
+
+          {/* Success Banner */}
+          {importResult && (
+            <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 font-bold text-emerald-600 dark:text-emerald-400 text-sm">
+                <CheckCircle2 className="h-5 w-5" />
+                <span>Importação Concluída com Sucesso!</span>
+              </div>
+              <div className="text-xs text-foreground">
+                <b>{importResult.successCount}</b> produto(s) importado(s) e integrados ao catálogo.
+                {importResult.errorCount > 0 && (
+                  <span className="text-danger ml-2 font-medium">
+                    ({importResult.errorCount} falha(s))
+                  </span>
+                )}
+              </div>
+              {importResult.errors.length > 0 && (
+                <div className="mt-2 p-2.5 bg-surface rounded-lg border border-border max-h-32 overflow-y-auto font-mono text-[11px] text-danger space-y-1">
+                  {importResult.errors.map((e, idx) => (
+                    <div key={idx}>• {e}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Parsed Items Preview */}
+          {parsedItems.length > 0 && !importResult && (
+            <div className="space-y-2 pt-2">
+              <div className="flex items-center justify-between">
+                <div className="font-bold text-foreground flex items-center gap-2">
+                  <span>Pré-visualização dos Dados</span>
+                  <Badge variant="default">{parsedItems.length} registros identificados</Badge>
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  Exibindo os primeiros {Math.min(5, parsedItems.length)} registros
+                </span>
+              </div>
+
+              <div className="border border-border rounded-xl overflow-hidden divide-y divide-border bg-surface">
+                <div className="grid grid-cols-12 gap-2 p-2.5 bg-muted/60 font-bold uppercase text-[10px] text-muted-foreground">
+                  <div className="col-span-4">Produto</div>
+                  <div className="col-span-2">SKU</div>
+                  <div className="col-span-2">Categoria</div>
+                  <div className="col-span-2 text-right">Preço Venda</div>
+                  <div className="col-span-2 text-center">Estoque Inicial</div>
+                </div>
+                {parsedItems.slice(0, 5).map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 p-2.5 items-center font-mono text-xs">
+                    <div className="col-span-4 font-sans font-semibold text-foreground truncate">
+                      {item.name || item.Nome || item.nome || item.produto || <span className="text-danger">Sem nome</span>}
+                    </div>
+                    <div className="col-span-2 text-muted-foreground truncate">
+                      {item.sku || item.SKU || <span className="text-primary italic">Automático</span>}
+                    </div>
+                    <div className="col-span-2 font-sans text-muted-foreground truncate">
+                      {item.category_name || item.category || item.categoria || '-'}
+                    </div>
+                    <div className="col-span-2 text-right font-bold text-foreground">
+                      {item.selling_price || item.preco_venda || item.preco || item.price ? `R$ ${item.selling_price || item.preco_venda || item.preco || item.price}` : 'R$ 0,00'}
+                    </div>
+                    <div className="col-span-2 text-center text-primary font-bold">
+                      {item.initial_stock ?? item.stock_quantity ?? item.estoque ?? item.quantidade ?? 0}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action Footer */}
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
+              onClick={() => setIsImportModalOpen(false)}
+            >
+              {importResult ? 'Fechar' : 'Cancelar'}
+            </Button>
+            {!importResult && (
+              <Button
+                type="button"
+                className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+                disabled={parsedItems.length === 0}
+                isLoading={bulkImportMutation.isPending}
+                onClick={handleExecuteImport}
+              >
+                <Upload className="h-4 w-4 mr-2" /> Iniciar Importação ({parsedItems.length})
+              </Button>
+            )}
+          </div>
+        </div>
+      </Modal>
 
       {/* Create / Edit Modal */}
       <Modal
