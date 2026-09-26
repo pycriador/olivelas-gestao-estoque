@@ -271,6 +271,7 @@ export const userService = {
         store_id,
         role,
         is_active,
+        employee_registration,
         created_at,
         profiles (
           id,
@@ -292,6 +293,7 @@ export const userService = {
       role: item.role as UserRole,
       isActive: item.is_active,
       createdAt: item.created_at,
+      employeeRegistration: item.employee_registration ?? null,
       fullName: item.profiles?.full_name || null,
       email: item.profiles?.email || '',
       phone: item.profiles?.phone || null,

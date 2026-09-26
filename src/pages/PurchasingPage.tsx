@@ -87,18 +87,32 @@ export function PurchasingPage() {
   const totalItems = data?.total || 0
   const totalPages = Math.ceil(totalItems / pageSize) || 1
 
-  const { data: suppliersData } = useQuery({
-    queryKey: ['suppliers-select', storeId],
-    queryFn: () => supplierService.listSuppliers(storeId),
+  const {
+    data: suppliersData,
+    isLoading: loadingSuppliers,
+    isError: suppliersError,
+    error: suppliersErrorObj,
+  } = useQuery({
+    // Chave com o mesmo prefixo de /suppliers de proposito: a invalidacao
+    // `['suppliers', storeId]` feita la cascata para ca. A chave antiga
+    // ('suppliers-select') nunca era invalidada, entao um resultado vazio
+    // antigo ficava em cache para sempre (refetchOnMount e global false).
+    queryKey: ['suppliers', storeId, { all: true }],
+    queryFn: () => supplierService.listSuppliers(storeId, { pageSize: 200 }),
     enabled: Boolean(hasActiveStore),
+    staleTime: 0,
+    refetchOnMount: true,
   })
 
   const suppliers = Array.isArray(suppliersData) ? suppliersData : suppliersData?.data || []
+  const suppliersErrorMsg = suppliersError ? parseApiError(suppliersErrorObj) : null
 
   const { data: productsData } = useQuery({
     queryKey: ['products-select', storeId],
     queryFn: () => productService.listProducts(storeId, { pageSize: 100 }),
     enabled: Boolean(hasActiveStore),
+    staleTime: 0,
+    refetchOnMount: true,
   })
 
   const productList = productsData?.data || []
@@ -189,7 +203,8 @@ export function PurchasingPage() {
             value={selectedSupplier}
             onChange={(e) => setFilter('supplier', e.target.value)}
             aria-label="Filtrar por fornecedor"
-            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            disabled={loadingSuppliers}
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer disabled:opacity-50"
           >
             <option value="ALL">Todos Fornecedores</option>
             {suppliers.map((s) => (
@@ -207,7 +222,8 @@ export function PurchasingPage() {
           >
             <option value="ALL">Todos Status</option>
             <option value="DRAFT">Rascunho</option>
-            <option value="PENDING">Pendente</option>
+            <option value="ISSUED">Emitido</option>
+            <option value="PARTIALLY_RECEIVED">Parcialmente Recebido</option>
             <option value="RECEIVED">Recebido</option>
             <option value="CANCELLED">Cancelado</option>
           </select>
@@ -217,6 +233,12 @@ export function PurchasingPage() {
           </Button>
         </div>
       </div>
+
+      {suppliersErrorMsg && (
+        <div className="flex-shrink-0 p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
+          Não foi possível carregar os fornecedores: {suppliersErrorMsg}
+        </div>
+      )}
 
       {/* Table Card - Viewport fitting with internal scroll */}
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
@@ -352,14 +374,36 @@ export function PurchasingPage() {
               onChange={(e) => setSupplierId(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
+              disabled={loadingSuppliers}
             >
-              <option value="">Selecione um fornecedor...</option>
+              <option value="">
+                {loadingSuppliers
+                  ? 'Carregando fornecedores...'
+                  : suppliers.length === 0
+                    ? 'Nenhum fornecedor cadastrado'
+                    : 'Selecione um fornecedor...'}
+              </option>
               {suppliers.map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.trade_name || s.corporate_name}
                 </option>
               ))}
             </select>
+            {!loadingSuppliers && !suppliersErrorMsg && suppliers.length === 0 && (
+              <p className="text-[11px] text-muted-foreground">
+                Cadastre o fornecedor em{' '}
+                <a
+                  href="/suppliers"
+                  className="text-primary hover:underline font-medium"
+                >
+                  Fornecedores
+                </a>{' '}
+                para emitir uma ordem de compra.
+              </p>
+            )}
+            {suppliersErrorMsg && (
+              <p className="text-[11px] text-danger">Falha ao carregar: {suppliersErrorMsg}</p>
+            )}
           </div>
 
           {/* Items Section */}

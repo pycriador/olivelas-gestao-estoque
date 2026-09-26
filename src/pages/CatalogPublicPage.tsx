@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import {
   ShoppingBag,
@@ -27,8 +29,31 @@ import type { Product } from '@/types/product.types'
 
 export function CatalogPublicPage() {
   const { slug } = useParams<{ slug: string }>()
-  const [search, setSearch] = React.useState('')
-  const [selectedCategory, setSelectedCategory] = React.useState<string>('')
+  // Paginação, busca, categoria e faixa de preço via URL
+  const {
+    page,
+    pageSize,
+    search,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 24,
+    defaultSortBy: 'name',
+    defaultSortOrder: 'asc',
+    defaultFilters: {
+      categoryId: '',
+      minPrice: '',
+      maxPrice: '',
+    },
+  })
+
+  const selectedCategory = filters.categoryId || ''
+  const minPrice = filters.minPrice || ''
+  const maxPrice = filters.maxPrice || ''
+
   const [isCartOpen, setIsCartOpen] = React.useState(false)
   const [customerName, setCustomerName] = React.useState('')
   const [customerAddress, setCustomerAddress] = React.useState('')
@@ -53,16 +78,30 @@ export function CatalogPublicPage() {
 
   // Fetch Published Products
   const { data: productsData, isLoading: loadingProducts } = useQuery({
-    queryKey: ['public-products', store?.id, search, selectedCategory],
+    queryKey: [
+      'public-products',
+      store?.id,
+      search,
+      selectedCategory,
+      minPrice,
+      maxPrice,
+      page,
+      pageSize,
+    ],
     queryFn: () =>
-      productService.listProducts(store!.id, {
+      productService.listPublicCatalogProducts(store!.id, {
         search: search || undefined,
         categoryId: selectedCategory || undefined,
-        isPublished: true,
-        isActive: true,
-        pageSize: 50,
+        minPrice: minPrice ? Number(minPrice) : undefined,
+        maxPrice: maxPrice ? Number(maxPrice) : undefined,
+        sortBy: 'name',
+        sortOrder: 'asc',
+        page,
+        pageSize,
       }),
     enabled: Boolean(store?.id),
+    // Sempre revalida ao voltar para a vitrine: preco/estoque podem ter mudado.
+    staleTime: 0,
   })
 
   // Fetch Categories
@@ -73,6 +112,8 @@ export function CatalogPublicPage() {
   })
 
   const products = productsData?.data || []
+  const totalItems = productsData?.total || 0
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
   const cartTotal = getTotalAmount()
   const cartCount = getTotalItemsCount()
 
@@ -188,44 +229,94 @@ export function CatalogPublicPage() {
 
       {/* Main Content Area */}
       <main className="max-w-6xl w-full mx-auto px-4 sm:px-6 py-8 flex-1 space-y-6">
-        {/* Search & Category Filter */}
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="w-full flex-1">
-            <Input
-              placeholder="Buscar produtos no catálogo..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
-            />
+        {/* Search, Category & Price Range */}
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <div className="w-full flex-1">
+              <Input
+                placeholder="Buscar produtos no catálogo..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                icon={<Search className="h-4 w-4" />}
+              />
+            </div>
+
+            {categories.length > 0 && (
+              <select
+                value={selectedCategory}
+                onChange={(e) => {
+                  setFilter('categoryId', e.target.value)
+                  setPage(1)
+                }}
+                aria-label="Filtrar por categoria"
+                className="w-full sm:w-auto h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="">Todas as categorias</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
-          {categories.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-              <button
-                onClick={() => setSelectedCategory('')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                  !selectedCategory
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Todos
-              </button>
-              {categories.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => setSelectedCategory(c.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                    selectedCategory === c.id
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
+          {/* Faixa de preco */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="catalog-min-price" className="text-[11px] text-muted-foreground">
+                Preço
+              </label>
+              <input
+                id="catalog-min-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={minPrice}
+                onChange={(e) => {
+                  setFilter('minPrice', e.target.value)
+                  setPage(1)
+                }}
+                placeholder="mín."
+                className="h-8 w-24 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
+              <span className="text-[11px] text-muted-foreground">até</span>
+              <input
+                id="catalog-max-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={maxPrice}
+                onChange={(e) => {
+                  setFilter('maxPrice', e.target.value)
+                  setPage(1)
+                }}
+                placeholder="máx."
+                className="h-8 w-24 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+              />
             </div>
-          )}
+
+            {totalItems > 0 && (
+              <span className="text-[11px] text-muted-foreground">
+                {totalItems} {totalItems === 1 ? 'produto' : 'produtos'}
+              </span>
+            )}
+
+            {(minPrice || maxPrice || selectedCategory || search) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFilter('minPrice', '')
+                  setFilter('maxPrice', '')
+                  setFilter('categoryId', '')
+                  setSearch('')
+                }}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
+              >
+                Limpar filtros
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Product Cards Grid */}
@@ -312,6 +403,20 @@ export function CatalogPublicPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex justify-center">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
           </div>
         )}
       </main>

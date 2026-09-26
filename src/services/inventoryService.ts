@@ -1,7 +1,14 @@
 import { supabase } from '@/lib/supabase/client'
 import { checkExpirationStatus } from '@/utils/dates'
 import { auditService } from '@/services/auditService'
-import type { StockBalance, StockMovement, StockBatch } from '@/types/inventory.types'
+import type {
+  CostCenter,
+  LossReason,
+  StockBalance,
+  StockBatch,
+  StockMovement,
+  StockMovementInput,
+} from '@/types/inventory.types'
 import type { StockMovementType } from '@/types/database.types'
 
 export interface StockBalanceListParams {
@@ -15,6 +22,8 @@ export interface StockBalanceListParams {
 export interface StockMovementListParams {
   search?: string
   movementType?: string
+  reasonCode?: string
+  costCenterId?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   page?: number
@@ -29,6 +38,27 @@ export interface StockBatchListParams {
   page?: number
   pageSize?: number
 }
+
+/** Acoes de justificativa aplicaveis a um alerta de validade/lote. */
+export type ExpirationAction =
+  | 'PURCHASED'
+  | 'RETURNED'
+  | 'WRITTEN_OFF'
+  | 'DISCARDED'
+  | 'KEPT'
+  | 'ON_HOLD'
+
+export const EXPIRATION_ACTIONS: {
+  value: ExpirationAction
+  label: string
+}[] = [
+  { value: 'PURCHASED', label: 'Comprado' },
+  { value: 'RETURNED', label: 'Devolução' },
+  { value: 'WRITTEN_OFF', label: 'Baixado' },
+  { value: 'DISCARDED', label: 'Descartado' },
+  { value: 'ON_HOLD', label: 'Em análise' },
+  { value: 'KEPT', label: 'Manter' },
+]
 
 export const inventoryService = {
   async getStockBalances(
@@ -45,7 +75,8 @@ export const inventoryService = {
 
     let query = supabase
       .from('stock_balances')
-      .select(`
+      .select(
+        `
         id,
         store_id,
         product_id,
@@ -53,14 +84,21 @@ export const inventoryService = {
         reserved_quantity,
         available_quantity,
         updated_at,
-        products (
+        products!inner (
           name,
           sku,
           min_stock,
           unit
         )
-      `, { count: 'exact' })
+      `,
+        { count: 'exact' }
+      )
       .eq('store_id', storeId)
+
+    if (search?.trim()) {
+      const q = search.trim()
+      query = query.or(`products.name.ilike.%${q}%,products.sku.ilike.%${q}%`)
+    }
 
     const orderCol = ['quantity', 'reserved_quantity', 'available_quantity', 'updated_at'].includes(sortBy)
       ? sortBy
@@ -75,7 +113,7 @@ export const inventoryService = {
 
     if (error) throw error
 
-    let list = (data || []).map((item: any) => ({
+    const list = (data || []).map((item: any) => ({
       id: item.id,
       store_id: item.store_id,
       product_id: item.product_id,
@@ -87,15 +125,6 @@ export const inventoryService = {
       product_sku: item.products?.sku || '',
       min_stock: item.products?.min_stock || 0,
     }))
-
-    if (search) {
-      const q = search.toLowerCase()
-      list = list.filter(
-        (b) =>
-          b.product_name.toLowerCase().includes(q) ||
-          b.product_sku.toLowerCase().includes(q)
-      )
-    }
 
     return {
       data: list,
@@ -118,19 +147,36 @@ export const inventoryService = {
 
     let query = supabase
       .from('stock_movements')
-      .select(`
+      .select(
+        `
         *,
-        products ( name ),
-        profiles ( full_name )
-      `, { count: 'exact' })
+        products!inner ( name, sku ),
+        profiles:operator_id ( full_name ),
+        approver:approved_by ( full_name ),
+        stock_batches ( lot_number, expiration_date )
+      `,
+        { count: 'exact' }
+      )
       .eq('store_id', storeId)
 
     if (movementType && movementType !== 'ALL') {
       query = query.eq('movement_type', movementType)
     }
 
-    if (search) {
-      query = query.ilike('notes', `%${search}%`)
+    if (params.reasonCode && params.reasonCode !== 'ALL') {
+      query = query.eq('reason_code', params.reasonCode)
+    }
+
+    if (params.costCenterId && params.costCenterId !== 'ALL') {
+      query = query.eq('cost_center_id', params.costCenterId)
+    }
+
+    if (search?.trim()) {
+      const q = search.trim()
+      query = query.or(
+        `notes.ilike.%${q}%,products.name.ilike.%${q}%,products.sku.ilike.%${q}%,` +
+          `reason_code.ilike.%${q}%,cost_center_code.ilike.%${q}%,lot_number.ilike.%${q}%`
+      )
     }
 
     const orderCol = ['created_at', 'quantity', 'movement_type'].includes(sortBy)
@@ -161,8 +207,21 @@ export const inventoryService = {
       notes: item.notes,
       user_id: item.user_id,
       created_at: item.created_at,
+      reason_code: item.reason_code ?? null,
+      reason_detail: item.reason_detail ?? null,
+      cost_center_id: item.cost_center_id ?? null,
+      cost_center_code: item.cost_center_code ?? null,
+      operator_id: item.operator_id ?? null,
+      operator_registration: item.operator_registration ?? null,
+      approved_by: item.approved_by ?? null,
+      approved_by_registration: item.approved_by_registration ?? null,
+      approved_at: item.approved_at ?? null,
       product_name: item.products?.name || 'Produto',
+      product_sku: item.products?.sku || '',
       user_name: item.profiles?.full_name || 'Sistema',
+      approver_name: item.approver?.full_name || null,
+      batch_lot_number: item.stock_batches?.lot_number ?? null,
+      batch_expiration_date: item.stock_batches?.expiration_date ?? null,
     }))
 
     return {
@@ -252,6 +311,36 @@ export const inventoryService = {
     }
   },
 
+  /**
+   * Lancamento atomico de movimentacao (saldo + lote + trilha de auditoria).
+   * Delega ao RPC `apply_stock_movement`, que trava a linha do saldo com
+   * FOR UPDATE — o fluxo client-side anterior nao era transacional e perdia
+   * escritas concorrentes.
+   */
+  async applyMovement(input: StockMovementInput): Promise<string> {
+    const { data, error } = await supabase.rpc('apply_stock_movement', {
+      p_product_id: input.productId,
+      p_movement_type: input.movementType,
+      p_quantity: input.quantity,
+      p_batch_id: input.batchId || null,
+      p_lot_number: input.lotNumber || null,
+      p_expiration_date: input.expirationDate || null,
+      p_unit_cost: input.unitCost ?? null,
+      p_reason_code: input.reasonCode || null,
+      p_reason_detail: input.reasonDetail || null,
+      p_cost_center_id: input.costCenterId || null,
+      p_notes: input.notes || null,
+      p_approved_by: input.approvedBy || null,
+    })
+
+    if (error) throw error
+    return data as string
+  },
+
+  /**
+   * @deprecated Use `applyMovement`. Mantido para compatibilidade; agora
+   * delega ao RPC em vez de escrever direto nas tabelas.
+   */
   async createManualMovement(params: {
     storeId: string
     productId: string
@@ -261,67 +350,125 @@ export const inventoryService = {
     batchId?: string
     unitCost?: number
   }): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser()
-
-    // 1. Get current balance
-    const { data: balance } = await supabase
-      .from('stock_balances')
-      .select('quantity')
-      .eq('store_id', params.storeId)
-      .eq('product_id', params.productId)
-      .single()
-
-    const currentQty = balance ? Number(balance.quantity) : 0
-    let delta = params.quantity
-
-    // If exit, loss, damage, expiration -> negative delta
-    if (['EXIT', 'LOSS', 'DAMAGE', 'EXPIRATION'].includes(params.movementType)) {
-      delta = -Math.abs(params.quantity)
-    } else if (params.movementType === 'ADJUSTMENT') {
-      delta = params.quantity - currentQty
-    }
-
-    const newQty = currentQty + delta
-
-    // 2. Upsert balance
-    await supabase
-      .from('stock_balances')
-      .upsert({
-        store_id: params.storeId,
-        product_id: params.productId,
-        quantity: newQty,
-        reserved_quantity: 0,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'store_id,product_id' })
-
-    // 3. Record movement
-    await supabase
-      .from('stock_movements')
-      .insert({
-        store_id: params.storeId,
-        product_id: params.productId,
-        batch_id: params.batchId || null,
-        movement_type: params.movementType,
-        quantity: Math.abs(params.quantity),
-        previous_quantity: currentQty,
-        new_quantity: newQty,
-        unit_cost: params.unitCost || null,
-        notes: params.notes || null,
-        user_id: user?.id || null,
-      })
+    const movementId = await inventoryService.applyMovement({
+      productId: params.productId,
+      movementType: params.movementType,
+      quantity: Math.abs(params.quantity),
+      batchId: params.batchId,
+      unitCost: params.unitCost,
+      notes: params.notes,
+    })
 
     auditService.logAction({
       storeId: params.storeId,
       action: `STOCK_MOVEMENT_${params.movementType}`,
       entity: 'stock_movements',
-      entityId: params.productId,
+      entityId: movementId,
       afterData: {
+        productId: params.productId,
         movementType: params.movementType,
         quantity: Math.abs(params.quantity),
-        previousQuantity: currentQty,
-        newQuantity: newQty,
         notes: params.notes,
       },
     })
+  },
+
+  async getCostCenters(storeId: string): Promise<CostCenter[]> {
+    const { data, error } = await supabase
+      .from('cost_centers')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+      .order('code', { ascending: true })
+
+    if (error) throw error
+    return data || []
+  },
+
+  async getLossReasons(): Promise<LossReason[]> {
+    const { data, error } = await supabase
+      .from('loss_reasons')
+      .select('*')
+      .order('sort_order', { ascending: true })
+
+    if (error) throw error
+    return data || []
+  },
+
+  /**
+   * Importacao em lote de movimentacoes. Cada linha e lancada individualmente
+   * pelo RPC, de modo que uma linha invalida nao derruba as demais.
+   */
+  async importMovementsBulk(
+    storeId: string,
+    rows: StockMovementInput[]
+  ): Promise<{ successCount: number; errorCount: number; errors: string[] }> {
+    const errors: string[] = []
+    let successCount = 0
+
+    for (const [index, row] of rows.entries()) {
+      try {
+        await inventoryService.applyMovement(row)
+        successCount += 1
+      } catch (err: any) {
+        errors.push(`Linha ${index + 1}: ${err?.message || 'falha ao lançar a movimentação'}`)
+      }
+    }
+
+    if (successCount > 0) {
+      auditService.logAction({
+        storeId,
+        action: 'STOCK_MOVEMENTS_BULK_IMPORT',
+        entity: 'stock_movements',
+        entityId: storeId,
+        afterData: { successCount, errorCount: errors.length },
+      })
+    }
+
+    return { successCount, errorCount: errors.length, errors }
+  },
+
+  /**
+   * Disposicao mais recente de cada lote, indexada por batch_id para
+   * sobrepor a tabela da tela /expiration sem N+1.
+   */
+  async getBatchDispositions(
+    storeId: string
+  ): Promise<Record<string, { action: ExpirationAction; note: string | null; created_at: string }>> {
+    const { data, error } = await supabase
+      .from('latest_batch_dispositions')
+      .select('batch_id, action, note, created_at')
+      .eq('store_id', storeId)
+    if (error) throw error
+
+    const map: Record<
+      string,
+      { action: ExpirationAction; note: string | null; created_at: string }
+    > = {}
+    for (const row of data || []) {
+      map[row.batch_id as string] = {
+        action: row.action as ExpirationAction,
+        note: (row.note as string | null) ?? null,
+        created_at: row.created_at as string,
+      }
+    }
+    return map
+  },
+
+  /**
+   * Justifica o status de um alerta de validade. A RPC grava a disposicao e a
+   * trilha de auditoria na mesma transacao.
+   */
+  async setBatchDisposition(params: {
+    batchId: string
+    action: ExpirationAction
+    note?: string
+  }): Promise<void> {
+    const { error } = await supabase.rpc('set_batch_disposition', {
+      p_batch_id: params.batchId,
+      p_action: params.action,
+      p_note: params.note?.trim() || null,
+    })
+    if (error) throw error
   },
 }

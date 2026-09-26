@@ -72,6 +72,10 @@ export const ptBR = {
     notifications: 'Notificações',
     audit: 'Auditoria & Logs',
     settings: 'Configurações',
+    team: 'Equipe',
+    groupRegistry: 'Cadastro',
+    groupControl: 'Controle',
+    groupManagement: 'Gestão',
   },
   dashboard: {
     salesToday: 'Vendas Hoje',

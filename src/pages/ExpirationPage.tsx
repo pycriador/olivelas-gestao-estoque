@@ -1,6 +1,8 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryService } from '@/services/inventoryService'
+import type { ExpirationAction } from '@/services/inventoryService'
+import { EXPIRATION_ACTIONS } from '@/services/inventoryService'
 import { useTenant } from '@/hooks/useTenant'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatDate } from '@/utils/dates'
@@ -13,6 +15,8 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
+import type { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
 import {
@@ -24,6 +28,11 @@ import {
   Search,
   RotateCcw
 } from 'lucide-react'
+
+/** Rotulo curto da acao registrada, usado no badge e no export. */
+function dispositionLabel(action: string): string {
+  return EXPIRATION_ACTIONS.find((a) => a.value === action)?.label || ''
+}
 
 export function ExpirationPage() {
   const { storeId, hasActiveStore } = useTenant()
@@ -82,6 +91,73 @@ export function ExpirationPage() {
 
   const [writeoffBatch, setWriteoffBatch] = React.useState<any | null>(null)
 
+  // Disposicao mais recente por lote (badge "Justificado" + reuso no export)
+  const { data: dispositions = {} } = useQuery({
+    queryKey: ['batch-dispositions', storeId],
+    queryFn: () => inventoryService.getBatchDispositions(storeId),
+    enabled: hasActiveStore,
+    staleTime: 30_000,
+  })
+
+  // Modal de justificativa: guarda o alvo e a acao pré-escolhida
+  const [dispositionDraft, setDispositionDraft] = React.useState<{
+    batch: any
+    action: ExpirationAction
+  } | null>(null)
+  const [dispositionNote, setDispositionNote] = React.useState('')
+  const [dispositionError, setDispositionError] = React.useState('')
+
+  const dispositionMutation = useMutation({
+    mutationFn: (vars: { batch: any; action: ExpirationAction; note: string }) =>
+      inventoryService.setBatchDisposition({
+        batchId: vars.batch.id,
+        action: vars.action,
+        note: vars.note,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['batch-dispositions', storeId] })
+      setDispositionDraft(null)
+      setDispositionNote('')
+      setDispositionError('')
+    },
+    onError: (err: any) => {
+      setDispositionError(err?.message || 'Não foi possível registrar a justificativa.')
+    },
+  })
+
+  const openDisposition = (batch: any, action: ExpirationAction) => {
+    setDispositionError('')
+    setDispositionNote('')
+    setDispositionDraft({ batch, action })
+  }
+
+  // Acoes do dropdown "Acao": a linha ja justificada oferece primeiro
+  // "Trocar justificativa" e "Remover justificativa".
+  const dispositionMenuItems = React.useCallback(
+    (batch: any): DropdownMenuItem[] => {
+      const current = dispositions[batch.id]
+      const base: DropdownMenuItem[] = EXPIRATION_ACTIONS.map((action) => ({
+        key: action.value,
+        label: current?.action === action.value ? `${action.label} (atual)` : action.label,
+        disabled: current?.action === action.value,
+        onSelect: () => openDisposition(batch, action.value),
+      }))
+
+      if (!current) return base
+
+      return [
+        ...base,
+        {
+          key: '__clear',
+          label: 'Remover justificativa',
+          variant: 'danger',
+          onSelect: () => openDisposition(batch, 'KEPT'),
+        },
+      ]
+    },
+    [dispositions]
+  )
+
   // Writeoff expired batch mutation
   const writeoffMutation = useMutation({
     mutationFn: (batch: any) =>
@@ -114,6 +190,11 @@ export function ExpirationPage() {
           { header: 'Data de Fabricação', key: (r) => formatDate(r.manufacturing_date) },
           { header: 'Data de Validade', key: (r) => formatDate(r.expiration_date) },
           { header: 'Status de Validade', key: (r) => r.expirationInfo?.status || '-' },
+          {
+            header: 'Justificativa',
+            key: (r) => dispositionLabel(dispositions[r.id]?.action || ''),
+          },
+          { header: 'Observação', key: (r) => dispositions[r.id]?.note || '-' },
         ]
       )
     } catch (e) {
@@ -284,6 +365,7 @@ export function ExpirationPage() {
                 <tbody className="divide-y divide-border/60">
                   {batches.map((batch) => {
                     const status = batch.expirationInfo?.status
+                    const disposition = dispositions[batch.id]
                     return (
                       <tr key={batch.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-4 font-semibold text-foreground">
@@ -302,36 +384,57 @@ export function ExpirationPage() {
                           {formatDate(batch.expiration_date)}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {status === 'expired' && (
+                          {disposition && (
+                            <Badge
+                              variant="success"
+                              className="gap-1"
+                              title={
+                                disposition.note ||
+                                `Justificado por ${
+                                  dispositionLabel(disposition.action) || disposition.action
+                                }`
+                              }
+                            >
+                              <CheckCircle className="h-3 w-3" />
+                              {dispositionLabel(disposition.action) || 'JUSTIFICADO'}
+                            </Badge>
+                          )}
+                          {!disposition && status === 'expired' && (
                             <Badge variant="destructive" className="gap-1">
                               <PackageX className="h-3 w-3" /> VENCIDO
                             </Badge>
                           )}
-                          {status === 'critical_7_days' && (
+                          {!disposition && status === 'critical_7_days' && (
                             <Badge variant="warning" className="gap-1 text-orange-500">
                               <AlertTriangle className="h-3 w-3" /> &le; 7 DIAS
                             </Badge>
                           )}
-                          {status === 'warning_30_days' && (
+                          {!disposition && status === 'warning_30_days' && (
                             <Badge variant="warning" className="gap-1">
                               <Clock className="h-3 w-3" /> &le; 30 DIAS
                             </Badge>
                           )}
-                          {status === 'normal' && (
+                          {!disposition && status === 'normal' && (
                             <Badge variant="success">OK</Badge>
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          {status === 'expired' && batch.quantity > 0 && (
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              className="text-[11px] h-7 px-2"
-                              onClick={() => setWriteoffBatch(batch)}
-                            >
-                              Dar Baixa
-                            </Button>
-                          )}
+                          <div className="flex items-center justify-end gap-1.5">
+                            {status === 'expired' && batch.quantity > 0 && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                className="text-[11px] h-7 px-2"
+                                onClick={() => setWriteoffBatch(batch)}
+                              >
+                                Dar Baixa
+                              </Button>
+                            )}
+                            <DropdownMenu
+                              triggerLabel="Ação"
+                              items={dispositionMenuItems(batch)}
+                            />
+                          </div>
                         </td>
                       </tr>
                     )
@@ -372,6 +475,71 @@ export function ExpirationPage() {
         variant="danger"
         isLoading={writeoffMutation.isPending}
       />
+
+      {/* Justificativa do alerta de validade */}
+      <Modal
+        isOpen={Boolean(dispositionDraft)}
+        onClose={() => setDispositionDraft(null)}
+        title="Justificar alerta de validade"
+        description={`Lote ${dispositionDraft?.batch?.lot_number || ''} — ${
+          dispositionDraft?.batch?.products?.name || ''
+        }`}
+      >
+        <div className="space-y-3 pt-1 text-xs">
+          <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5">
+            <div className="text-[11px] text-muted-foreground">Ação registrada</div>
+            <div className="mt-0.5 font-semibold text-foreground">
+              {dispositionLabel(dispositionDraft?.action || '')}
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-medium text-muted-foreground" htmlFor="expiration-note">
+              Observação (opcional)
+            </label>
+            <textarea
+              id="expiration-note"
+              rows={3}
+              value={dispositionNote}
+              onChange={(e) => setDispositionNote(e.target.value)}
+              placeholder="Ex.: nota fiscal 1234, lote substituído pelo lote 8891..."
+              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs text-foreground outline-none focus:border-primary"
+            />
+          </div>
+
+          {dispositionError && (
+            <div className="rounded-lg border border-danger/40 bg-danger/10 px-3 py-2 text-[11px] text-danger">
+              {dispositionError}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setDispositionDraft(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={!dispositionDraft || dispositionMutation.isPending}
+              onClick={() => {
+                if (!dispositionDraft) return
+                dispositionMutation.mutate({
+                  batch: dispositionDraft.batch,
+                  action: dispositionDraft.action,
+                  note: dispositionNote,
+                })
+              }}
+            >
+              {dispositionMutation.isPending ? 'Salvando...' : 'Salvar justificativa'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

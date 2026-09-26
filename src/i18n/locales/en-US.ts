@@ -72,6 +72,10 @@ export const enUS = {
     notifications: 'Notifications',
     audit: 'Audit & Logs',
     settings: 'Settings',
+    team: 'Team',
+    groupRegistry: 'Registry',
+    groupControl: 'Control',
+    groupManagement: 'Management',
   },
   dashboard: {
     salesToday: 'Sales Today',

@@ -5,18 +5,20 @@ import { productService } from '@/services/productService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
 import { useTablePagination } from '@/hooks/useTablePagination'
-import { formatDateTime } from '@/utils/dates'
+import { formatDate, formatDateTime } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
 import { exportToCSV } from '@/utils/export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
+import { StockImportModal } from '@/components/inventory/StockImportModal'
 import {
   Layers,
   Plus,
@@ -26,9 +28,24 @@ import {
   Download,
   AlertTriangle,
   History,
-  Filter
+  ShieldAlert,
+  Upload,
 } from 'lucide-react'
 import type { StockMovementType } from '@/types/database.types'
+
+const MOVEMENT_LABELS: Record<string, string> = {
+  ENTRY: 'Entrada',
+  EXIT: 'Saída',
+  SALE: 'Venda',
+  RETURN: 'Devolução',
+  ADJUSTMENT: 'Ajuste',
+  LOSS: 'Perda',
+  DAMAGE: 'Avaria',
+  EXPIRATION: 'Vencimento',
+  TRANSFER: 'Transferência',
+  INVENTORY_COUNT: 'Contagem',
+}
+
 
 export function InventoryPage() {
   const { storeId, hasActiveStore } = useTenant()
@@ -56,13 +73,17 @@ export function InventoryPage() {
     defaultFilters: {
       tab: 'balances',
       movementType: 'ALL',
+      reasonCode: 'ALL',
     },
   })
 
   const activeTab = (filters.tab as 'balances' | 'movements') || 'balances'
   const movementTypeFilter = filters.movementType || 'ALL'
+  const reasonCodeFilter = filters.reasonCode || 'ALL'
 
   const [isMovementModalOpen, setIsMovementModalOpen] = React.useState(false)
+  const [isWriteoffModalOpen, setIsWriteoffModalOpen] = React.useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   // Form states
@@ -87,16 +108,33 @@ export function InventoryPage() {
 
   // Query Movements
   const { data: movementsData, isLoading: loadingMovements } = useQuery({
-    queryKey: ['stock-movements', storeId, page, pageSize, search, movementTypeFilter, sortBy, sortOrder],
+    queryKey: [
+      'stock-movements',
+      storeId,
+      page,
+      pageSize,
+      search,
+      movementTypeFilter,
+      reasonCodeFilter,
+      sortBy,
+      sortOrder,
+    ],
     queryFn: () =>
       inventoryService.getMovements(storeId, {
         page,
         pageSize,
         search: search || undefined,
         movementType: movementTypeFilter !== 'ALL' ? movementTypeFilter : undefined,
+        reasonCode: reasonCodeFilter !== 'ALL' ? reasonCodeFilter : undefined,
         sortBy: sortBy === 'quantity' ? 'quantity' : 'created_at',
         sortOrder,
       }),
+    enabled: Boolean(hasActiveStore && activeTab === 'movements'),
+  })
+
+  const { data: lossReasons = [] } = useQuery({
+    queryKey: ['loss-reasons'],
+    queryFn: () => inventoryService.getLossReasons(),
     enabled: Boolean(hasActiveStore && activeTab === 'movements'),
   })
 
@@ -127,6 +165,8 @@ export function InventoryPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-movements', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-batches', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
       setIsMovementModalOpen(false)
       setProductId('')
@@ -158,11 +198,15 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-2.5 animate-in fade-in duration-150 min-h-0">
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
       <PageHeader title={t.inventory.title}>
         <Input
-          placeholder={activeTab === 'balances' ? 'Buscar produto ou SKU...' : 'Buscar em observações...'}
+          placeholder={
+            activeTab === 'balances'
+              ? 'Buscar produto ou SKU...'
+              : 'Buscar produto, SKU, lote ou motivo...'
+          }
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 text-xs bg-background/90"
@@ -204,31 +248,68 @@ export function InventoryPage() {
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
           {activeTab === 'movements' && (
-            <select
-              value={movementTypeFilter}
-              onChange={(e) => {
-                setFilter('movementType', e.target.value)
-                setPage(1)
-              }}
-              aria-label="Filtrar por tipo"
-              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todos os Tipos</option>
-              <option value="ENTRY">Entrada</option>
-              <option value="EXIT">Saída</option>
-              <option value="ADJUSTMENT">Ajuste</option>
-              <option value="LOSS">Perda</option>
-              <option value="DAMAGE">Avaria</option>
-              <option value="EXPIRATION">Vencimento</option>
-              <option value="RETURN">Devolução</option>
-            </select>
+            <>
+              <select
+                value={movementTypeFilter}
+                onChange={(e) => {
+                  setFilter('movementType', e.target.value)
+                  setPage(1)
+                }}
+                aria-label="Filtrar por tipo"
+                className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="ALL">Todos os Tipos</option>
+                <option value="ENTRY">Entrada</option>
+                <option value="EXIT">Saída</option>
+                <option value="ADJUSTMENT">Ajuste</option>
+                <option value="LOSS">Perda</option>
+                <option value="DAMAGE">Avaria</option>
+                <option value="EXPIRATION">Vencimento</option>
+                <option value="RETURN">Devolução</option>
+              </select>
+
+              <select
+                value={reasonCodeFilter}
+                onChange={(e) => {
+                  setFilter('reasonCode', e.target.value)
+                  setPage(1)
+                }}
+                aria-label="Filtrar por motivo"
+                className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="ALL">Todos os Motivos</option>
+                {lossReasons.map((r) => (
+                  <option key={r.code} value={r.code}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsImportModalOpen(true)}
+            className="h-8 text-xs px-2.5"
+          >
+            <Upload className="h-3.5 w-3.5 mr-1" /> Importar
+          </Button>
 
           {activeTab === 'balances' && (
             <Button variant="outline" size="sm" onClick={handleExportBalances} className="h-8 text-xs px-2.5">
               <Download className="h-3.5 w-3.5 mr-1" /> Exportar
             </Button>
           )}
+
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={() => setIsWriteoffModalOpen(true)}
+            className="h-8 text-xs px-2.5 shadow-xs font-semibold"
+          >
+            <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Baixa
+          </Button>
 
           <Button size="sm" onClick={() => setIsMovementModalOpen(true)} className="h-8 text-xs px-2.5 shadow-xs font-semibold">
             <Plus className="h-3.5 w-3.5 mr-1" /> Lançar Movimento
@@ -250,12 +331,12 @@ export function InventoryPage() {
                 Nenhum saldo encontrado para os filtros informados.
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                     <tr>
-                      <th className="py-3 px-4">Produto</th>
-                      <th className="py-3 px-4">SKU</th>
+                      <th className="py-3 px-4 font-semibold">Produto</th>
+                      <th className="py-3 px-4 font-semibold">SKU</th>
                       <SortableHeader
                         column="quantity"
                         label="Físico"
@@ -280,11 +361,11 @@ export function InventoryPage() {
                         onSort={toggleSort}
                         align="center"
                       />
-                      <th className="py-3 px-4 text-center">Mínimo</th>
-                      <th className="py-3 px-4 text-center">Status</th>
+                      <th className="py-3 px-4 font-semibold text-center">Mínimo</th>
+                      <th className="py-3 px-4 font-semibold text-center">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/60">
+                  <tbody className="divide-y divide-border">
                     {balances.map((b) => {
                       const isLow = b.quantity <= (b.min_stock || 0)
                       return (
@@ -323,19 +404,19 @@ export function InventoryPage() {
                 </table>
               </div>
             )}
-
-            {/* Pinned Pagination */}
-            <div className="border-t border-border bg-card/80 flex-shrink-0">
-              <Pagination
-                currentPage={page}
-                totalPages={totalBalancesPages}
-                totalItems={totalBalances}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-              />
-            </div>
           </CardContent>
+
+          {/* Pinned Pagination */}
+          <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+            <Pagination
+              currentPage={page}
+              totalPages={totalBalancesPages}
+              totalItems={totalBalances}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </Card>
       )}
 
@@ -353,9 +434,9 @@ export function InventoryPage() {
                 Nenhuma movimentação registrada para os filtros aplicados.
               </div>
             ) : (
-              <div className="flex-1 min-h-0 overflow-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                     <tr>
                       <SortableHeader
                         column="created_at"
@@ -364,8 +445,8 @@ export function InventoryPage() {
                         currentSortOrder={sortOrder}
                         onSort={toggleSort}
                       />
-                      <th className="py-3 px-4">Produto</th>
-                      <th className="py-3 px-4">Tipo de Movimento</th>
+                      <th className="py-3 px-4 font-semibold">Produto</th>
+                      <th className="py-3 px-4 font-semibold">Tipo / Motivo</th>
                       <SortableHeader
                         column="quantity"
                         label="Qtd"
@@ -374,23 +455,35 @@ export function InventoryPage() {
                         onSort={toggleSort}
                         align="center"
                       />
-                      <th className="py-3 px-4 text-center">Antes &rarr; Depois</th>
-                      <th className="py-3 px-4">Usuário / Origem</th>
-                      <th className="py-3 px-4">Observações</th>
+                      <th className="py-3 px-4 font-semibold text-center">Antes &rarr; Depois</th>
+                      <th className="py-3 px-4 font-semibold">Lote / Validade</th>
+                      <th className="py-3 px-4 font-semibold">Centro de Custo</th>
+                      <th className="py-3 px-4 font-semibold">Operador / Aprovador</th>
+                      <th className="py-3 px-4 font-semibold">Observações</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-border/60">
+                  <tbody className="divide-y divide-border">
                     {movements.map((m) => {
                       const isEntry = ['ENTRY', 'RETURN'].includes(m.movement_type)
+                      const reasonLabel = lossReasons.find(
+                        (r) => r.code === m.reason_code
+                      )?.label
                       return (
                         <tr key={m.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3 px-4 text-muted-foreground font-mono text-[11px]">
+                          <td className="py-2.5 px-4 text-muted-foreground font-mono text-[11px] whitespace-nowrap">
                             {formatDateTime(m.created_at)}
                           </td>
-                          <td className="py-3 px-4 font-semibold text-foreground">
-                            {m.product_name}
+                          <td className="py-2.5 px-4">
+                            <div className="font-semibold text-foreground truncate max-w-[14rem]">
+                              {m.product_name}
+                            </div>
+                            {m.product_sku && (
+                              <div className="font-mono text-[10px] text-muted-foreground">
+                                {m.product_sku}
+                              </div>
+                            )}
                           </td>
-                          <td className="py-3 px-4">
+                          <td className="py-2.5 px-4">
                             <span
                               className={`inline-flex items-center gap-1 font-semibold text-[11px] ${
                                 isEntry ? 'text-success' : 'text-danger'
@@ -401,21 +494,67 @@ export function InventoryPage() {
                               ) : (
                                 <ArrowUpRight className="h-3.5 w-3.5" />
                               )}
-                              {m.movement_type}
+                              {MOVEMENT_LABELS[m.movement_type] || m.movement_type}
                             </span>
+                            {m.reason_code && (
+                              <div className="text-[10px] text-muted-foreground mt-0.5">
+                                {reasonLabel || m.reason_code}
+                              </div>
+                            )}
                           </td>
-                          <td className="py-3 px-4 text-center font-mono font-bold">
+                          <td className="py-2.5 px-4 text-center font-mono font-bold">
                             {m.quantity}
                           </td>
-                          <td className="py-3 px-4 text-center font-mono text-muted-foreground">
+                          <td className="py-2.5 px-4 text-center font-mono text-muted-foreground whitespace-nowrap">
                             {m.previous_quantity} &rarr;{' '}
                             <span className="font-bold text-foreground">{m.new_quantity}</span>
                           </td>
-                          <td className="py-3 px-4 text-muted-foreground">
-                            {m.user_name}
+                          <td className="py-2.5 px-4 text-muted-foreground">
+                            {m.batch_lot_number ? (
+                              <div>
+                                <div className="font-mono text-[11px]">
+                                  {m.batch_lot_number}
+                                </div>
+                                <div className="font-mono text-[10px]">
+                                  {m.batch_expiration_date
+                                    ? formatDate(m.batch_expiration_date)
+                                    : 'sem validade'}
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="italic">-</span>
+                            )}
                           </td>
-                          <td className="py-3 px-4 text-muted-foreground italic">
-                            {m.notes || '-'}
+                          <td className="py-2.5 px-4">
+                            {m.cost_center_code ? (
+                              <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                {m.cost_center_code}
+                              </span>
+                            ) : (
+                              <span className="italic text-muted-foreground">-</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="text-[11px] text-foreground truncate max-w-[12rem]">
+                              {m.user_name}
+                              {m.operator_registration && (
+                                <span className="font-mono text-[10px] text-muted-foreground">
+                                  {' '}
+                                  ({m.operator_registration})
+                                </span>
+                              )}
+                            </div>
+                            {m.approver_name && (
+                              <div className="text-[10px] text-emerald-600 dark:text-emerald-400 truncate max-w-[12rem]">
+                                Aprovado por {m.approver_name}
+                                {m.approved_by_registration
+                                  ? ` (${m.approved_by_registration})`
+                                  : ''}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 text-muted-foreground italic">
+                            {m.reason_detail || m.notes || '-'}
                           </td>
                         </tr>
                       )
@@ -424,19 +563,19 @@ export function InventoryPage() {
                 </table>
               </div>
             )}
-
-            {/* Pinned Pagination */}
-            <div className="border-t border-border bg-card/80 flex-shrink-0">
-              <Pagination
-                currentPage={page}
-                totalPages={totalMovementsPages}
-                totalItems={totalMovements}
-                pageSize={pageSize}
-                onPageChange={setPage}
-                onPageSizeChange={setPageSize}
-              />
-            </div>
           </CardContent>
+
+          {/* Pinned Pagination */}
+          <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+            <Pagination
+              currentPage={page}
+              totalPages={totalMovementsPages}
+              totalItems={totalMovements}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </Card>
       )}
 
@@ -479,6 +618,15 @@ export function InventoryPage() {
             </select>
           </div>
 
+          <div className="p-3 text-[11px] bg-muted/40 rounded-xl border border-border/60 text-muted-foreground flex items-start gap-2">
+            <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-px text-amber-500" />
+            <span>
+              Saídas por perda, avaria e vencimento exigem motivo, centro de custo e
+              aprovador. Use o botão <b className="text-foreground">Baixa</b> na barra
+              superior para registrar esses lançamentos.
+            </span>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <label className="text-xs font-semibold text-foreground">Tipo de Movimento *</label>
@@ -488,11 +636,8 @@ export function InventoryPage() {
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
                 <option value="ENTRY">Entrada Manual</option>
-                <option value="EXIT">Saída Manual</option>
-                <option value="ADJUSTMENT">Ajuste de Saldo</option>
-                <option value="LOSS">Perda</option>
-                <option value="DAMAGE">Avaria / Quebra</option>
-                <option value="EXPIRATION">Descarte por Vencimento</option>
+                <option value="ADJUSTMENT">Ajuste de Saldo (quantidade final)</option>
+                <option value="RETURN">Devolução</option>
               </select>
             </div>
 
@@ -537,6 +682,18 @@ export function InventoryPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Baixa de Estoque (perda / ajuste com rastreabilidade) */}
+      <StockWriteoffModal
+        isOpen={isWriteoffModalOpen}
+        onClose={() => setIsWriteoffModalOpen(false)}
+      />
+
+      {/* Importação em lote de movimentações */}
+      <StockImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   )
 }

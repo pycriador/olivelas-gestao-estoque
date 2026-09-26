@@ -22,6 +22,10 @@ export interface AuditListParams {
   search?: string
   action?: string
   entity?: string
+  /** Periodo inicial inclusivo (ISO yyyy-mm-dd). */
+  dateFrom?: string
+  /** Periodo final inclusivo (ISO yyyy-mm-dd). */
+  dateTo?: string
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   page?: number
@@ -37,6 +41,8 @@ export const auditService = {
       search,
       action,
       entity,
+      dateFrom,
+      dateTo,
       sortBy = 'created_at',
       sortOrder = 'desc',
       page = 1,
@@ -73,6 +79,15 @@ export const auditService = {
 
     if (entity && entity !== 'ALL') {
       query = query.eq('entity', entity)
+    }
+
+    // Periodo: dateTo e inclusivo, entao usa o fim do dia para nao cortar
+    // registros registrados no proprio dia selecionado.
+    if (dateFrom) {
+      query = query.gte('created_at', `${dateFrom}T00:00:00.000Z`)
+    }
+    if (dateTo) {
+      query = query.lte('created_at', `${dateTo}T23:59:59.999Z`)
     }
 
     const orderCol = ['created_at', 'action', 'entity'].includes(sortBy)

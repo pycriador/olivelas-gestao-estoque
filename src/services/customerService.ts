@@ -58,6 +58,42 @@ export const customerService = {
     }
   },
 
+  /**
+   * Cliente por id, para reconciliar um nome digitado com um cadastro.
+   */
+  async getCustomer(id: string): Promise<Customer | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('id', id)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (error) throw error
+    return (data as Customer) || null
+  },
+
+  /**
+   * Clientes mais recentes da plataforma, do mais novo para o mais antigo.
+   *
+   * Deliberadamente SEM `.eq('store_id', ...)`: o PDV usa isso como
+   * amostra de digitos rapidos. O RLS continua valendo - um usuario comum
+   * so enxerga os clientes das lojas das quais participa, e um global admin
+   * enxerga todos. `created_at` tem DEFAULT NOW() e nunca e nulo.
+   */
+  async getRecentCustomers(limit = 5): Promise<Customer[]> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select('*')
+      .is('deleted_at', null)
+      .eq('status', 'ACTIVE')
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw error
+    return (data || []) as Customer[]
+  },
+
   async createCustomer(storeId: string, customerData: Partial<Customer>): Promise<Customer> {
     const { data, error } = await supabase
       .from('customers')

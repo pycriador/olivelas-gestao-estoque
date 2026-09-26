@@ -72,6 +72,10 @@ export const esES = {
     notifications: 'Notificaciones',
     audit: 'Auditoría y Logs',
     settings: 'Configuraciones',
+    team: 'Equipo',
+    groupRegistry: 'Registros',
+    groupControl: 'Control',
+    groupManagement: 'Gestión',
   },
   dashboard: {
     salesToday: 'Ventas Hoy',

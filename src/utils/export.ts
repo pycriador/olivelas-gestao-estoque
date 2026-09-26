@@ -38,12 +38,53 @@ export function exportToCSV<T extends object>(
   })
 
   const csvContent = '\uFEFF' + [headers, ...rows].join('\r\n')
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+  downloadBlob(
+    csvContent,
+    `${filename.replace(/\.csv$/, '')}_${new Date().toISOString().slice(0, 10)}.csv`,
+    'text/csv;charset=utf-8;'
+  )
+}
+
+/**
+ * Exporta o mesmo conjunto de dados em JSON, espelhando o shape do CSV
+ * (mesmo filename e mesmo timestamp) para inspecao/forense.
+ */
+export function exportToJSON<T extends object>(
+  filename: string,
+  data: T[],
+  columns: ExportColumn<T>[]
+): void {
+  if (!data || data.length === 0) {
+    throw new Error('Nenhum dado para exportar')
+  }
+
+  const rows = data.map((row) => {
+    const out: Record<string, string | number | boolean | null> = {}
+    for (const col of columns) {
+      const val =
+        typeof col.key === 'function'
+          ? col.key(row)
+          : (row as Record<string, unknown>)[col.key as string]
+      out[col.header] = val === undefined ? null : (val as string | number | boolean | null)
+    }
+    return out
+  })
+
+  const jsonContent = JSON.stringify(rows, null, 2)
+  downloadBlob(
+    jsonContent,
+    `${filename.replace(/\.json$/, '')}_${new Date().toISOString().slice(0, 10)}.json`,
+    'application/json;charset=utf-8;'
+  )
+}
+
+function downloadBlob(content: string, downloadName: string, type: string): void {
+  const blob = new Blob([content], { type })
   const url = URL.createObjectURL(blob)
 
   const link = document.createElement('a')
   link.setAttribute('href', url)
-  link.setAttribute('download', `${filename.replace(/\.csv$/, '')}_${new Date().toISOString().slice(0, 10)}.csv`)
+  link.setAttribute('download', downloadName)
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)

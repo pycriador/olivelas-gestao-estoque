@@ -31,4 +31,5 @@ export interface StoreMember {
   email: string
   phone: string | null
   avatarUrl: string | null
+  employeeRegistration?: string | null
 }

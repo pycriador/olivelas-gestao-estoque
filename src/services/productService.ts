@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
+import { categoryService } from '@/services/categoryService'
 import type { Product, Category } from '@/types/product.types'
 
 export interface ProductFilters {
@@ -8,11 +9,30 @@ export interface ProductFilters {
   isActive?: boolean
   isPublished?: boolean
   lowStockOnly?: boolean
+  minPrice?: number
+  maxPrice?: number
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   page?: number
   pageSize?: number
 }
+
+/** Qual faixa de estoque a listagem do PDV deve trazer. */
+export type POSStockFilter = 'in' | 'out' | 'all'
+
+export interface POSProductFilters {
+  search?: string
+  categoryId?: string
+  stock?: POSStockFilter
+  page?: number
+  pageSize?: number
+}
+
+/** Projection publica: nunca expoe `cost_price` nem dados internos. */
+const PUBLIC_PRODUCT_COLUMNS = `
+  id, store_id, name, sku, barcode, description, category_id,
+  unit, selling_price, is_active, is_published_catalog
+`
 
 export const productService = {
   async listProducts(
@@ -24,6 +44,8 @@ export const productService = {
       categoryId,
       isActive,
       isPublished,
+      minPrice,
+      maxPrice,
       sortBy = 'created_at',
       sortOrder = 'desc',
       page = 1,
@@ -51,6 +73,14 @@ export const productService = {
 
     if (categoryId) {
       query = query.eq('category_id', categoryId)
+    }
+
+    if (typeof minPrice === 'number' && !Number.isNaN(minPrice)) {
+      query = query.gte('selling_price', minPrice)
+    }
+
+    if (typeof maxPrice === 'number' && !Number.isNaN(maxPrice)) {
+      query = query.lte('selling_price', maxPrice)
     }
 
     if (typeof isActive === 'boolean') {
@@ -86,6 +116,194 @@ export const productService = {
       data: mapped,
       total: count || 0,
     }
+  },
+
+  /**
+   * Listagem do PDV.
+   *
+   * A consulta e montada a partir de `stock_balances` (e nao de
+   * `products`) porque o PostgREST nao aceita `order` por coluna de
+   * recurso embutido - e "produtos com estoque primeiro" e justamente uma
+   * ordenacao por saldo. Todo produto criado pelo app tem uma linha em
+   * `stock_balances` (ver createProduct / importProductsBulk), entao
+   * partir do saldo nao perde nenhum produto.
+   *
+   * `stock: 'in'` traz so o que da para vender agora, `'out'` traz o
+   * zerado/negativo e `'all'` traz os dois (com estoque primeiro).
+   */
+  async listProductsForPOS(
+    storeId: string,
+    filters: POSProductFilters = {}
+  ): Promise<{ data: Product[]; total: number }> {
+    const { search, categoryId, stock = 'in', page = 1, pageSize = 24 } = filters
+
+    let productIds: string[] | null = null
+
+    // `.or()` nao aceita caminho de recurso embutido, entao a busca por
+    // nome/SKU/codigo de barras e resolvida em uma consulta leve de ids
+    // antes da paginacao.
+    if (search && search.trim().length >= 2) {
+      const { data: matched, error: matchErr } = await supabase
+        .from('products')
+        .select('id')
+        .eq('store_id', storeId)
+        .is('deleted_at', null)
+        .eq('is_active', true)
+        .or(
+          `name.ilike.%${search.trim()}%,sku.ilike.%${search.trim()}%,barcode.ilike.%${search.trim()}%`
+        )
+
+      if (matchErr) throw matchErr
+      productIds = (matched || []).map((p: any) => p.id)
+
+      // Nada casou: encerrar aqui evita a segunda query e devolve
+      // paginacao coerente (total 0) em vez da pagina 1 inteira.
+      if (productIds.length === 0) return { data: [], total: 0 }
+    }
+
+    let query = supabase
+      .from('stock_balances')
+      .select(
+        `
+        quantity, available_quantity, reserved_quantity,
+        products!inner (
+          id, store_id, name, sku, barcode, description, unit,
+          selling_price, category_id, is_active,
+          categories ( id, name )
+        )
+      `,
+        { count: 'exact' }
+      )
+      .eq('store_id', storeId)
+
+    if (productIds) query = query.in('product_id', productIds)
+    if (categoryId) query = query.eq('products.category_id', categoryId)
+
+    // Produto inativo nao entra no PDV.
+    query = query.eq('products.is_active', true).is('products.deleted_at', null)
+
+    if (stock === 'in') {
+      query = query.gt('available_quantity', 0)
+    } else if (stock === 'out') {
+      query = query.lte('available_quantity', 0)
+    }
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    // `nullsfirst` garante que saldo nulo (nunca ocorre, mas por seguranca)
+    // nao flutue para o topo do grupo "com estoque".
+    const { data, count, error } = await query
+      .order('available_quantity', { ascending: stock === 'out', nullsFirst: false })
+      .order('product_id', { ascending: true })
+      .range(from, to)
+
+    if (error) throw error
+
+    const mapped: Product[] = (data || [])
+      .map((row: any) => {
+        const product = row.products
+        if (!product) return null
+        return {
+          ...product,
+          category_name: product.categories?.name,
+          stock_quantity: Number(row.available_quantity ?? 0),
+          reserved_quantity: Number(row.reserved_quantity ?? 0),
+          physical_quantity: Number(row.quantity ?? 0),
+        } as Product
+      })
+      .filter(Boolean) as Product[]
+
+    return { data: mapped, total: count || 0 }
+  },
+
+  /**
+   * Catalogo publico de `/store/:slug`.
+   *
+   * Projection explicita em vez de `select('*')`: a pagina e anonima e o
+   * `*` mandava `cost_price` (e `min_stock`) para o navegador de qualquer
+   * visitante. Tambem nao busca `stock_balances` - o anon nao tem acesso
+   * a essa tabela por RLS e o catalogo nao mostra saldo.
+   */
+  async listPublicCatalogProducts(
+    storeId: string,
+    filters: {
+      search?: string
+      categoryId?: string
+      minPrice?: number
+      maxPrice?: number
+      sortBy?: string
+      sortOrder?: 'asc' | 'desc'
+      page?: number
+      pageSize?: number
+    } = {}
+  ): Promise<{ data: Product[]; total: number }> {
+    const {
+      search,
+      categoryId,
+      minPrice,
+      maxPrice,
+      sortBy = 'name',
+      sortOrder = 'asc',
+      page = 1,
+      pageSize = 24,
+    } = filters
+
+    let query = supabase
+      .from('products')
+      .select(
+        `
+        ${PUBLIC_PRODUCT_COLUMNS},
+        categories ( id, name ),
+        product_images ( id, public_url, is_primary, display_order )
+      `,
+        { count: 'exact' }
+      )
+      .eq('store_id', storeId)
+      .eq('is_active', true)
+      .eq('is_published_catalog', true)
+      .is('deleted_at', null)
+
+    if (search && search.trim()) {
+      const term = search.trim()
+      query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.ilike.%${term}%`)
+    }
+
+    if (categoryId) query = query.eq('category_id', categoryId)
+    if (typeof minPrice === 'number' && !Number.isNaN(minPrice)) {
+      query = query.gte('selling_price', minPrice)
+    }
+    if (typeof maxPrice === 'number' && !Number.isNaN(maxPrice)) {
+      query = query.lte('selling_price', maxPrice)
+    }
+
+    const orderColumn = ['name', 'selling_price', 'created_at'].includes(sortBy)
+      ? sortBy
+      : 'name'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderColumn, { ascending: sortOrder === 'asc' })
+      .order('id', { ascending: true })
+      .range(from, to)
+
+    if (error) throw error
+
+    const mapped: Product[] = (data || []).map((item: any) => {
+      const images = (item.product_images || []) as any[]
+      const primary =
+        images.find((img) => img.is_primary) ||
+        [...images].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))[0]
+      return {
+        ...item,
+        category_name: item.categories?.name,
+        images: primary ? [primary] : [],
+      } as Product
+    })
+
+    return { data: mapped, total: count || 0 }
   },
 
   async getProductById(id: string, storeId: string): Promise<Product | null> {
@@ -223,34 +441,14 @@ export const productService = {
     })
   },
 
+  // Categorias sao mantidas em categoryService (CRUD completo + slug seguro).
+  // Estes dois wrappers existem para nao quebrar os consumidores antigos.
   async listCategories(storeId: string): Promise<Category[]> {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*')
-      .eq('store_id', storeId)
-      .is('deleted_at', null)
-      .order('name', { ascending: true })
-
-    if (error) throw error
-    return (data || []) as Category[]
+    return categoryService.listCategories(storeId)
   },
 
   async createCategory(storeId: string, name: string): Promise<Category> {
-    const slug = name.toLowerCase().replace(/[^a-z0-9]/g, '-')
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({
-        store_id: storeId,
-        name,
-        slug,
-      })
-      .select()
-      .single()
-
-    if (error && error.code !== '23505') throw error
-    if (data) return data as Category
-    const existing = await supabase.from('categories').select('*').eq('store_id', storeId).eq('name', name).single()
-    return existing.data as Category
+    return categoryService.createCategory(storeId, { name })
   },
 
   async importProductsBulk(
@@ -355,13 +553,15 @@ export const productService = {
           continue
         }
 
-        // Insert initial stock balance
+        // Insert initial stock balance.
+        // `available_quantity` e coluna gerada (quantity - reserved_quantity)
+        // e nao pode ser enviada no insert.
         if (insertedProduct?.id) {
           await supabase.from('stock_balances').insert({
             store_id: storeId,
             product_id: insertedProduct.id,
             quantity: initialStock,
-            available_quantity: initialStock,
+            reserved_quantity: 0,
           })
         }
 

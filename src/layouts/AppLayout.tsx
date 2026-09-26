@@ -22,8 +22,13 @@ import {
   ChevronDown,
   Search,
   ExternalLink,
-  Calendar
+  Calendar,
+  Tags,
+  FolderTree,
+  TrendingUp,
+  BarChart3,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
@@ -35,6 +40,7 @@ import { GlobalCommandK } from '@/components/common/GlobalCommandK'
 import { Badge } from '@/components/ui/badge'
 
 export function AppLayout() {
+  const SIDEBAR_GROUPS_KEY = 'olivelas_sidebar_open_groups'
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [storeMenuOpen, setStoreMenuOpen] = React.useState(false)
   const location = useLocation()
@@ -65,23 +71,110 @@ export function AppLayout() {
       }))
     : userStores
 
-  const navItems = [
+  type NavItem = { label: string; path: string; icon: LucideIcon }
+  type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] }
+
+  const topNavItems: NavItem[] = [
     { label: t.nav.dashboard, path: '/dashboard', icon: LayoutDashboard },
-    ...(isGlobalAdmin ? [{ label: t.nav.globalAdmin, path: '/global-admin', icon: Shield }] : []),
-    { label: t.nav.products, path: '/products', icon: Package },
-    { label: t.nav.inventory, path: '/inventory', icon: Layers },
-    { label: t.nav.expiration, path: '/expiration', icon: Calendar },
-    { label: t.nav.sales, path: '/sales', icon: ShoppingBag },
-    { label: t.nav.orders, path: '/orders', icon: ShoppingCart },
-    { label: t.nav.customers, path: '/customers', icon: Users },
-    { label: t.nav.suppliers, path: '/suppliers', icon: Truck },
-    { label: t.nav.purchases, path: '/purchases', icon: FileText },
-    { label: 'Equipe', path: '/team', icon: UserCheck },
-    { label: t.nav.reports, path: '/reports', icon: FileText },
+    ...(isGlobalAdmin
+      ? [{ label: t.nav.globalAdmin, path: '/global-admin', icon: Shield }]
+      : []),
+  ]
+
+  // Grupos sanfona. "Compras" fica so em Controle para nao duplicar o
+  // mesmo link em dois grupos.
+  const navGroups: NavGroup[] = [
+    {
+      id: 'registry',
+      label: t.nav.groupRegistry,
+      icon: FolderTree,
+      items: [
+        { label: t.nav.products, path: '/products', icon: Package },
+        { label: t.nav.categories, path: '/categories', icon: Tags },
+        { label: t.nav.customers, path: '/customers', icon: Users },
+        { label: t.nav.suppliers, path: '/suppliers', icon: Truck },
+      ],
+    },
+    {
+      id: 'control',
+      label: t.nav.groupControl,
+      icon: Layers,
+      items: [
+        { label: t.nav.inventory, path: '/inventory', icon: Layers },
+        { label: t.nav.expiration, path: '/expiration', icon: Calendar },
+        { label: t.nav.purchases, path: '/purchases', icon: FileText },
+      ],
+    },
+    {
+      id: 'management',
+      label: t.nav.groupManagement,
+      icon: TrendingUp,
+      items: [
+        { label: t.nav.orders, path: '/orders', icon: ShoppingCart },
+        { label: t.nav.sales, path: '/sales', icon: ShoppingBag },
+        { label: t.nav.reports, path: '/reports', icon: BarChart3 },
+        { label: t.nav.team, path: '/team', icon: UserCheck },
+      ],
+    },
+  ]
+
+  const bottomNavItems: NavItem[] = [
     { label: t.nav.notifications, path: '/notifications', icon: Bell },
     { label: t.nav.audit, path: '/audit', icon: Shield },
     { label: t.nav.settings, path: '/settings', icon: Settings },
   ]
+
+  const allGroupIds = navGroups.map((g) => g.id)
+  const activeGroupIds = navGroups
+    .filter((g) => g.items.some((i) => i.path === location.pathname))
+    .map((g) => g.id)
+  const currentActiveGroup = activeGroupIds[0] || null
+
+  const persistGroupsToStorage = (next: string[]) => {
+    try {
+      window.localStorage.setItem(SIDEBAR_GROUPS_KEY, JSON.stringify(next))
+    } catch {
+      // Sem persistencia o accordion funciona, so nao sobrevive ao reload.
+    }
+  }
+
+  // Estado da sanfona: por padrao o grupo da rota atual vem aberto, e a
+  // escolha do usuario e lembrada entre recargas.
+  const [openGroups, setOpenGroups] = React.useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = window.localStorage.getItem(SIDEBAR_GROUPS_KEY)
+        if (stored) {
+          const parsed = JSON.parse(stored) as string[]
+          if (Array.isArray(parsed)) return parsed.filter((id) => allGroupIds.includes(id))
+        }
+      } catch {
+        // localStorage indisponivel/JSON invalido: cai no default.
+      }
+    }
+    return activeGroupIds
+  })
+
+  // Trocar de rota para outro grupo abre esse grupo. O ajuste acontece no
+  // render (padrao do React para estado derivado de props) para nao
+  // disparar um render extra por effect.
+  const [lastActiveGroup, setLastActiveGroup] = React.useState<string | null>(currentActiveGroup)
+  if (currentActiveGroup && currentActiveGroup !== lastActiveGroup) {
+    setLastActiveGroup(currentActiveGroup)
+    if (!openGroups.includes(currentActiveGroup)) {
+      const next = [...openGroups, currentActiveGroup]
+      setOpenGroups(next)
+      persistGroupsToStorage(next)
+    }
+  }
+
+  const toggleGroup = (id: string) => {
+    const next = openGroups.includes(id)
+      ? openGroups.filter((g) => g !== id)
+      : [...openGroups, id]
+    setOpenGroups(next)
+    persistGroupsToStorage(next)
+  }
 
   const handleLogout = async () => {
     await signOut()
@@ -194,7 +287,7 @@ export function AppLayout() {
 
         {/* Navigation Items */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
-          {navItems.map((item) => {
+          {topNavItems.map((item) => {
             const Icon = item.icon
             const isActive = location.pathname === item.path
             return (
@@ -213,6 +306,93 @@ export function AppLayout() {
               </Link>
             )
           })}
+
+          {/* Sanfonas de navegacao */}
+          <div className="pt-2 space-y-1">
+            {navGroups.map((group) => {
+              const GroupIcon = group.icon
+              const isOpen = openGroups.includes(group.id)
+              const groupHasActive = group.items.some((i) => i.path === location.pathname)
+
+              return (
+                <div key={group.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.id)}
+                    aria-expanded={isOpen}
+                    aria-controls={`nav-group-${group.id}`}
+                    className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold uppercase tracking-wide transition-all ${
+                      groupHasActive
+                        ? 'text-foreground'
+                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                    }`}
+                  >
+                    <GroupIcon className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 text-left">{group.label}</span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${
+                        isOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+
+                  {isOpen && (
+                    <div
+                      id={`nav-group-${group.id}`}
+                      className="mt-0.5 space-y-0.5 pl-3 ml-3 border-l border-sidebar-border animate-in fade-in slide-in-from-top-1 duration-150"
+                    >
+                      {group.items.map((item) => {
+                        const Icon = item.icon
+                        const isActive = location.pathname === item.path
+                        return (
+                          <Link
+                            key={item.path}
+                            to={item.path}
+                            onClick={() => setSidebarOpen(false)}
+                            aria-current={isActive ? 'page' : undefined}
+                            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                              isActive
+                                ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold'
+                                : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                            }`}
+                          >
+                            <Icon
+                              className={`h-3.5 w-3.5 shrink-0 ${
+                                isActive ? 'text-primary-foreground' : 'text-muted-foreground'
+                              }`}
+                            />
+                            <span className="truncate">{item.label}</span>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          <div className="pt-2 space-y-1">
+            {bottomNavItems.map((item) => {
+              const Icon = item.icon
+              const isActive = location.pathname === item.path
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  onClick={() => setSidebarOpen(false)}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold'
+                      : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
+                  }`}
+                >
+                  <Icon className={`h-4 w-4 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                  {item.label}
+                </Link>
+              )
+            })}
+          </div>
         </nav>
 
         {/* Store Public Catalog Link */}

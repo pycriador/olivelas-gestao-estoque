@@ -6,6 +6,7 @@ import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatDateTime } from '@/utils/dates'
+import { exportToCSV, exportToJSON } from '@/utils/export'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -14,7 +15,7 @@ import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { PageHeader } from '@/components/common/PageHeader'
-import { Shield, Eye, Search, Store as StoreIcon, User, Globe, Laptop } from 'lucide-react'
+import { Shield, Eye, Search, Store as StoreIcon, User, Globe, Laptop, FileDown, Braces, X } from 'lucide-react'
 
 export function AuditLogsPage() {
   const { storeId, hasActiveStore } = useTenant()
@@ -39,10 +40,14 @@ export function AuditLogsPage() {
     defaultFilters: {
       entity: 'ALL',
       selectedStoreId: isGlobalAdmin ? 'ALL' : storeId || 'ALL',
+      dateFrom: '',
+      dateTo: '',
     },
   })
 
   const selectedEntity = filters.entity || 'ALL'
+  const dateFrom = filters.dateFrom || ''
+  const dateTo = filters.dateTo || ''
   const filterStoreId = filters.selectedStoreId || (isGlobalAdmin ? 'ALL' : storeId)
   const [inspectLog, setInspectLog] = React.useState<AuditLog | null>(null)
 
@@ -60,11 +65,17 @@ export function AuditLogsPage() {
     : storeId
 
   const { data, isLoading } = useQuery({
-    queryKey: ['audit-logs', effectiveStoreId, { search, selectedEntity, page, pageSize, sortBy, sortOrder }],
+    queryKey: [
+      'audit-logs',
+      effectiveStoreId,
+      { search, selectedEntity, dateFrom, dateTo, page, pageSize, sortBy, sortOrder },
+    ],
     queryFn: () =>
       auditService.listAuditLogs(effectiveStoreId, {
         search: search || undefined,
         entity: selectedEntity !== 'ALL' ? selectedEntity : undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
         sortBy,
         sortOrder,
         page,
@@ -76,6 +87,62 @@ export function AuditLogsPage() {
   const logs = data?.data || []
   const totalItems = data?.total || 0
   const totalPages = Math.ceil(totalItems / pageSize) || 1
+
+  // Exporta o periodo inteiro, nao so a pagina visivel. Os mesmos filtros
+  // da tela sao reaplicados na consulta de exportacao.
+  const [isExporting, setIsExporting] = React.useState(false)
+  const [exportError, setExportError] = React.useState('')
+
+  const auditExportColumns = [
+    { header: 'Data/Hora', key: (r: AuditLog) => formatDateTime(r.created_at) },
+    { header: 'Loja', key: (r: AuditLog) => r.store_name || '-' },
+    { header: 'Usuário', key: (r: AuditLog) => r.user_name || r.user_email || 'Sistema' },
+    { header: 'Ação', key: (r: AuditLog) => r.action },
+    { header: 'Entidade', key: (r: AuditLog) => r.entity },
+    { header: 'ID da Entidade', key: (r: AuditLog) => r.entity_id || '-' },
+    {
+      header: 'Antes',
+      key: (r: AuditLog) => (r.before_data ? JSON.stringify(r.before_data) : ''),
+    },
+    {
+      header: 'Depois',
+      key: (r: AuditLog) => (r.after_data ? JSON.stringify(r.after_data) : ''),
+    },
+  ]
+
+  const handleExport = async (format: 'csv' | 'json') => {
+    setIsExporting(true)
+    setExportError('')
+    try {
+      const res = await auditService.listAuditLogs(effectiveStoreId, {
+        search: search || undefined,
+        entity: selectedEntity !== 'ALL' ? selectedEntity : undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        sortBy: 'created_at',
+        sortOrder: 'desc',
+        page: 1,
+        pageSize: 10000,
+      })
+      if (format === 'csv') {
+        exportToCSV('auditoria', res.data, auditExportColumns)
+      } else {
+        exportToJSON('auditoria', res.data, auditExportColumns)
+      }
+    } catch (e: any) {
+      setExportError(e?.message || 'Não foi possível exportar os logs.')
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
+  const hasDateFilter = Boolean(dateFrom || dateTo)
+
+  const clearDateFilter = () => {
+    setFilter('dateFrom', '')
+    setFilter('dateTo', '')
+    setPage(1)
+  }
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
@@ -101,9 +168,78 @@ export function AuditLogsPage() {
           <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
             {totalItems} {totalItems === 1 ? 'evento' : 'eventos'}
           </Badge>
+          {exportError && (
+            <span className="text-[11px] text-danger">{exportError}</span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
+          {/* Periodo */}
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="audit-date-from" className="sr-only">
+              Data inicial
+            </label>
+            <input
+              id="audit-date-from"
+              type="date"
+              value={dateFrom}
+              max={dateTo || undefined}
+              onChange={(e) => {
+                setFilter('dateFrom', e.target.value)
+                setPage(1)
+              }}
+              className="h-8 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            <span className="text-[11px] text-muted-foreground">até</span>
+            <label htmlFor="audit-date-to" className="sr-only">
+              Data final
+            </label>
+            <input
+              id="audit-date-to"
+              type="date"
+              value={dateTo}
+              min={dateFrom || undefined}
+              onChange={(e) => {
+                setFilter('dateTo', e.target.value)
+                setPage(1)
+              }}
+              className="h-8 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+            {hasDateFilter && (
+              <button
+                type="button"
+                onClick={clearDateFilter}
+                title="Limpar período"
+                className="inline-flex items-center h-8 px-2 rounded-lg text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Export */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-[11px] px-2.5"
+            disabled={isExporting || totalItems === 0}
+            onClick={() => handleExport('csv')}
+          >
+            <FileDown className="h-3.5 w-3.5" />
+            CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 text-[11px] px-2.5"
+            disabled={isExporting || totalItems === 0}
+            onClick={() => handleExport('json')}
+          >
+            <Braces className="h-3.5 w-3.5" />
+            JSON
+          </Button>
           {/* Global Admin Store Selector */}
           {isGlobalAdmin && (
             <div className="flex items-center gap-1.5">

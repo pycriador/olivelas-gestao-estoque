@@ -22,6 +22,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { GlobalAdminDashboardPage } from '@/pages/GlobalAdminDashboardPage'
 import { StoresPage } from '@/pages/StoresPage'
 import { ProductsPage } from '@/pages/ProductsPage'
+import { CategoriesPage } from '@/pages/CategoriesPage'
 import { InventoryPage } from '@/pages/InventoryPage'
 import { ExpirationPage } from '@/pages/ExpirationPage'
 import { SalesPage } from '@/pages/SalesPage'
@@ -77,6 +78,7 @@ export function AppRoutes() {
         />
         <Route path="/stores" element={<StoresPage />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/categories" element={<CategoriesPage />} />
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/expiration" element={<ExpirationPage />} />
         <Route path="/sales" element={<SalesPage />} />

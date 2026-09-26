@@ -1,17 +1,19 @@
 import * as React from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
-import { customerService } from '@/services/customerService'
 import { orderService } from '@/services/orderService'
 import { useTenant } from '@/hooks/useTenant'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatCurrency } from '@/utils/currency'
 import { parseApiError } from '@/utils/errorHandler'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
+import { CustomerCombobox } from '@/components/sales/CustomerCombobox'
 import {
   ShoppingBag,
   Plus,
@@ -25,9 +27,12 @@ import {
   Users,
   Package,
   RotateCcw,
+  AlertTriangle,
+  EyeOff,
 } from 'lucide-react'
 import type { PaymentMethod } from '@/types/database.types'
 import type { Product } from '@/types/product.types'
+import type { POSStockFilter } from '@/services/productService'
 
 interface CartLine {
   product: Product
@@ -36,11 +41,33 @@ interface CartLine {
   discount: number
 }
 
+const STOCK_VIEW_OPTIONS: { value: POSStockFilter; label: string }[] = [
+  { value: 'in', label: 'Com estoque' },
+  { value: 'all', label: 'Todos' },
+  { value: 'out', label: 'Zerados' },
+]
+
 export function SalesPage() {
   const { storeId, hasActiveStore } = useTenant()
   const queryClient = useQueryClient()
 
-  const [search, setSearch] = React.useState('')
+  const {
+    page,
+    pageSize,
+    search,
+    setPage,
+    setPageSize,
+    setSearch,
+    filters,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 24,
+    defaultFilters: { stock: 'in' },
+  })
+
+  const stockView = (filters.stock as POSStockFilter) || 'in'
+  const categoryFilter = filters.category || ''
+
   const [cart, setCart] = React.useState<CartLine[]>([])
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>('')
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('PIX')
@@ -49,33 +76,77 @@ export function SalesPage() {
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [successOrderNumber, setSuccessOrderNumber] = React.useState<string | null>(null)
 
-  // Fetch available products
-  const { data: productsData, isLoading: loadingProducts } = useQuery({
-    queryKey: ['products-pos', storeId, search],
-    queryFn: () => productService.listProducts(storeId, { search, pageSize: 50 }),
+  // Categorias: alimentam o filtro do grid do PDV.
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories', storeId],
+    queryFn: () => productService.listCategories(storeId),
     enabled: Boolean(hasActiveStore),
+    staleTime: 60 * 1000,
   })
 
-  // Fetch customers
-  const { data: customersData } = useQuery({
-    queryKey: ['customers-pos', storeId],
-    queryFn: () => customerService.listCustomers(storeId, { pageSize: 500 }),
+  // Produtos do PDV. `staleTime: 0` + `refetchOnMount` garante que cada
+  // troca de pagina valide contra o banco - o operador precisa ver o saldo
+  // real, nao um cache de 5 minutos. `keepPreviousData` evita a tela
+  // piscar enquanto a proxima pagina carrega.
+  const {
+    data: productsData,
+    isLoading: loadingProducts,
+    isFetching: fetchingProducts,
+  } = useQuery({
+    queryKey: [
+      'products-pos',
+      storeId,
+      { search, page, pageSize, stock: stockView, categoryFilter },
+    ],
+    queryFn: () =>
+      productService.listProductsForPOS(storeId, {
+        search: search || undefined,
+        categoryId: categoryFilter || undefined,
+        stock: stockView,
+        page,
+        pageSize,
+      }),
     enabled: Boolean(hasActiveStore),
+    placeholderData: keepPreviousData,
+    staleTime: 0,
+    refetchOnMount: true,
   })
 
-  const customers = customersData?.data || []
-  const products = productsData?.data || []
+  const productRows = productsData?.data
+  const products = React.useMemo(() => productRows || [], [productRows])
+  const totalProducts = productsData?.total || 0
+  const totalPages = Math.ceil(totalProducts / pageSize) || 1
+
+  // Saldos publicados pela listagem atual, para bloquear a venda de
+  // quantidade maior que o disponivel sem depender do item do carrinho.
+  const stockByProduct = React.useMemo(() => {
+    const map = new Map<string, number>()
+    for (const p of products) map.set(p.id, Number(p.stock_quantity ?? 0))
+    return map
+  }, [products])
 
   // Add to cart
   const addToCart = (product: Product) => {
+    const available = Number(product.stock_quantity ?? 0)
     const existing = cart.find((i) => i.product.id === product.id)
+
     if (existing) {
+      if (existing.quantity + 1 > available) {
+        setErrorMsg(
+          `Estoque insuficiente para "${product.name}". Disponível: ${available}.`
+        )
+        return
+      }
       setCart(
         cart.map((i) =>
           i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
         )
       )
     } else {
+      if (available < 1) {
+        setErrorMsg(`"${product.name}" está sem estoque disponível.`)
+        return
+      }
       setCart([
         ...cart,
         {
@@ -94,7 +165,17 @@ export function SalesPage() {
         .map((i) => {
           if (i.product.id === productId) {
             const newQ = i.quantity + delta
-            return newQ > 0 ? { ...i, quantity: newQ } : null
+            if (newQ <= 0) return null
+            // Teto por linha: o saldo atual do produto, ou o saldo
+            // publicado na pagina quando o item nao esta mais visivel.
+            const available = stockByProduct.get(productId) ?? Number(i.product.stock_quantity ?? 0)
+            if (newQ > available) {
+              setErrorMsg(
+                `Estoque insuficiente. Disponível para "${i.product.name}": ${available}.`
+              )
+              return i
+            }
+            return { ...i, quantity: newQ }
           }
           return i
         })
@@ -140,6 +221,9 @@ export function SalesPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['orders', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      // O grid do PDV le o saldo; sem invalidar, continuaria mostrando a
+      // quantidade antiga ate a proxima revalidacao.
+      queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
       setSuccessOrderNumber(order.order_number)
       clearCart()
     },
@@ -149,6 +233,27 @@ export function SalesPage() {
   const handleCheckout = () => {
     if (cart.length === 0) return
     setErrorMsg(null)
+
+    // Guarda de cliente: o saldo pode ter mudado desde que o item entrou
+    // no carrinho (outro PDV, recebimento, baixa). O RPC do banco tambem
+    // valida, mas chegar la deixa o operador com o carrinho intacto e
+    // apenas a mensagem de erro.
+    const shortages = cart
+      .map((line) => {
+        const available = stockByProduct.get(line.product.id) ?? Number(line.product.stock_quantity ?? 0)
+        return { name: line.product.name, requested: line.quantity, available }
+      })
+      .filter((s) => s.requested > s.available)
+
+    if (shortages.length > 0) {
+      setErrorMsg(
+        `Estoque insuficiente para: ${shortages
+          .map((s) => `${s.name} (pedido ${s.requested}, disponível ${s.available})`)
+          .join('; ')}.`
+      )
+      return
+    }
+
     setSuccessOrderNumber(null)
     saleMutation.mutate()
   }
@@ -201,21 +306,61 @@ export function SalesPage() {
         {/* Left Column: Products Grid (8 cols on desktop) */}
         <div className="lg:col-span-8 flex flex-col min-h-0 h-full overflow-hidden">
           <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
-            <CardHeader className="py-2.5 px-3 border-b border-border/60 flex flex-row items-center justify-between flex-shrink-0">
-              <div className="flex items-center gap-2">
+            <CardHeader className="py-2.5 px-3 border-b border-border/60 flex flex-col gap-2 flex-shrink-0">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-foreground">Catálogo de Produtos</span>
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
-                  {products.length} itens disponíveis
+                  {totalProducts} {totalProducts === 1 ? 'produto' : 'produtos'}
                 </Badge>
+                {fetchingProducts && !loadingProducts && (
+                  <span className="text-[10px] text-muted-foreground">validando...</span>
+                )}
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                  >
+                    Limpar busca
+                  </button>
+                )}
               </div>
-              {search && (
-                <button
-                  onClick={() => setSearch('')}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {/* Visibilidade do estoque: com estoque primeiro, o resto
+                    escondido mas acessivel pela mesma paginacao por URL. */}
+                <div className="inline-flex rounded-lg border border-border overflow-hidden">
+                  {STOCK_VIEW_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setFilter('stock', opt.value)}
+                      aria-pressed={stockView === opt.value}
+                      className={`px-2.5 h-7 text-[11px] font-medium transition-colors inline-flex items-center gap-1 ${
+                        stockView === opt.value
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-background text-muted-foreground hover:bg-muted hover:text-foreground'
+                      }`}
+                    >
+                      {opt.value === 'out' && <EyeOff className="h-3 w-3" />}
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setFilter('category', e.target.value)}
+                  aria-label="Filtrar por categoria"
+                  className="h-7 px-2 rounded-lg border border-input bg-background text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
                 >
-                  Limpar busca
-                </button>
-              )}
+                  <option value="">Todas Categorias</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </CardHeader>
 
             <CardContent className="p-2.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
@@ -238,17 +383,27 @@ export function SalesPage() {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
                   {products.map((p) => {
-                    const stock = p.stock_quantity ?? 0
+                    const stock = Number(p.stock_quantity ?? 0)
                     const inCart = cart.find((i) => i.product.id === p.id)
+                    const inCartQty = inCart?.quantity ?? 0
                     const isOutOfStock = stock <= 0
+                    // Ja atingiu o saldo disponivel: nao deixa passar.
+                    const atStockLimit = !isOutOfStock && inCartQty >= stock
 
                     return (
                       <button
                         key={p.id}
                         onClick={() => addToCart(p)}
-                        disabled={isOutOfStock}
-                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between group relative ${
+                        disabled={isOutOfStock || atStockLimit}
+                        title={
                           isOutOfStock
+                            ? 'Sem estoque disponível'
+                            : atStockLimit
+                              ? `Todo o estoque disponível (${stock}) já está no carrinho`
+                              : undefined
+                        }
+                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between group relative ${
+                          isOutOfStock || atStockLimit
                             ? 'opacity-40 cursor-not-allowed bg-muted/20 border-border/40'
                             : inCart
                             ? 'bg-primary/5 border-primary/40 shadow-xs ring-1 ring-primary/20'
@@ -257,7 +412,7 @@ export function SalesPage() {
                       >
                         {inCart && (
                           <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold font-mono">
-                            {inCart.quantity}x
+                            {inCartQty}x
                           </div>
                         )}
 
@@ -275,10 +430,15 @@ export function SalesPage() {
                             {formatCurrency(p.selling_price)}
                           </span>
                           <span
-                            className={`text-[10px] ${
-                              stock <= 3 ? 'text-amber-500 font-semibold' : 'text-muted-foreground'
+                            className={`text-[10px] inline-flex items-center gap-0.5 ${
+                              stock <= 0
+                                ? 'text-danger font-semibold'
+                                : stock <= 3
+                                  ? 'text-amber-500 font-semibold'
+                                  : 'text-muted-foreground'
                             }`}
                           >
+                            {stock <= 0 && <AlertTriangle className="h-2.5 w-2.5" />}
                             Est: {stock}
                           </span>
                         </div>
@@ -288,6 +448,18 @@ export function SalesPage() {
                 </div>
               )}
             </CardContent>
+
+            <div className="p-2 border-t border-border bg-surface flex-shrink-0">
+              <Pagination
+                currentPage={page}
+                totalPages={totalPages}
+                totalItems={totalProducts}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+                pageSizeOptions={[12, 24, 48, 96]}
+              />
+            </div>
           </Card>
         </div>
 
@@ -327,7 +499,10 @@ export function SalesPage() {
                 </div>
               ) : (
                 <div className="divide-y divide-border/40">
-                  {cart.map((item) => (
+                  {cart.map((item) => {
+                    const available = stockByProduct.get(item.product.id) ?? Number(item.product.stock_quantity ?? 0)
+                    const atLimit = item.quantity >= available
+                    return (
                     <div
                       key={item.product.id}
                       className="py-1.5 px-1 flex items-center justify-between gap-2 hover:bg-muted/30 rounded-lg transition-colors"
@@ -338,6 +513,9 @@ export function SalesPage() {
                         </div>
                         <div className="text-[11px] text-muted-foreground font-mono">
                           {formatCurrency(item.unitPrice)}
+                          {atLimit && (
+                            <span className="text-amber-500 font-semibold"> · máx {available}</span>
+                          )}
                         </div>
                       </div>
 
@@ -345,6 +523,7 @@ export function SalesPage() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.product.id, -1)}
+                          aria-label={`Diminuir ${item.product.name}`}
                           className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
                           <Minus className="h-2.5 w-2.5" />
@@ -355,13 +534,17 @@ export function SalesPage() {
                         <button
                           type="button"
                           onClick={() => updateQuantity(item.product.id, 1)}
-                          className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                          disabled={atLimit}
+                          aria-label={`Aumentar ${item.product.name}`}
+                          title={atLimit ? `Estoque disponível: ${available}` : undefined}
+                          className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                           <Plus className="h-2.5 w-2.5" />
                         </button>
                         <button
                           type="button"
                           onClick={() => removeFromCart(item.product.id)}
+                          aria-label={`Remover ${item.product.name}`}
                           className="p-1 text-muted-foreground hover:text-danger ml-0.5 cursor-pointer transition-colors"
                           title="Remover item"
                         >
@@ -369,7 +552,8 @@ export function SalesPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </CardContent>
@@ -381,18 +565,11 @@ export function SalesPage() {
                 <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
                   <Users className="h-3 w-3" /> Cliente
                 </label>
-                <select
+                <CustomerCombobox
+                  storeId={storeId}
                   value={selectedCustomerId}
-                  onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full h-7 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none cursor-pointer"
-                >
-                  <option value="">Consumidor Final (Sem cadastro)</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.document ? `(${c.document})` : ''}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setSelectedCustomerId}
+                />
               </div>
 
               {/* Payment Methods */}

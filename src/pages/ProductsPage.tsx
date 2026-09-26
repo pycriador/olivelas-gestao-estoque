@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
+import { productImageService } from '@/services/productImageService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
 import { useTablePagination } from '@/hooks/useTablePagination'
@@ -22,9 +23,11 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ProductGalleryModal } from '@/components/products/ProductGalleryModal'
 import {
   Package,
   Plus,
@@ -37,6 +40,9 @@ import {
   FileSpreadsheet,
   FileCode,
   CheckCircle2,
+  Images,
+  ImageOff,
+  ImagePlus,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 
@@ -71,6 +77,7 @@ export function ProductsPage() {
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = React.useState<Product | null>(null)
+  const [galleryProduct, setGalleryProduct] = React.useState<Product | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   // Bulk Import state
@@ -120,6 +127,12 @@ export function ProductsPage() {
     queryKey: ['categories', storeId],
     queryFn: () => productService.listCategories(storeId),
     enabled: Boolean(hasActiveStore),
+  })
+
+  const { data: editingProductImages = [] } = useQuery({
+    queryKey: ['product-images', editingProduct?.id],
+    queryFn: () => productImageService.listProductImages(editingProduct!.id),
+    enabled: Boolean(editingProduct),
   })
 
   const products = data?.data || []
@@ -424,15 +437,48 @@ export function ProductsPage() {
                 <tbody className="divide-y divide-border">
                   {products.map((p) => {
                     const isLowStock = (p.stock_quantity ?? 0) <= (p.min_stock ?? 5)
+                    const primaryImage =
+                      (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
+                    const imageCount = (p.images || []).length
                     return (
                       <tr key={p.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-2.5 px-4">
-                          <div className="font-semibold text-foreground">{p.name}</div>
-                          {p.description && (
-                            <div className="text-[11px] text-muted-foreground truncate max-w-xs">
-                              {p.description}
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setGalleryProduct(p)}
+                              title="Gerenciar imagens do produto"
+                              className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-border bg-muted/40 hover:ring-2 hover:ring-primary/50 transition-all"
+                            >
+                              {primaryImage ? (
+                                <img
+                                  src={primaryImage.public_url}
+                                  alt={p.name}
+                                  loading="lazy"
+                                  className="h-full w-full object-cover"
+                                />
+                              ) : (
+                                <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+                                  <ImageOff className="h-4 w-4" />
+                                </span>
+                              )}
+                              {imageCount > 1 && (
+                                <span className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[9px] font-bold leading-tight py-px">
+                                  +{imageCount - 1}
+                                </span>
+                              )}
+                            </button>
+                            <div className="min-w-0">
+                              <div className="font-semibold text-foreground truncate max-w-[16rem]">
+                                {p.name}
+                              </div>
+                              {p.description && (
+                                <div className="text-[11px] text-muted-foreground truncate max-w-xs">
+                                  {p.description}
+                                </div>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </td>
 
                         <td className="py-2.5 px-4 font-mono">
@@ -477,20 +523,30 @@ export function ProductsPage() {
                         </td>
 
                         <td className="py-2.5 px-4 text-right space-x-1">
-                          <button
-                            onClick={() => handleOpenEdit(p)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                            title="Editar"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setDeletingProduct(p)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
-                            title="Desativar"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <DropdownMenu
+                            triggerLabel="Ações"
+                            items={[
+                              {
+                                key: 'foto',
+                                label: 'Foto',
+                                icon: <Images className="h-3.5 w-3.5 shrink-0" />,
+                                onSelect: () => setGalleryProduct(p),
+                              },
+                              {
+                                key: 'editar',
+                                label: 'Editar',
+                                icon: <Edit2 className="h-3.5 w-3.5 shrink-0" />,
+                                onSelect: () => handleOpenEdit(p),
+                              },
+                              {
+                                key: 'deletar',
+                                label: 'Deletar',
+                                variant: 'danger',
+                                icon: <Trash2 className="h-3.5 w-3.5 shrink-0" />,
+                                onSelect: () => setDeletingProduct(p),
+                              },
+                            ]}
+                          />
                         </td>
                       </tr>
                     )
@@ -851,6 +907,36 @@ export function ProductsPage() {
               />
             </div>
 
+            {/* Imagens */}
+            <div className="sm:col-span-2 pt-3 border-t border-border">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                    <Images className="h-3.5 w-3.5 text-primary" /> Galeria de Imagens
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">
+                    {editingProduct
+                      ? `${editingProductImages.length} imagem(ns) vinculada(s)`
+                      : 'Salve o produto para habilitar a galeria de imagens'}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs shrink-0"
+                  disabled={!editingProduct}
+                  onClick={() => {
+                    if (editingProduct) {
+                      setGalleryProduct(editingProduct)
+                    }
+                  }}
+                >
+                  <ImagePlus className="h-3.5 w-3.5 mr-1.5" /> Gerenciar imagens
+                </Button>
+              </div>
+            </div>
+
             {/* Checkbox controls */}
             <div className="sm:col-span-2 pt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-border">
               <label className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 text-xs font-medium cursor-pointer transition-colors">
@@ -907,6 +993,12 @@ export function ProductsPage() {
           </div>
         </form>
       </Modal>
+
+      <ProductGalleryModal
+        isOpen={Boolean(galleryProduct)}
+        onClose={() => setGalleryProduct(null)}
+        product={galleryProduct}
+      />
 
       {/* Confirm Deactivation Modal */}
       <ConfirmModal
