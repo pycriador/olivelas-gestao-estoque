@@ -20,9 +20,9 @@
         repoBase = '/' + pathSegments[0];
       }
 
+      var routePath = l.pathname.slice(repoBase.length).replace(/^[\\/]+/, '');
       var target = l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
-        repoBase + '/?' +
-        (l.pathname.slice(repoBase.length).replace(/^[\\/]+/, '')) +
+        repoBase + '/?/' + routePath +
         (l.search ? '&' + l.search.slice(1).replace(/&/g, '~and~') : '') +
         l.hash;
 
