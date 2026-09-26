@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/common/PageHeader'
 import { Store, Save, CheckCircle2, Globe, ExternalLink, MapPin, Building, Phone } from 'lucide-react'
 
 export function SettingsPage() {
@@ -88,6 +89,16 @@ export function SettingsPage() {
 
   return (
     <div className="h-full overflow-y-auto pr-1 sm:pr-2 space-y-3 animate-in fade-in duration-150 max-w-5xl">
+      {/* Top Navbar Title */}
+      <PageHeader
+        title={t.nav.settings}
+        badge={
+          <Badge variant="outline" className="text-[10px] font-normal px-2 py-0">
+            {formData.name || 'Loja'}
+          </Badge>
+        }
+      />
+
       {/* Compact Top Header & Quick Save */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border pb-2.5 flex-shrink-0">
         <div className="flex items-center gap-2">
@@ -95,12 +106,6 @@ export function SettingsPage() {
             <Store className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-              {t.nav.settings}
-              <Badge variant="outline" className="text-[10px] font-normal px-2 py-0">
-                {formData.name || 'Loja'}
-              </Badge>
-            </h1>
             <p className="text-xs text-muted-foreground">
               Configurações cadastrais, endereço e catálogo público WhatsApp
             </p>

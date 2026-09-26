@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pagination } from '@/components/ui/pagination'
+import { PageHeader } from '@/components/common/PageHeader'
 import { Bell, CheckCheck, AlertTriangle, Search } from 'lucide-react'
 
 export function NotificationsPage() {
@@ -64,29 +65,26 @@ export function NotificationsPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
-      {/* Unified Compact Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+      {/* Top Navbar Title & Search */}
+      <PageHeader title="Notificações & Alertas">
+        <Input
+          placeholder="Buscar título ou mensagem..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
+
+      {/* Page Toolbar (Count, Read status & Action) */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-            Notificações & Alertas
-            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
-              {totalItems}
-            </Badge>
-          </h1>
-          <span className="hidden sm:inline text-xs text-muted-foreground">| Avisos de estoque, validades e pedidos</span>
+          <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
+            {totalItems} {totalItems === 1 ? 'notificação' : 'notificações'}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-full sm:w-56 relative">
-            <Input
-              placeholder="Buscar título ou mensagem..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
-
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           <select
             value={readStatusFilter}
             onChange={(e) => setFilter('readStatus', e.target.value)}
@@ -106,7 +104,7 @@ export function NotificationsPage() {
               onClick={() => markAllMutation.mutate()}
               isLoading={markAllMutation.isPending}
             >
-              <CheckCheck className="h-3.5 w-3.5 mr-1" /> Marcar Lidas
+              <CheckCheck className="h-3.5 w-3.5 mr-1" /> Marcar todas como lidas
             </Button>
           )}
         </div>

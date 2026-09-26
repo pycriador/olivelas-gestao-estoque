@@ -31,6 +31,8 @@ import { formatDate } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
 import type { Store as StoreType } from '@/types/store.types'
 
+import { PageHeader } from '@/components/common/PageHeader'
+
 export function GlobalAdminDashboardPage() {
   const queryClient = useQueryClient()
 
@@ -188,47 +190,44 @@ export function GlobalAdminDashboardPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
-      {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
-        <div className="flex items-center gap-2">
+      {/* Top Navbar Title & Search */}
+      <PageHeader
+        title="Gestão Multi-Lojas"
+        badge={
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
             <Shield className="h-3 w-3" /> Global Admin
           </div>
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-            Gestão Multi-Lojas
-          </h1>
-        </div>
+        }
+      >
+        <Input
+          placeholder="Buscar nome, slug, CNPJ..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-full sm:w-48 relative">
-            <Input
-              placeholder="Buscar nome, slug, CNPJ..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
+      {/* Page Toolbar (Status filter & Actions) */}
+      <div className="flex items-center justify-end gap-2 flex-shrink-0">
+        <select
+          value={statusFilter}
+          onChange={(e) => setFilter('status', e.target.value)}
+          aria-label="Filtrar por status"
+          className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+        >
+          <option value="ALL">Todos os Status</option>
+          <option value="ACTIVE">Apenas Ativas</option>
+          <option value="INACTIVE">Inativas</option>
+        </select>
 
-          <select
-            value={statusFilter}
-            onChange={(e) => setFilter('status', e.target.value)}
-            aria-label="Filtrar por status"
-            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-          >
-            <option value="ALL">Todos os Status</option>
-            <option value="ACTIVE">Apenas Ativas</option>
-            <option value="INACTIVE">Inativas</option>
-          </select>
-
-          <Button
-            size="sm"
-            onClick={handleOpenCreate}
-            className="h-8 text-xs px-2.5 shadow-xs font-semibold"
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" /> Nova Loja (Tenant)
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={handleOpenCreate}
+          className="h-8 text-xs px-2.5 shadow-xs font-semibold"
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" /> Nova Loja (Tenant)
+        </Button>
       </div>
 
       {/* Global Compact Metrics Cards */}

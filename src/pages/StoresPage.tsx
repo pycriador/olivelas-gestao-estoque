@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/common/PageHeader'
 import { Store, Plus, ExternalLink, Check } from 'lucide-react'
 import { parseApiError } from '@/utils/errorHandler'
 
@@ -63,19 +64,19 @@ export function StoresPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-4 animate-in fade-in duration-150">
+      {/* Top Navbar Title */}
+      <PageHeader title="Lojas & Filiais" />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Lojas & Filiais
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             Gerencie e alterne entre as lojas vinculadas à sua conta
           </p>
         </div>
 
-        <Button onClick={() => setIsModalOpen(true)} className="shadow-md">
-          <Plus className="h-4 w-4 mr-1.5" /> Adicionar Nova Loja
+        <Button onClick={() => setIsModalOpen(true)} size="sm" className="h-8 text-xs font-semibold">
+          <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar Nova Loja
         </Button>
       </div>
 

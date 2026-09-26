@@ -18,6 +18,8 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { Users, Plus, Search, Download, Trash2, Edit2, Phone, Mail } from 'lucide-react'
 import type { Customer } from '@/types/customer.types'
 
+import { PageHeader } from '@/components/common/PageHeader'
+
 export function CustomersPage() {
   const { storeId, hasActiveStore } = useTenant()
   const { t } = useI18n()
@@ -158,29 +160,26 @@ export function CustomersPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
-      {/* Unified Compact Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+      {/* Top Navbar Title & Search */}
+      <PageHeader title="Gestão de Clientes">
+        <Input
+          placeholder="Buscar nome, CPF, e-mail..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
+
+      {/* Page Toolbar (Count, Filters & Actions) */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-            Gestão de Clientes
-            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
-              {totalItems} {totalItems === 1 ? 'cliente' : 'clientes'}
-            </Badge>
-          </h1>
-          <span className="hidden sm:inline text-xs text-muted-foreground">| Cadastro e contatos da loja</span>
+          <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
+            {totalItems} {totalItems === 1 ? 'cliente' : 'clientes'}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-full sm:w-56 relative">
-            <Input
-              placeholder="Buscar nome, CPF, e-mail..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
-
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           <select
             value={statusFilter}
             onChange={(e) => setFilter('status', e.target.value)}

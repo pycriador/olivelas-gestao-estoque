@@ -16,6 +16,7 @@ import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { PageHeader } from '@/components/common/PageHeader'
 import {
   ShoppingCart,
   Search,
@@ -146,29 +147,26 @@ export function OrdersPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
-      {/* Unified Compact Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+      {/* Top Navbar Title & Search */}
+      <PageHeader title={t.orders.title}>
+        <Input
+          placeholder="Buscar pedido ou cliente..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
+
+      {/* Page Toolbar (Count, Filters & Actions) */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-            {t.orders.title}
-            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
-              {totalItems} {totalItems === 1 ? 'pedido' : 'pedidos'}
-            </Badge>
-          </h1>
-          <span className="hidden sm:inline text-xs text-muted-foreground">| {t.orders.subtitle}</span>
+          <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
+            {totalItems} {totalItems === 1 ? 'pedido' : 'pedidos'}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-full sm:w-52 relative">
-            <Input
-              placeholder="Buscar pedido ou cliente..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
-
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           <select
             value={selectedStatus}
             onChange={(e) => setFilter('status', e.target.value)}

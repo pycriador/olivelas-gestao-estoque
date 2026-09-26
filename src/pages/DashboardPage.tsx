@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { PageHeader } from '@/components/common/PageHeader'
 
 export function DashboardPage() {
   const { storeId, storeName, hasActiveStore } = useTenant()
@@ -121,27 +122,27 @@ export function DashboardPage() {
   ]
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-150">
+    <div className="space-y-4 animate-in fade-in duration-150">
+      {/* Top Navbar Title */}
+      <PageHeader title="Painel da Loja" />
+
       {/* Top Banner & Quick Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Painel da Loja
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             Visão geral em tempo real de <span className="font-semibold text-foreground">{storeName}</span>
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Link to="/sales">
-            <Button variant="default" size="sm" className="shadow-md shadow-primary/20">
-              <ShoppingBag className="h-4 w-4 mr-1.5" /> Nova Venda (PDV)
+            <Button variant="default" size="sm" className="h-8 text-xs shadow-md shadow-primary/20">
+              <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Nova Venda (PDV)
             </Button>
           </Link>
           <Link to="/products">
-            <Button variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-1.5" /> Novo Produto
+            <Button variant="outline" size="sm" className="h-8 text-xs">
+              <Plus className="h-3.5 w-3.5 mr-1" /> Novo Produto
             </Button>
           </Link>
         </div>

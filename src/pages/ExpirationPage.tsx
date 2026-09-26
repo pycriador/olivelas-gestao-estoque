@@ -12,6 +12,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { PageHeader } from '@/components/common/PageHeader'
 import {
   Clock,
   AlertTriangle,
@@ -118,29 +119,26 @@ export function ExpirationPage() {
 
   return (
     <div className="h-full flex flex-col space-y-2.5 animate-in fade-in duration-150 min-h-0">
-      {/* Unified Compact Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+      {/* Top Navbar Title & Search */}
+      <PageHeader title="Lotes & Validades">
+        <Input
+          placeholder="Buscar lote ou produto..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
+
+      {/* Page Toolbar (Count & Export) */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-            Lotes & Validades
-            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
-              {totalBatches} {totalBatches === 1 ? 'lote' : 'lotes'}
-            </Badge>
-          </h1>
-          <span className="hidden sm:inline text-xs text-muted-foreground">| Prevenção de perdas e perecíveis</span>
+          <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
+            {totalBatches} {totalBatches === 1 ? 'lote' : 'lotes'}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-full sm:w-56 relative">
-            <Input
-              placeholder="Buscar lote ou produto..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
-
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           <Button
             variant="outline"
             size="sm"

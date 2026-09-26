@@ -16,6 +16,7 @@ import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { PageHeader } from '@/components/common/PageHeader'
 import {
   Layers,
   Plus,
@@ -158,54 +159,50 @@ export function InventoryPage() {
 
   return (
     <div className="h-full flex flex-col space-y-2.5 animate-in fade-in duration-150 min-h-0">
-      {/* Unified Compact Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
-            {t.inventory.title}
-          </h1>
-          {/* Tab Selector Pills */}
-          <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
-            <button
-              onClick={() => {
-                setFilter('tab', 'balances')
-                setPage(1)
-              }}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'balances'
-                  ? 'bg-card text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Layers className="h-3.5 w-3.5 inline mr-1" /> Saldos ({totalBalances})
-            </button>
-            <button
-              onClick={() => {
-                setFilter('tab', 'movements')
-                setPage(1)
-              }}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
-                activeTab === 'movements'
-                  ? 'bg-card text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <History className="h-3.5 w-3.5 inline mr-1" /> Movimentos ({totalMovements})
-            </button>
-          </div>
+      {/* Top Navbar Title & Search */}
+      <PageHeader title={t.inventory.title}>
+        <Input
+          placeholder={activeTab === 'balances' ? 'Buscar produto ou SKU...' : 'Buscar em observações...'}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
+
+      {/* Page Toolbar (Tabs, Filters & Actions) */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
+        {/* Tab Selector Pills */}
+        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
+          <button
+            onClick={() => {
+              setFilter('tab', 'balances')
+              setPage(1)
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+              activeTab === 'balances'
+                ? 'bg-card text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Layers className="h-3.5 w-3.5 inline mr-1" /> Saldos ({totalBalances})
+          </button>
+          <button
+            onClick={() => {
+              setFilter('tab', 'movements')
+              setPage(1)
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+              activeTab === 'movements'
+                ? 'bg-card text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <History className="h-3.5 w-3.5 inline mr-1" /> Movimentos ({totalMovements})
+          </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="w-full sm:w-56 relative">
-            <Input
-              placeholder={activeTab === 'balances' ? 'Buscar produto ou SKU...' : 'Buscar em observações...'}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
-
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           {activeTab === 'movements' && (
             <select
               value={movementTypeFilter}

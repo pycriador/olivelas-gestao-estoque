@@ -12,6 +12,7 @@ import { formatDate, formatDateTime } from '@/utils/dates'
 import { exportToCSV, printFormattedDocument } from '@/utils/export'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { PageHeader } from '@/components/common/PageHeader'
 import {
   TrendingUp,
   Download,
@@ -134,19 +135,19 @@ export function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-4 animate-in fade-in duration-150">
+      {/* Top Navbar Title */}
+      <PageHeader title={t.nav.reports} />
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            {t.nav.reports}
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             Demonstrativos de desempenho, curvas de estoque e exportação de dados
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={handlePrintSummary}>
-          <Printer className="h-4 w-4 mr-1.5" /> Imprimir Demonstrativo
+        <Button variant="outline" size="sm" onClick={handlePrintSummary} className="h-8 text-xs">
+          <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir Demonstrativo
         </Button>
       </div>
 

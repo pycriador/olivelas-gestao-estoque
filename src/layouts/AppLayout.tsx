@@ -234,26 +234,18 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 sm:px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+        <header className="h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 sm:px-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
+              className="md:hidden p-1.5 rounded-lg text-muted-foreground hover:bg-muted shrink-0"
+              aria-label="Abrir menu lateral"
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            {/* Quick Search Button triggering Command+K */}
-            <button
-              onClick={() => {
-                const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
-                window.dispatchEvent(event)
-              }}
-              className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-background border border-border text-xs text-muted-foreground hover:border-primary/40 transition-colors w-56"
-            >
-              <Search className="h-3.5 w-3.5" />
-              <span>Buscar... (Ctrl + K)</span>
-            </button>
+            {/* Dedicated Page Header Slot (Title + Page Search) */}
+            <div id="page-header-slot" className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0" />
           </div>
 
           {/* Right Header Utilities */}

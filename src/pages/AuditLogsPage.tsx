@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
+import { PageHeader } from '@/components/common/PageHeader'
 import { Shield, Eye, Search, Store as StoreIcon, User, Globe, Laptop } from 'lucide-react'
 
 export function AuditLogsPage() {
@@ -78,22 +79,31 @@ export function AuditLogsPage() {
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
-      {/* Unified Compact Header & Toolbar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+      {/* Top Navbar Title & Search */}
+      <PageHeader
+        title="Logs de Auditoria"
+        badge={
+          <Shield className="h-3.5 w-3.5 text-primary" />
+        }
+      >
+        <Input
+          placeholder="Buscar por ação, entidade..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
+
+      {/* Page Toolbar (Count, Store selector & Entity filter) */}
+      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-            <Shield className="h-4 w-4 text-primary" />
-            Logs de Auditoria
-            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
-              {totalItems} {totalItems === 1 ? 'evento' : 'eventos'}
-            </Badge>
-          </h1>
-          <span className="hidden sm:inline text-xs text-muted-foreground">
-            | {isGlobalAdmin ? 'Registro de todas as atividades do ecossistema' : 'Trilha de conformidade da loja'}
-          </span>
+          <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
+            {totalItems} {totalItems === 1 ? 'evento' : 'eventos'}
+          </Badge>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           {/* Global Admin Store Selector */}
           {isGlobalAdmin && (
             <div className="flex items-center gap-1.5">
@@ -116,16 +126,6 @@ export function AuditLogsPage() {
               </select>
             </div>
           )}
-
-          <div className="w-full sm:w-48 relative">
-            <Input
-              placeholder="Buscar por ação ou ID..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-8 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
 
           <select
             value={selectedEntity}

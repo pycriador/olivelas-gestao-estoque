@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { PageHeader } from '@/components/common/PageHeader'
 import {
   ShoppingBag,
   Plus,
@@ -144,17 +145,17 @@ export function SalesPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Frente de Caixa (PDV)
-          </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Lançamento rápido de vendas com baixa automática de estoque
-          </p>
-        </div>
-      </div>
+    <div className="space-y-4 animate-in fade-in duration-150">
+      {/* Top Navbar Title & Search */}
+      <PageHeader title="Frente de Caixa (PDV)">
+        <Input
+          placeholder="Buscar produto por nome, SKU..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
+      </PageHeader>
 
       {successOrderNumber && (
         <div className="p-4 rounded-2xl bg-success/15 border border-success/30 flex items-center justify-between animate-in zoom-in-95">
