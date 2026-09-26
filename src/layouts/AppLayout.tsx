@@ -1,5 +1,7 @@
 import * as React from 'react'
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { storeService } from '@/services/storeService'
 import {
   LayoutDashboard,
   Package,
@@ -7,6 +9,7 @@ import {
   ShoppingBag,
   ShoppingCart,
   Users,
+  UserCheck,
   Truck,
   FileText,
   Bell,
@@ -44,6 +47,24 @@ export function AppLayout() {
   // Realtime updates for stock, orders, and notifications
   useRealtimeSubscriptions(storeId)
 
+  // Fetch all stores for Global Admin switcher
+  const { data: allStores = [] } = useQuery({
+    queryKey: ['all-stores-switcher'],
+    queryFn: () => storeService.listAllStores(),
+    enabled: Boolean(isGlobalAdmin),
+  })
+
+  const availableStoresToSwitch = isGlobalAdmin
+    ? allStores.map((st) => ({
+        id: st.id,
+        storeId: st.id,
+        storeName: st.name,
+        storeSlug: st.slug,
+        role: 'STORE_ADMIN' as const,
+        isActive: st.is_active,
+      }))
+    : userStores
+
   const navItems = [
     { label: t.nav.dashboard, path: '/dashboard', icon: LayoutDashboard },
     ...(isGlobalAdmin ? [{ label: t.nav.globalAdmin, path: '/global-admin', icon: Shield }] : []),
@@ -55,6 +76,7 @@ export function AppLayout() {
     { label: t.nav.customers, path: '/customers', icon: Users },
     { label: t.nav.suppliers, path: '/suppliers', icon: Truck },
     { label: t.nav.purchases, path: '/purchases', icon: FileText },
+    { label: 'Equipe', path: '/team', icon: UserCheck },
     { label: t.nav.reports, path: '/reports', icon: FileText },
     { label: t.nav.notifications, path: '/notifications', icon: Bell },
     { label: t.nav.audit, path: '/audit', icon: Shield },
@@ -135,25 +157,27 @@ export function AppLayout() {
           {storeMenuOpen && (
             <div className="absolute top-full left-3 right-3 mt-1 bg-surface border border-border rounded-xl shadow-xl z-50 p-1.5 space-y-1 animate-in fade-in zoom-in-95 duration-150">
               <div className="text-[10px] font-semibold text-muted-foreground px-2 py-1 uppercase">
-                Suas Lojas ({userStores.length})
+                {isGlobalAdmin ? `Todas as Lojas (${availableStoresToSwitch.length})` : `Suas Lojas (${availableStoresToSwitch.length})`}
               </div>
-              {userStores.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    setActiveStore(s)
-                    setStoreMenuOpen(false)
-                  }}
-                  className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors text-left ${
-                    s.storeId === storeId
-                      ? 'bg-primary text-primary-foreground font-medium'
-                      : 'hover:bg-muted text-foreground'
-                  }`}
-                >
-                  <span className="truncate">{s.storeName}</span>
-                  <span className="text-[10px] opacity-75">{s.role}</span>
-                </button>
-              ))}
+              <div className="max-h-60 overflow-y-auto space-y-1 custom-scrollbar">
+                {availableStoresToSwitch.map((s) => (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      setActiveStore(s)
+                      setStoreMenuOpen(false)
+                    }}
+                    className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors text-left cursor-pointer ${
+                      s.storeId === storeId
+                        ? 'bg-primary text-primary-foreground font-medium'
+                        : 'hover:bg-muted text-foreground'
+                    }`}
+                  >
+                    <span className="truncate font-semibold">{s.storeName}</span>
+                    <span className="text-[10px] opacity-75 shrink-0 ml-1">{s.role}</span>
+                  </button>
+                ))}
+              </div>
 
               {isGlobalAdmin && (
                 <Link
