@@ -4,6 +4,7 @@ import { inventoryService } from '@/services/inventoryService'
 import { productService } from '@/services/productService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatDateTime } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
 import { exportToCSV } from '@/utils/export'
@@ -12,6 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import {
   Layers,
@@ -21,7 +24,8 @@ import {
   Search,
   Download,
   AlertTriangle,
-  History
+  History,
+  Filter
 } from 'lucide-react'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -30,27 +34,69 @@ export function InventoryPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
-  const [activeTab, setActiveTab] = React.useState<'balances' | 'movements'>('balances')
-  const [search, setSearch] = React.useState('')
+  // Sincronização via URL
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPage: 1,
+    defaultPageSize: 10,
+    defaultSortBy: 'quantity',
+    defaultSortOrder: 'asc',
+    defaultFilters: {
+      tab: 'balances',
+      movementType: 'ALL',
+    },
+  })
+
+  const activeTab = (filters.tab as 'balances' | 'movements') || 'balances'
+  const movementTypeFilter = filters.movementType || 'ALL'
+
   const [isMovementModalOpen, setIsMovementModalOpen] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
-  // Form
+  // Form states
   const [productId, setProductId] = React.useState('')
   const [movementType, setMovementType] = React.useState<StockMovementType>('ENTRY')
   const [quantity, setQuantity] = React.useState<number>(1)
   const [notes, setNotes] = React.useState('')
 
-  const { data: balances = [], isLoading: loadingBalances } = useQuery({
-    queryKey: ['stock-balances', storeId],
-    queryFn: () => inventoryService.getStockBalances(storeId),
-    enabled: Boolean(hasActiveStore),
+  // Query Balances
+  const { data: balancesData, isLoading: loadingBalances } = useQuery({
+    queryKey: ['stock-balances', storeId, page, pageSize, search, sortBy, sortOrder],
+    queryFn: () =>
+      inventoryService.getStockBalances(storeId, {
+        page,
+        pageSize,
+        search: search || undefined,
+        sortBy,
+        sortOrder,
+      }),
+    enabled: Boolean(hasActiveStore && activeTab === 'balances'),
   })
 
-  const { data: movements = [], isLoading: loadingMovements } = useQuery({
-    queryKey: ['stock-movements', storeId],
-    queryFn: () => inventoryService.getMovements(storeId, 100),
-    enabled: Boolean(hasActiveStore),
+  // Query Movements
+  const { data: movementsData, isLoading: loadingMovements } = useQuery({
+    queryKey: ['stock-movements', storeId, page, pageSize, search, movementTypeFilter, sortBy, sortOrder],
+    queryFn: () =>
+      inventoryService.getMovements(storeId, {
+        page,
+        pageSize,
+        search: search || undefined,
+        movementType: movementTypeFilter !== 'ALL' ? movementTypeFilter : undefined,
+        sortBy: sortBy === 'quantity' ? 'quantity' : 'created_at',
+        sortOrder,
+      }),
+    enabled: Boolean(hasActiveStore && activeTab === 'movements'),
   })
 
   const { data: productsData } = useQuery({
@@ -60,6 +106,13 @@ export function InventoryPage() {
   })
 
   const productList = productsData?.data || []
+  const balances = balancesData?.data || []
+  const totalBalances = balancesData?.total || 0
+  const totalBalancesPages = Math.ceil(totalBalances / pageSize) || 1
+
+  const movements = movementsData?.data || []
+  const totalMovements = movementsData?.total || 0
+  const totalMovementsPages = Math.ceil(totalMovements / pageSize) || 1
 
   const movementMutation = useMutation({
     mutationFn: () =>
@@ -82,31 +135,31 @@ export function InventoryPage() {
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
 
-  const filteredBalances = balances.filter(
-    (b) =>
-      b.product_name?.toLowerCase().includes(search.toLowerCase()) ||
-      b.product_sku?.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const handleExportBalances = () => {
-    if (balances.length === 0) return
-    exportToCSV(
-      'saldos_estoque',
-      balances,
-      [
-        { header: 'Produto', key: (r) => r.product_name || '-' },
-        { header: 'SKU', key: (r) => r.product_sku || '-' },
-        { header: 'Saldo Físico', key: 'quantity' },
-        { header: 'Reservado', key: 'reserved_quantity' },
-        { header: 'Disponível', key: 'available_quantity' },
-        { header: 'Estoque Mínimo', key: (r) => r.min_stock ?? 0 },
-      ]
-    )
+  const handleExportBalances = async () => {
+    try {
+      const allBalances = await inventoryService.getStockBalances(storeId, { pageSize: 1000 })
+      if (!allBalances.data || allBalances.data.length === 0) return
+      exportToCSV(
+        'saldos_estoque',
+        allBalances.data,
+        [
+          { header: 'Produto', key: (r) => r.product_name || '-' },
+          { header: 'SKU', key: (r) => r.product_sku || '-' },
+          { header: 'Saldo Físico', key: 'quantity' },
+          { header: 'Reservado', key: 'reserved_quantity' },
+          { header: 'Disponível', key: 'available_quantity' },
+          { header: 'Estoque Mínimo', key: (r) => r.min_stock ?? 0 },
+        ]
+      )
+    } catch (e) {
+      console.error('Export error:', e)
+    }
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-150 min-h-0">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             {t.inventory.title}
@@ -127,9 +180,12 @@ export function InventoryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2">
+      <div className="flex items-center gap-2 border-b border-border pb-2 flex-shrink-0">
         <button
-          onClick={() => setActiveTab('balances')}
+          onClick={() => {
+            setFilter('tab', 'balances')
+            setPage(1)
+          }}
           className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'balances'
               ? 'bg-primary text-primary-foreground shadow-sm'
@@ -139,7 +195,10 @@ export function InventoryPage() {
           <Layers className="h-4 w-4 inline mr-1.5" /> Saldos Atuais por Produto
         </button>
         <button
-          onClick={() => setActiveTab('movements')}
+          onClick={() => {
+            setFilter('tab', 'movements')
+            setPage(1)
+          }}
           className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
             activeTab === 'movements'
               ? 'bg-primary text-primary-foreground shadow-sm'
@@ -152,43 +211,67 @@ export function InventoryPage() {
 
       {/* Balances View */}
       {activeTab === 'balances' && (
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-sm bg-card">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 flex-shrink-0">
             <CardTitle className="text-base font-bold">Posição de Estoque</CardTitle>
-            <div className="w-full sm:w-64">
+            <div className="w-full sm:w-72">
               <Input
                 placeholder="Filtrar por produto ou SKU..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 icon={<Search className="h-4 w-4" />}
+                className="h-9 text-xs"
               />
             </div>
           </CardHeader>
-          <CardContent className="p-0">
+
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
             {loadingBalances ? (
               <div className="p-6">
                 <LoadingSkeleton count={6} className="h-10" />
               </div>
-            ) : filteredBalances.length === 0 ? (
-              <div className="p-8 text-center text-xs text-muted-foreground">
+            ) : balances.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-muted-foreground">
+                <Layers className="h-8 w-8 text-muted-foreground/50 mb-2" />
                 Nenhum saldo encontrado para os filtros informados.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="flex-1 min-h-0 overflow-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+                  <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
                     <tr>
                       <th className="py-3 px-4">Produto</th>
                       <th className="py-3 px-4">SKU</th>
-                      <th className="py-3 px-4 text-center">Físico</th>
-                      <th className="py-3 px-4 text-center">Reservado</th>
-                      <th className="py-3 px-4 text-center">Disponível</th>
+                      <SortableHeader
+                        column="quantity"
+                        label="Físico"
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={toggleSort}
+                        align="center"
+                      />
+                      <SortableHeader
+                        column="reserved_quantity"
+                        label="Reservado"
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={toggleSort}
+                        align="center"
+                      />
+                      <SortableHeader
+                        column="available_quantity"
+                        label="Disponível"
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={toggleSort}
+                        align="center"
+                      />
                       <th className="py-3 px-4 text-center">Mínimo</th>
                       <th className="py-3 px-4 text-center">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {filteredBalances.map((b) => {
+                    {balances.map((b) => {
                       const isLow = b.quantity <= (b.min_stock || 0)
                       return (
                         <tr key={b.id} className="hover:bg-muted/30 transition-colors">
@@ -196,7 +279,7 @@ export function InventoryPage() {
                             {b.product_name}
                           </td>
                           <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
-                            {b.product_sku}
+                            {b.product_sku || '-'}
                           </td>
                           <td className="py-3 px-4 text-center font-bold font-mono">
                             {b.quantity}
@@ -226,34 +309,93 @@ export function InventoryPage() {
                 </table>
               </div>
             )}
+
+            {/* Pinned Pagination */}
+            <div className="border-t border-border bg-card/80 flex-shrink-0">
+              <Pagination
+                currentPage={page}
+                totalPages={totalBalancesPages}
+                totalItems={totalBalances}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Movements View */}
       {activeTab === 'movements' && (
-        <Card>
-          <CardHeader>
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-sm bg-card">
+          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 flex-shrink-0">
             <CardTitle className="text-base font-bold">Trilha de Movimentos de Estoque</CardTitle>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="w-full sm:w-56">
+                <Input
+                  placeholder="Buscar em observações..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  icon={<Search className="h-4 w-4" />}
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
+                <select
+                  value={movementTypeFilter}
+                  onChange={(e) => {
+                    setFilter('movementType', e.target.value)
+                    setPage(1)
+                  }}
+                  aria-label="Filtrar por tipo de movimentação"
+                  className="h-9 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="ALL">Todos os Tipos</option>
+                  <option value="ENTRY">Entrada</option>
+                  <option value="EXIT">Saída</option>
+                  <option value="ADJUSTMENT">Ajuste</option>
+                  <option value="LOSS">Perda</option>
+                  <option value="DAMAGE">Avaria</option>
+                  <option value="EXPIRATION">Vencimento</option>
+                  <option value="RETURN">Devolução</option>
+                </select>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="p-0">
+
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
             {loadingMovements ? (
               <div className="p-6">
                 <LoadingSkeleton count={6} className="h-10" />
               </div>
             ) : movements.length === 0 ? (
-              <div className="p-8 text-center text-xs text-muted-foreground">
-                Nenhuma movimentação registrada até o momento.
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-muted-foreground">
+                <History className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                Nenhuma movimentação registrada para os filtros aplicados.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="flex-1 min-h-0 overflow-auto">
                 <table className="w-full text-xs text-left">
-                  <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+                  <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
                     <tr>
-                      <th className="py-3 px-4">Data / Hora</th>
+                      <SortableHeader
+                        column="created_at"
+                        label="Data / Hora"
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={toggleSort}
+                      />
                       <th className="py-3 px-4">Produto</th>
                       <th className="py-3 px-4">Tipo de Movimento</th>
-                      <th className="py-3 px-4 text-center">Qtd</th>
+                      <SortableHeader
+                        column="quantity"
+                        label="Qtd"
+                        currentSortBy={sortBy}
+                        currentSortOrder={sortOrder}
+                        onSort={toggleSort}
+                        align="center"
+                      />
                       <th className="py-3 px-4 text-center">Antes &rarr; Depois</th>
                       <th className="py-3 px-4">Usuário / Origem</th>
                       <th className="py-3 px-4">Observações</th>
@@ -304,6 +446,18 @@ export function InventoryPage() {
                 </table>
               </div>
             )}
+
+            {/* Pinned Pagination */}
+            <div className="border-t border-border bg-card/80 flex-shrink-0">
+              <Pagination
+                currentPage={page}
+                totalPages={totalMovementsPages}
+                totalItems={totalMovements}
+                pageSize={pageSize}
+                onPageChange={setPage}
+                onPageSizeChange={setPageSize}
+              />
+            </div>
           </CardContent>
         </Card>
       )}

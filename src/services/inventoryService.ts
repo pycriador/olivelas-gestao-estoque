@@ -1,10 +1,48 @@
 import { supabase } from '@/lib/supabase/client'
+import { checkExpirationStatus } from '@/utils/dates'
 import type { StockBalance, StockMovement, StockBatch } from '@/types/inventory.types'
 import type { StockMovementType } from '@/types/database.types'
 
+export interface StockBalanceListParams {
+  search?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
+export interface StockMovementListParams {
+  search?: string
+  movementType?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
+export interface StockBatchListParams {
+  search?: string
+  status?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
 export const inventoryService = {
-  async getStockBalances(storeId: string): Promise<StockBalance[]> {
-    const { data, error } = await supabase
+  async getStockBalances(
+    storeId: string,
+    params: StockBalanceListParams = {}
+  ): Promise<{ data: StockBalance[]; total: number }> {
+    const {
+      search,
+      sortBy = 'quantity',
+      sortOrder = 'asc',
+      page = 1,
+      pageSize = 20,
+    } = params
+
+    let query = supabase
       .from('stock_balances')
       .select(`
         id,
@@ -20,13 +58,23 @@ export const inventoryService = {
           min_stock,
           unit
         )
-      `)
+      `, { count: 'exact' })
       .eq('store_id', storeId)
-      .order('quantity', { ascending: true })
+
+    const orderCol = ['quantity', 'reserved_quantity', 'available_quantity', 'updated_at'].includes(sortBy)
+      ? sortBy
+      : 'quantity'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderCol, { ascending: sortOrder === 'asc' })
+      .range(from, to)
 
     if (error) throw error
 
-    return (data || []).map((item: any) => ({
+    let list = (data || []).map((item: any) => ({
       id: item.id,
       store_id: item.store_id,
       product_id: item.product_id,
@@ -38,23 +86,66 @@ export const inventoryService = {
       product_sku: item.products?.sku || '',
       min_stock: item.products?.min_stock || 0,
     }))
+
+    if (search) {
+      const q = search.toLowerCase()
+      list = list.filter(
+        (b) =>
+          b.product_name.toLowerCase().includes(q) ||
+          b.product_sku.toLowerCase().includes(q)
+      )
+    }
+
+    return {
+      data: list,
+      total: count || list.length,
+    }
   },
 
-  async getMovements(storeId: string, limit: number = 50): Promise<StockMovement[]> {
-    const { data, error } = await supabase
+  async getMovements(
+    storeId: string,
+    params: StockMovementListParams = {}
+  ): Promise<{ data: StockMovement[]; total: number }> {
+    const {
+      search,
+      movementType,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
+      page = 1,
+      pageSize = 20,
+    } = params
+
+    let query = supabase
       .from('stock_movements')
       .select(`
         *,
         products ( name ),
         profiles ( full_name )
-      `)
+      `, { count: 'exact' })
       .eq('store_id', storeId)
-      .order('created_at', { ascending: false })
-      .limit(limit)
+
+    if (movementType && movementType !== 'ALL') {
+      query = query.eq('movement_type', movementType)
+    }
+
+    if (search) {
+      query = query.ilike('notes', `%${search}%`)
+    }
+
+    const orderCol = ['created_at', 'quantity', 'movement_type'].includes(sortBy)
+      ? sortBy
+      : 'created_at'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderCol, { ascending: sortOrder === 'asc' })
+      .range(from, to)
 
     if (error) throw error
 
-    return (data || []).map((item: any) => ({
+    const list = (data || []).map((item: any) => ({
       id: item.id,
       store_id: item.store_id,
       product_id: item.product_id,
@@ -72,21 +163,43 @@ export const inventoryService = {
       product_name: item.products?.name || 'Produto',
       user_name: item.profiles?.full_name || 'Sistema',
     }))
+
+    return {
+      data: list,
+      total: count || 0,
+    }
   },
 
-  async getBatches(storeId: string): Promise<StockBatch[]> {
-    const { data, error } = await supabase
+  async getBatches(
+    storeId: string,
+    params: StockBatchListParams = {}
+  ): Promise<{
+    data: (StockBatch & { expirationInfo: ReturnType<typeof import('@/utils/dates').checkExpirationStatus> })[]
+    total: number
+    summary: { total: number; expired: number; critical7d: number; warning30d: number; normal: number }
+  }> {
+    const {
+      search,
+      status,
+      sortBy = 'expiration_date',
+      sortOrder = 'asc',
+      page = 1,
+      pageSize = 20,
+    } = params
+
+    // Fetch all store batches to calculate accurate summary KPIs
+    const { data: allData, error: allErr } = await supabase
       .from('stock_batches')
       .select(`
         *,
         products ( name )
       `)
       .eq('store_id', storeId)
-      .order('expiration_date', { ascending: true })
+      .order(sortBy, { ascending: sortOrder === 'asc' })
 
-    if (error) throw error
+    if (allErr) throw allErr
 
-    return (data || []).map((item: any) => ({
+    const mapped = (allData || []).map((item: any) => ({
       id: item.id,
       store_id: item.store_id,
       product_id: item.product_id,
@@ -98,7 +211,44 @@ export const inventoryService = {
       status: item.status,
       created_at: item.created_at,
       product_name: item.products?.name || 'Produto',
+      expirationInfo: checkExpirationStatus(item.expiration_date),
     }))
+
+    const summary = {
+      total: mapped.length,
+      expired: mapped.filter((b) => b.expirationInfo.status === 'expired').length,
+      critical7d: mapped.filter((b) => b.expirationInfo.status === 'critical_7_days').length,
+      warning30d: mapped.filter((b) => b.expirationInfo.status === 'warning_30_days').length,
+      normal: mapped.filter((b) => b.expirationInfo.status === 'normal').length,
+    }
+
+    let filtered = mapped
+
+    if (status && status !== 'ALL') {
+      if (status === 'EXPIRED') filtered = filtered.filter((b) => b.expirationInfo.status === 'expired')
+      else if (status === '7D') filtered = filtered.filter((b) => b.expirationInfo.status === 'critical_7_days')
+      else if (status === '30D') filtered = filtered.filter((b) => b.expirationInfo.status === 'warning_30_days')
+      else if (status === 'NORMAL') filtered = filtered.filter((b) => b.expirationInfo.status === 'normal')
+    }
+
+    if (search) {
+      const q = search.toLowerCase()
+      filtered = filtered.filter(
+        (b) =>
+          b.lot_number.toLowerCase().includes(q) ||
+          b.product_name.toLowerCase().includes(q)
+      )
+    }
+
+    const total = filtered.length
+    const from = (page - 1) * pageSize
+    const paginatedData = filtered.slice(from, from + pageSize)
+
+    return {
+      data: paginatedData,
+      total,
+      summary,
+    }
   },
 
   async createManualMovement(params: {

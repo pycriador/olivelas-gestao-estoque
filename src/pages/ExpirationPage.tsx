@@ -2,32 +2,80 @@ import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryService } from '@/services/inventoryService'
 import { useTenant } from '@/hooks/useTenant'
-import { formatDate, checkExpirationStatus } from '@/utils/dates'
+import { useTablePagination } from '@/hooks/useTablePagination'
+import { formatDate } from '@/utils/dates'
 import { exportToCSV } from '@/utils/export'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import {
-  Calendar,
   Clock,
   AlertTriangle,
   PackageX,
   CheckCircle,
   Download,
-  Trash2
+  Search,
+  RotateCcw
 } from 'lucide-react'
 
 export function ExpirationPage() {
   const { storeId, hasActiveStore } = useTenant()
   const queryClient = useQueryClient()
-  const [filterStatus, setFilterStatus] = React.useState<string>('ALL')
 
-  const { data: batches = [], isLoading } = useQuery({
-    queryKey: ['stock-batches', storeId],
-    queryFn: () => inventoryService.getBatches(storeId),
+  // Sincronização de paginação e filtros via URL
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPage: 1,
+    defaultPageSize: 10,
+    defaultSortBy: 'expiration_date',
+    defaultSortOrder: 'asc',
+    defaultFilters: {
+      status: 'ALL',
+    },
+  })
+
+  const filterStatus = filters.status || 'ALL'
+
+  // Query batches with server-side pagination & summary
+  const { data: batchesResult, isLoading } = useQuery({
+    queryKey: ['stock-batches', storeId, page, pageSize, search, filterStatus, sortBy, sortOrder],
+    queryFn: () =>
+      inventoryService.getBatches(storeId, {
+        page,
+        pageSize,
+        search: search || undefined,
+        status: filterStatus,
+        sortBy,
+        sortOrder,
+      }),
     enabled: Boolean(hasActiveStore),
   })
+
+  const batches = batchesResult?.data || []
+  const totalBatches = batchesResult?.total || 0
+  const totalBatchesPages = Math.ceil(totalBatches / pageSize) || 1
+  const summary = batchesResult?.summary || {
+    total: 0,
+    expired: 0,
+    critical7d: 0,
+    warning30d: 0,
+    normal: 0,
+  }
 
   // Writeoff expired batch mutation
   const writeoffMutation = useMutation({
@@ -47,47 +95,31 @@ export function ExpirationPage() {
     },
   })
 
-  // Categorize batches
-  const batchesWithStatus = batches.map((b) => {
-    const info = checkExpirationStatus(b.expiration_date)
-    return {
-      ...b,
-      expirationInfo: info,
+  const handleExportCSV = async () => {
+    try {
+      const res = await inventoryService.getBatches(storeId, { pageSize: 1000 })
+      if (!res.data || res.data.length === 0) return
+      exportToCSV(
+        'lotes_e_validades',
+        res.data,
+        [
+          { header: 'Produto', key: (r) => r.product_name || '-' },
+          { header: 'Nº Lote', key: 'lot_number' },
+          { header: 'Quantidade', key: 'quantity' },
+          { header: 'Data de Fabricação', key: (r) => formatDate(r.manufacturing_date) },
+          { header: 'Data de Validade', key: (r) => formatDate(r.expiration_date) },
+          { header: 'Status de Validade', key: (r) => r.expirationInfo?.status || '-' },
+        ]
+      )
+    } catch (e) {
+      console.error('Export error:', e)
     }
-  })
-
-  const expiredList = batchesWithStatus.filter((b) => b.expirationInfo.status === 'expired')
-  const critical7dList = batchesWithStatus.filter((b) => b.expirationInfo.status === 'critical_7_days')
-  const warning30dList = batchesWithStatus.filter((b) => b.expirationInfo.status === 'warning_30_days')
-  const normalList = batchesWithStatus.filter((b) => b.expirationInfo.status === 'normal')
-
-  const displayedBatches = batchesWithStatus.filter((b) => {
-    if (filterStatus === 'EXPIRED') return b.expirationInfo.status === 'expired'
-    if (filterStatus === '7D') return b.expirationInfo.status === 'critical_7_days'
-    if (filterStatus === '30D') return b.expirationInfo.status === 'warning_30_days'
-    if (filterStatus === 'NORMAL') return b.expirationInfo.status === 'normal'
-    return true
-  })
-
-  const handleExportCSV = () => {
-    if (batches.length === 0) return
-    exportToCSV(
-      'lotes_e_validades',
-      batchesWithStatus,
-      [
-        { header: 'Produto', key: (r) => r.product_name || '-' },
-        { header: 'Nº Lote', key: 'lot_number' },
-        { header: 'Quantidade', key: 'quantity' },
-        { header: 'Data de Fabricação', key: (r) => formatDate(r.manufacturing_date) },
-        { header: 'Data de Validade', key: (r) => formatDate(r.expiration_date) },
-        { header: 'Status de Validade', key: (r) => r.expirationInfo.status },
-      ]
-    )
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-150 min-h-0">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-shrink-0">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
             Lotes & Controle de Validades
@@ -97,134 +129,197 @@ export function ExpirationPage() {
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={batches.length === 0}>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCSV}
+          disabled={totalBatches === 0}
+        >
           <Download className="h-4 w-4 mr-1.5" /> Exportar Lotes CSV
         </Button>
       </div>
 
-      {/* Summary Alert Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* KPI Alert Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
         <Card
-          onClick={() => setFilterStatus('EXPIRED')}
-          className={`cursor-pointer transition-all ${
-            filterStatus === 'EXPIRED' ? 'ring-2 ring-danger' : 'hover:border-danger/50'
+          onClick={() => {
+            setFilter('status', filterStatus === 'EXPIRED' ? 'ALL' : 'EXPIRED')
+            setPage(1)
+          }}
+          className={`cursor-pointer transition-all hover:scale-[1.01] ${
+            filterStatus === 'EXPIRED' ? 'ring-2 ring-danger bg-danger/5' : 'hover:border-danger/50'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Produtos Vencidos</span>
-            <div className="p-2 rounded-xl bg-danger/10 text-danger">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
+            <span className="text-xs font-semibold text-muted-foreground">Produtos Vencidos</span>
+            <div className="p-1.5 rounded-lg bg-danger/10 text-danger">
               <PackageX className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 pt-0">
+          <CardContent className="p-3.5 sm:p-4 pt-0">
             <div className="text-2xl font-extrabold text-danger">
-              {expiredList.length}
+              {summary.expired}
             </div>
-            <span className="text-[11px] text-muted-foreground">Bloqueio de venda recomendado</span>
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Bloqueio recomendado</span>
           </CardContent>
         </Card>
 
         <Card
-          onClick={() => setFilterStatus('7D')}
-          className={`cursor-pointer transition-all ${
-            filterStatus === '7D' ? 'ring-2 ring-orange-500' : 'hover:border-orange-500/50'
+          onClick={() => {
+            setFilter('status', filterStatus === '7D' ? 'ALL' : '7D')
+            setPage(1)
+          }}
+          className={`cursor-pointer transition-all hover:scale-[1.01] ${
+            filterStatus === '7D' ? 'ring-2 ring-orange-500 bg-orange-500/5' : 'hover:border-orange-500/50'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Vencendo em 7 Dias</span>
-            <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
+            <span className="text-xs font-semibold text-muted-foreground">&le; 7 Dias</span>
+            <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
               <AlertTriangle className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 pt-0">
+          <CardContent className="p-3.5 sm:p-4 pt-0">
             <div className="text-2xl font-extrabold text-orange-500">
-              {critical7dList.length}
+              {summary.critical7d}
             </div>
-            <span className="text-[11px] text-muted-foreground">Ação promocional urgente</span>
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Ação promocional</span>
           </CardContent>
         </Card>
 
         <Card
-          onClick={() => setFilterStatus('30D')}
-          className={`cursor-pointer transition-all ${
-            filterStatus === '30D' ? 'ring-2 ring-amber-500' : 'hover:border-amber-500/50'
+          onClick={() => {
+            setFilter('status', filterStatus === '30D' ? 'ALL' : '30D')
+            setPage(1)
+          }}
+          className={`cursor-pointer transition-all hover:scale-[1.01] ${
+            filterStatus === '30D' ? 'ring-2 ring-amber-500 bg-amber-500/5' : 'hover:border-amber-500/50'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Vencendo em 30 Dias</span>
-            <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
+            <span className="text-xs font-semibold text-muted-foreground">&le; 30 Dias</span>
+            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
               <Clock className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 pt-0">
+          <CardContent className="p-3.5 sm:p-4 pt-0">
             <div className="text-2xl font-extrabold text-amber-500">
-              {warning30dList.length}
+              {summary.warning30d}
             </div>
-            <span className="text-[11px] text-muted-foreground">Alerta de giro prioritário</span>
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Giro prioritário</span>
           </CardContent>
         </Card>
 
         <Card
-          onClick={() => setFilterStatus('NORMAL')}
-          className={`cursor-pointer transition-all ${
-            filterStatus === 'NORMAL' ? 'ring-2 ring-success' : 'hover:border-success/50'
+          onClick={() => {
+            setFilter('status', filterStatus === 'NORMAL' ? 'ALL' : 'NORMAL')
+            setPage(1)
+          }}
+          className={`cursor-pointer transition-all hover:scale-[1.01] ${
+            filterStatus === 'NORMAL' ? 'ring-2 ring-success bg-success/5' : 'hover:border-success/50'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Dentro do Prazo</span>
-            <div className="p-2 rounded-xl bg-success/10 text-success">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
+            <span className="text-xs font-semibold text-muted-foreground">Dentro do Prazo</span>
+            <div className="p-1.5 rounded-lg bg-success/10 text-success">
               <CheckCircle className="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent className="p-5 pt-0">
+          <CardContent className="p-3.5 sm:p-4 pt-0">
             <div className="text-2xl font-extrabold text-success">
-              {normalList.length}
+              {summary.normal}
             </div>
-            <span className="text-[11px] text-muted-foreground">Lotes normais</span>
+            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Lotes normais</span>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filter Reset Button */}
-      {filterStatus !== 'ALL' && (
-        <div className="flex items-center justify-between bg-muted/40 p-3 rounded-xl border border-border">
-          <span className="text-xs font-medium">
-            Exibindo filtro: <b>{filterStatus}</b> ({displayedBatches.length} lotes)
-          </span>
-          <Button variant="ghost" size="sm" onClick={() => setFilterStatus('ALL')}>
-            Ver todos os lotes
-          </Button>
+      {/* Filter / Search Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/40 p-3 rounded-xl border border-border flex-shrink-0">
+        <div className="w-full sm:w-72">
+          <Input
+            placeholder="Buscar por lote ou produto..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            icon={<Search className="h-4 w-4" />}
+            className="h-9 text-xs"
+          />
         </div>
-      )}
 
-      {/* Batches Table */}
-      <Card>
-        <CardContent className="p-0">
+        {filterStatus !== 'ALL' && (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">
+              Filtro ativo: <b className="text-foreground">{filterStatus}</b> ({totalBatches} lotes)
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 text-xs gap-1"
+              onClick={() => {
+                setFilter('status', 'ALL')
+                setPage(1)
+              }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Limpar filtro
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Batches Table Card */}
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-sm bg-card">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">
               <LoadingSkeleton count={5} className="h-10" />
             </div>
-          ) : displayedBatches.length === 0 ? (
-            <div className="py-12 text-center text-xs text-muted-foreground">
-              Nenhum lote com os filtros selecionados.
+          ) : batches.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-muted-foreground">
+              <PackageX className="h-8 w-8 text-muted-foreground/50 mb-2" />
+              Nenhum lote encontrado com os filtros selecionados.
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 min-h-0 overflow-auto">
               <table className="w-full text-xs text-left">
-                <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+                <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-4">Produto</th>
-                    <th className="py-3 px-4">Número do Lote</th>
-                    <th className="py-3 px-4 text-center">Quantidade</th>
-                    <th className="py-3 px-4">Fabricação</th>
-                    <th className="py-3 px-4">Validade</th>
+                    <SortableHeader
+                      column="lot_number"
+                      label="Nº Lote"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="quantity"
+                      label="Quantidade"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                      align="center"
+                    />
+                    <SortableHeader
+                      column="manufacturing_date"
+                      label="Fabricação"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="expiration_date"
+                      label="Validade"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
                     <th className="py-3 px-4 text-center">Situação</th>
                     <th className="py-3 px-4 text-right">Ação</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {displayedBatches.map((batch) => {
-                    const status = batch.expirationInfo.status
+                  {batches.map((batch) => {
+                    const status = batch.expirationInfo?.status
                     return (
                       <tr key={batch.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-4 font-semibold text-foreground">
@@ -269,7 +364,11 @@ export function ExpirationPage() {
                               size="sm"
                               className="text-[11px] h-7 px-2"
                               onClick={() => {
-                                if (confirm(`Confirmar descarte/baixa por vencimento do lote ${batch.lot_number}?`)) {
+                                if (
+                                  confirm(
+                                    `Confirmar descarte/baixa por vencimento do lote ${batch.lot_number}?`
+                                  )
+                                ) {
                                   writeoffMutation.mutate(batch)
                                 }
                               }}
@@ -285,6 +384,18 @@ export function ExpirationPage() {
               </table>
             </div>
           )}
+
+          {/* Pinned Pagination */}
+          <div className="border-t border-border bg-card/80 flex-shrink-0">
+            <Pagination
+              currentPage={page}
+              totalPages={totalBatchesPages}
+              totalItems={totalBatches}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={setPageSize}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -40,11 +40,12 @@ export function ReportsPage() {
   })
   const orders = ordersData?.data || []
 
-  const { data: balances = [] } = useQuery({
+  const { data: balancesData } = useQuery({
     queryKey: ['report-balances', storeId],
-    queryFn: () => inventoryService.getStockBalances(storeId),
+    queryFn: () => inventoryService.getStockBalances(storeId, { pageSize: 1000 }),
     enabled: Boolean(hasActiveStore),
   })
+  const balances = balancesData?.data || []
 
   const { data: customersData } = useQuery({
     queryKey: ['report-customers', storeId],
