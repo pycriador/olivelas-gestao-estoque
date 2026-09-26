@@ -418,18 +418,18 @@ export function ProductsPage() {
         }}
         title={editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
         description="Preencha os dados cadastrais, fiscais e operacionais do produto"
-        maxWidth="xl"
+        maxWidth="2xl"
       >
-        <form onSubmit={handleSave} className="space-y-4 pt-2">
+        <form onSubmit={handleSave} className="space-y-4 pt-1">
           {errorMsg && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {errorMsg}
             </div>
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1 sm:col-span-2">
-              <label className="text-xs font-medium">Nome do Produto *</label>
+              <label className="text-xs font-semibold text-foreground">Nome do Produto *</label>
               <Input
                 placeholder="Ex: Azeite Extra Virgem 500ml"
                 value={formData.name}
@@ -439,7 +439,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">SKU / Código Interno *</label>
+              <label className="text-xs font-semibold text-foreground">SKU / Código Interno *</label>
               <Input
                 placeholder="PRD-001"
                 value={formData.sku}
@@ -449,7 +449,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Código de Barras / EAN-13</label>
+              <label className="text-xs font-semibold text-foreground">Código de Barras / EAN-13</label>
               <Input
                 placeholder="7891234567890"
                 value={formData.barcode}
@@ -458,11 +458,11 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Categoria</label>
+              <label className="text-xs font-semibold text-foreground">Categoria</label>
               <select
                 value={formData.categoryId}
                 onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
               >
                 <option value="">Selecione uma categoria...</option>
                 {categories.map((c) => (
@@ -474,11 +474,11 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Unidade de Medida</label>
+              <label className="text-xs font-semibold text-foreground">Unidade de Medida</label>
               <select
                 value={formData.unit}
                 onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
-                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
               >
                 <option value="UN">Unidade (UN)</option>
                 <option value="KG">Quilograma (KG)</option>
@@ -489,7 +489,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Preço de Custo (R$)</label>
+              <label className="text-xs font-semibold text-foreground">Preço de Custo (R$)</label>
               <Input
                 type="number"
                 step="0.01"
@@ -500,7 +500,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Preço de Venda (R$) *</label>
+              <label className="text-xs font-semibold text-foreground">Preço de Venda (R$) *</label>
               <Input
                 type="number"
                 step="0.01"
@@ -512,7 +512,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Estoque Mínimo</label>
+              <label className="text-xs font-semibold text-foreground">Estoque Mínimo</label>
               <Input
                 type="number"
                 value={formData.minStock}
@@ -521,7 +521,7 @@ export function ProductsPage() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Estoque Máximo</label>
+              <label className="text-xs font-semibold text-foreground">Estoque Máximo</label>
               <Input
                 type="number"
                 value={formData.maxStock}
@@ -530,8 +530,8 @@ export function ProductsPage() {
             </div>
 
             {/* Checkbox controls */}
-            <div className="sm:col-span-2 pt-2 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-border">
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
+            <div className="sm:col-span-2 pt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-border">
+              <label className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 text-xs font-medium cursor-pointer transition-colors">
                 <input
                   type="checkbox"
                   checked={formData.controlsBatch}
@@ -541,7 +541,7 @@ export function ProductsPage() {
                 <span>Controla Lote</span>
               </label>
 
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 text-xs font-medium cursor-pointer transition-colors">
                 <input
                   type="checkbox"
                   checked={formData.controlsExpiration}
@@ -551,7 +551,7 @@ export function ProductsPage() {
                 <span>Controla Validade</span>
               </label>
 
-              <label className="flex items-center gap-2 text-xs cursor-pointer">
+              <label className="flex items-center gap-2.5 p-2 rounded-lg hover:bg-muted/50 text-xs font-medium cursor-pointer transition-colors">
                 <input
                   type="checkbox"
                   checked={formData.isPublished}
@@ -563,10 +563,11 @@ export function ProductsPage() {
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => {
                 setIsNewModalOpen(false)
                 setEditingProduct(null)
@@ -576,6 +577,7 @@ export function ProductsPage() {
             </Button>
             <Button
               type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
               isLoading={createMutation.isPending || updateMutation.isPending}
             >
               Salvar Produto

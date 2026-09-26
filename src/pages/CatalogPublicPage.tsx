@@ -321,44 +321,52 @@ export function CatalogPublicPage() {
         onClose={() => setIsCartOpen(false)}
         title="Meu Carrinho"
         description="Confira seus itens e envie o pedido diretamente para o WhatsApp da loja"
-        maxWidth="md"
+        maxWidth="lg"
       >
         <div className="space-y-4 pt-1 text-xs">
           {cartItems.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
+            <div className="py-12 text-center text-muted-foreground">
               Seu carrinho está vazio. Adicione produtos para continuar.
             </div>
           ) : (
-            <div className="space-y-3">
-              <div className="divide-y divide-border/60 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-4">
+              <div className="divide-y divide-border/60 max-h-72 overflow-y-auto pr-1">
                 {cartItems.map((item) => (
-                  <div key={item.product.id} className="py-2.5 flex items-center justify-between">
-                    <div className="max-w-[180px]">
-                      <div className="font-semibold text-foreground truncate">{item.product.name}</div>
-                      <div className="text-[11px] text-muted-foreground font-mono">
+                  <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-foreground text-sm truncate">{item.product.name}</div>
+                      <div className="text-xs text-muted-foreground font-mono mt-0.5">
                         {formatCurrency(item.product.selling_price)} x {item.quantity}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center border border-border rounded-xl bg-background overflow-hidden">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          className="h-8 w-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors"
+                          aria-label="Diminuir quantidade"
+                        >
+                          <Minus className="h-3.5 w-3.5" />
+                        </button>
+                        <span className="font-mono font-bold w-7 text-center text-xs">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          className="h-8 w-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors"
+                          aria-label="Aumentar quantidade"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                        className="h-6 w-6 rounded-lg border border-border flex items-center justify-center hover:bg-muted"
-                      >
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <span className="font-mono font-bold w-5 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                        className="h-6 w-6 rounded-lg border border-border flex items-center justify-center hover:bg-muted"
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                      <button
+                        type="button"
                         onClick={() => removeItem(item.product.id)}
-                        className="text-muted-foreground hover:text-danger ml-1 p-1"
+                        className="text-muted-foreground hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors"
+                        aria-label="Remover produto"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
@@ -366,44 +374,44 @@ export function CatalogPublicPage() {
               </div>
 
               {/* Customer Contact Details */}
-              <div className="p-3 bg-muted/40 rounded-xl space-y-2 border border-border/50">
+              <div className="p-3.5 bg-muted/40 rounded-xl space-y-2.5 border border-border/50">
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                  <label className="text-[11px] uppercase font-bold text-muted-foreground">
                     Seu Nome *
                   </label>
                   <Input
                     placeholder="Ex: João Silva"
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-10 text-xs"
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-muted-foreground">
+                  <label className="text-[11px] uppercase font-bold text-muted-foreground">
                     Endereço de Entrega
                   </label>
                   <Input
                     placeholder="Rua, número, bairro..."
                     value={customerAddress}
                     onChange={(e) => setCustomerAddress(e.target.value)}
-                    className="h-8 text-xs"
+                    className="h-10 text-xs"
                   />
                 </div>
               </div>
 
               {/* Total & WhatsApp Button */}
-              <div className="p-3 bg-surface-elevated rounded-xl border border-border space-y-1">
-                <div className="flex justify-between font-bold text-sm text-foreground">
+              <div className="p-3.5 bg-surface-elevated rounded-xl border border-border space-y-1">
+                <div className="flex justify-between items-center font-bold text-base text-foreground">
                   <span>Total do Pedido:</span>
-                  <span className="font-mono text-primary text-base">{formatCurrency(cartTotal)}</span>
+                  <span className="font-mono text-primary text-lg">{formatCurrency(cartTotal)}</span>
                 </div>
               </div>
 
               <Button
-                className="w-full h-11 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20"
+                className="w-full h-12 text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 active:scale-[0.99] transition-all"
                 onClick={handleWhatsAppCheckout}
               >
-                <MessageCircle className="h-4 w-4 mr-2" /> Enviar Pedido no WhatsApp
+                <MessageCircle className="h-5 w-5 mr-2" /> Enviar Pedido no WhatsApp
               </Button>
             </div>
           )}

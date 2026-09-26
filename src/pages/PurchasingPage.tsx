@@ -220,27 +220,27 @@ export function PurchasingPage() {
         onClose={() => setIsNewModalOpen(false)}
         title="Nova Ordem de Compra"
         description="Selecione o fornecedor, produtos, quantidades e lotes para emissão"
-        maxWidth="xl"
+        maxWidth="3xl"
       >
         <form
           onSubmit={(e) => {
             e.preventDefault()
             createMutation.mutate()
           }}
-          className="space-y-4 pt-2 text-xs"
+          className="space-y-4 pt-1 text-xs"
         >
           {errorMsg && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-1">
-            <label className="font-medium">Fornecedor *</label>
+            <label className="text-xs font-semibold text-foreground">Fornecedor *</label>
             <select
               value={supplierId}
               onChange={(e) => setSupplierId(e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs focus:outline-none"
+              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             >
               <option value="">Selecione um fornecedor...</option>
@@ -255,31 +255,31 @@ export function PurchasingPage() {
           {/* Items Section */}
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between">
-              <span className="font-bold uppercase text-[10px] text-muted-foreground">
-                Itens a Comprar
+              <span className="font-bold uppercase text-[11px] text-muted-foreground">
+                Itens a Comprar ({items.length})
               </span>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="text-primary hover:underline text-xs font-semibold"
+                className="text-primary hover:underline text-xs font-semibold px-2 py-1 rounded-md hover:bg-primary/10 transition-colors"
               >
                 + Adicionar Item
               </button>
             </div>
 
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+            <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
               {items.map((item, idx) => (
                 <div
                   key={idx}
-                  className="p-2.5 rounded-xl border border-border bg-surface-elevated space-y-2"
+                  className="p-3 rounded-xl border border-border bg-surface-elevated space-y-3"
                 >
-                  <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-6">
-                      <label className="text-[10px] text-muted-foreground block">Produto</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                    <div className="sm:col-span-6">
+                      <label className="text-[10px] uppercase font-semibold text-muted-foreground block mb-1">Produto *</label>
                       <select
                         value={item.productId}
                         onChange={(e) => handleItemChange(idx, 'productId', e.target.value)}
-                        className="w-full h-8 px-2 rounded-lg border border-input bg-background text-xs"
+                        className="w-full h-9 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                         required
                       >
                         <option value="">Selecione...</option>
@@ -291,74 +291,84 @@ export function PurchasingPage() {
                       </select>
                     </div>
 
-                    <div className="col-span-3">
-                      <label className="text-[10px] text-muted-foreground block">Qtd</label>
-                      <Input
-                        type="number"
-                        min="1"
-                        className="h-8"
-                        value={item.quantityOrdered}
-                        onChange={(e) =>
-                          handleItemChange(idx, 'quantityOrdered', parseFloat(e.target.value) || 1)
-                        }
-                        required
-                      />
-                    </div>
+                    <div className="grid grid-cols-2 sm:contents gap-2">
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] uppercase font-semibold text-muted-foreground block mb-1">Qtd *</label>
+                        <Input
+                          type="number"
+                          min="1"
+                          className="h-9"
+                          value={item.quantityOrdered}
+                          onChange={(e) =>
+                            handleItemChange(idx, 'quantityOrdered', parseFloat(e.target.value) || 1)
+                          }
+                          required
+                        />
+                      </div>
 
-                    <div className="col-span-3">
-                      <label className="text-[10px] text-muted-foreground block">Custo Unit (R$)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        className="h-8"
-                        value={item.unitCost}
-                        onChange={(e) =>
-                          handleItemChange(idx, 'unitCost', parseFloat(e.target.value) || 0)
-                        }
-                        required
-                      />
+                      <div className="sm:col-span-3">
+                        <label className="text-[10px] uppercase font-semibold text-muted-foreground block mb-1">Custo Unit (R$) *</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          className="h-9"
+                          value={item.unitCost}
+                          onChange={(e) =>
+                            handleItemChange(idx, 'unitCost', parseFloat(e.target.value) || 0)
+                          }
+                          required
+                        />
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-12 gap-2 pt-1 border-t border-border/50">
-                    <div className="col-span-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-2 border-t border-border/50 items-center">
+                    <div className="sm:col-span-6">
                       <Input
                         placeholder="Nº Lote (Ex: LT-2026-A)"
-                        className="h-7 text-[11px]"
+                        className="h-8 text-[11px]"
                         value={item.lotNumber || ''}
                         onChange={(e) => handleItemChange(idx, 'lotNumber', e.target.value)}
                       />
                     </div>
-                    <div className="col-span-5">
+                    <div className="flex items-center gap-2 sm:col-span-6">
                       <Input
                         type="date"
-                        className="h-7 text-[11px]"
+                        className="h-8 text-[11px] flex-1"
                         value={item.expirationDate || ''}
                         onChange={(e) => handleItemChange(idx, 'expirationDate', e.target.value)}
                       />
-                    </div>
-                    {items.length > 1 && (
-                      <div className="col-span-1 flex items-center justify-end">
+                      {items.length > 1 && (
                         <button
                           type="button"
                           onClick={() => handleRemoveItem(idx)}
-                          className="text-danger hover:underline text-xs"
+                          className="text-danger hover:bg-danger/10 p-2 rounded-lg text-xs font-semibold shrink-0 transition-colors"
+                          title="Remover item"
                         >
-                          ✕
+                          ✕ Remover
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-            <Button type="button" variant="outline" onClick={() => setIsNewModalOpen(false)}>
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
+              onClick={() => setIsNewModalOpen(false)}
+            >
               Cancelar
             </Button>
-            <Button type="submit" isLoading={createMutation.isPending}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+              isLoading={createMutation.isPending}
+            >
               Emitir Ordem de Compra
             </Button>
           </div>
@@ -371,23 +381,24 @@ export function PurchasingPage() {
         onClose={() => setReceivingPO(null)}
         title="Receber Mercadorias & Entrar no Estoque"
         description="Esta ação atualizará os saldos em estoque, gerará os lotes e registrará os movimentos de entrada"
+        maxWidth="lg"
       >
         {receivingPO && (
-          <div className="space-y-4 pt-2 text-xs">
-            <div className="p-3 bg-muted/40 rounded-xl space-y-1">
-              <div className="flex justify-between font-semibold text-foreground">
+          <div className="space-y-4 pt-1 text-xs">
+            <div className="p-3 bg-muted/40 rounded-xl space-y-1 border border-border/50">
+              <div className="flex justify-between font-bold text-sm text-foreground">
                 <span>Ordem: {receivingPO.order_number}</span>
-                <span>{formatCurrency(receivingPO.total_amount)}</span>
+                <span className="text-primary font-mono">{formatCurrency(receivingPO.total_amount)}</span>
               </div>
               <div className="text-muted-foreground">Fornecedor: {receivingPO.supplier_name}</div>
             </div>
 
             <div className="border border-border rounded-xl divide-y divide-border overflow-hidden">
               {receivingPO.items?.map((it) => (
-                <div key={it.id} className="p-2.5 flex justify-between items-center">
+                <div key={it.id} className="p-3 flex justify-between items-center bg-surface">
                   <div>
-                    <div className="font-semibold text-foreground">{it.product_name}</div>
-                    <div className="text-[11px] text-muted-foreground">
+                    <div className="font-semibold text-foreground text-sm">{it.product_name}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
                       Qtd: <b>{it.quantity_ordered}</b> | Lote: {it.lot_number || 'Sem lote'}
                     </div>
                   </div>
@@ -398,16 +409,21 @@ export function PurchasingPage() {
               ))}
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setReceivingPO(null)}>
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto h-11 sm:h-10"
+                onClick={() => setReceivingPO(null)}
+              >
                 Voltar
               </Button>
               <Button
                 variant="default"
+                className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
                 isLoading={receiveMutation.isPending}
                 onClick={() => receiveMutation.mutate(receivingPO.id)}
               >
-                Confirmar Recebimento & Entrada no Estoque
+                Confirmar Recebimento
               </Button>
             </div>
           </div>

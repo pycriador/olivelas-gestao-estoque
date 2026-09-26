@@ -215,16 +215,17 @@ export function GlobalAdminDashboardPage() {
         onClose={() => setIsModalOpen(false)}
         title="Cadastrar Nova Loja (Tenant)"
         description="Criação de nova loja independente no ecossistema multi-tenant"
+        maxWidth="lg"
       >
-        <form onSubmit={handleCreateStore} className="space-y-4 pt-2">
+        <form onSubmit={handleCreateStore} className="space-y-4 pt-1">
           {errorMessage && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {errorMessage}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Nome da Loja</label>
+            <label className="text-xs font-semibold text-foreground">Nome da Loja *</label>
             <Input
               placeholder="Ex: Empório Central Paulista"
               value={newStoreName}
@@ -237,7 +238,7 @@ export function GlobalAdminDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Slug do Catálogo (URL)</label>
+            <label className="text-xs font-semibold text-foreground">Slug do Catálogo (URL) *</label>
             <Input
               placeholder="emporio-central-paulista"
               value={newStoreSlug}
@@ -247,7 +248,7 @@ export function GlobalAdminDashboardPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">CNPJ / CPF (Opcional)</label>
+            <label className="text-xs font-semibold text-foreground">CNPJ / CPF (Opcional)</label>
             <Input
               placeholder="00.000.000/0001-00"
               value={newStoreDoc}
@@ -255,15 +256,20 @@ export function GlobalAdminDashboardPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => setIsModalOpen(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" isLoading={createMutation.isPending}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+              isLoading={createMutation.isPending}
+            >
               Criar Loja
             </Button>
           </div>

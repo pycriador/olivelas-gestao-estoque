@@ -5,6 +5,7 @@ import { useTenant } from '@/hooks/useTenant'
 import { formatDateTime } from '@/utils/dates'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
 import { Shield, Eye, FileText, User } from 'lucide-react'
 
@@ -110,28 +111,39 @@ export function AuditLogsPage() {
         onClose={() => setInspectLog(null)}
         title="Inspeção de Auditoria"
         description={`Ação: ${inspectLog?.action} na entidade ${inspectLog?.entity}`}
-        maxWidth="xl"
+        maxWidth="3xl"
       >
         {inspectLog && (
           <div className="space-y-4 pt-1 text-xs">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <span className="font-bold text-muted-foreground uppercase text-[10px] block mb-1">
+                <span className="font-bold text-muted-foreground uppercase text-[10px] block mb-1.5">
                   Estado Anterior (Before)
                 </span>
-                <pre className="p-3 bg-muted/60 rounded-xl border border-border font-mono text-[11px] overflow-x-auto max-h-64">
+                <pre className="p-3.5 bg-muted/60 rounded-xl border border-border font-mono text-[11px] overflow-x-auto max-h-80 leading-relaxed text-foreground">
                   {JSON.stringify(inspectLog.before_data, null, 2) || 'Nenhum dado anterior'}
                 </pre>
               </div>
 
               <div>
-                <span className="font-bold text-muted-foreground uppercase text-[10px] block mb-1">
+                <span className="font-bold text-muted-foreground uppercase text-[10px] block mb-1.5">
                   Novo Estado (After)
                 </span>
-                <pre className="p-3 bg-muted/60 rounded-xl border border-border font-mono text-[11px] overflow-x-auto max-h-64">
+                <pre className="p-3.5 bg-muted/60 rounded-xl border border-border font-mono text-[11px] overflow-x-auto max-h-80 leading-relaxed text-foreground">
                   {JSON.stringify(inspectLog.after_data, null, 2) || 'Nenhum novo dado'}
                 </pre>
               </div>
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto h-11 sm:h-10"
+                onClick={() => setInspectLog(null)}
+              >
+                Fechar Inspeção
+              </Button>
             </div>
           </div>
         )}

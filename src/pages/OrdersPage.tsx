@@ -258,23 +258,23 @@ export function OrdersPage() {
         onClose={() => setViewingOrder(null)}
         title={`Detalhes do Pedido ${viewingOrder?.order_number}`}
         description={`Emitido em ${formatDateTime(viewingOrder?.created_at)}`}
-        maxWidth="lg"
+        maxWidth="2xl"
       >
         {viewingOrder && (
-          <div className="space-y-4 pt-2 text-xs">
-            <div className="grid grid-cols-2 gap-4 p-3 bg-muted/40 rounded-xl">
+          <div className="space-y-4 pt-1 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-muted/40 rounded-xl border border-border/50">
               <div>
-                <span className="text-muted-foreground block text-[11px]">Cliente</span>
+                <span className="text-muted-foreground block text-[11px] font-semibold uppercase">Cliente</span>
                 <span className="font-semibold text-foreground text-sm">
                   {viewingOrder.customer_name}
                 </span>
                 {viewingOrder.customer_phone && (
-                  <span className="text-muted-foreground block">{viewingOrder.customer_phone}</span>
+                  <span className="text-muted-foreground block text-xs mt-0.5">{viewingOrder.customer_phone}</span>
                 )}
               </div>
-              <div className="text-right">
-                <span className="text-muted-foreground block text-[11px]">Canal & Status</span>
-                <div className="flex items-center justify-end gap-1.5 mt-0.5">
+              <div className="sm:text-right">
+                <span className="text-muted-foreground block text-[11px] font-semibold uppercase">Canal & Status</span>
+                <div className="flex items-center sm:justify-end gap-1.5 mt-1 flex-wrap">
                   {getChannelBadge(viewingOrder.channel)}
                   <Badge variant={viewingOrder.status === 'CANCELLED' ? 'destructive' : 'success'}>
                     {viewingOrder.status}
@@ -286,18 +286,18 @@ export function OrdersPage() {
             {/* Items */}
             <div>
               <h4 className="font-bold mb-2 uppercase text-[11px] text-muted-foreground">
-                Itens do Pedido
+                Itens do Pedido ({viewingOrder.items?.length || 0})
               </h4>
               <div className="border border-border rounded-xl overflow-hidden divide-y divide-border">
                 {viewingOrder.items?.map((it) => (
-                  <div key={it.id} className="p-3 flex items-center justify-between">
+                  <div key={it.id} className="p-3 flex items-center justify-between bg-surface">
                     <div>
-                      <div className="font-semibold text-foreground">{it.product_name}</div>
-                      <div className="text-[11px] text-muted-foreground">
+                      <div className="font-semibold text-foreground text-sm">{it.product_name}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">
                         {it.quantity}x a {formatCurrency(it.unit_price)}
                       </div>
                     </div>
-                    <div className="font-bold font-mono text-foreground">
+                    <div className="font-bold font-mono text-foreground text-sm">
                       {formatCurrency(it.total_price)}
                     </div>
                   </div>
@@ -306,18 +306,18 @@ export function OrdersPage() {
             </div>
 
             {/* Total Summary */}
-            <div className="p-3 bg-surface-elevated rounded-xl border border-border space-y-1">
+            <div className="p-3.5 bg-surface-elevated rounded-xl border border-border space-y-1.5">
               <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
-                <span className="font-mono">{formatCurrency(viewingOrder.subtotal)}</span>
+                <span className="font-mono font-medium">{formatCurrency(viewingOrder.subtotal)}</span>
               </div>
               {viewingOrder.discount_amount > 0 && (
                 <div className="flex justify-between text-success">
                   <span>Desconto Aplicado</span>
-                  <span className="font-mono">-{formatCurrency(viewingOrder.discount_amount)}</span>
+                  <span className="font-mono font-medium">-{formatCurrency(viewingOrder.discount_amount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-sm text-foreground pt-1 border-t border-border">
+              <div className="flex justify-between font-bold text-base text-foreground pt-2 border-t border-border">
                 <span>Total</span>
                 <span className="font-mono text-primary">{formatCurrency(viewingOrder.total_amount)}</span>
               </div>
@@ -325,15 +325,15 @@ export function OrdersPage() {
 
             {/* Change Status Controls */}
             {viewingOrder.status !== 'CANCELLED' && (
-              <div className="pt-2 flex items-center justify-between border-t border-border">
-                <span className="text-muted-foreground font-medium">Alterar Status:</span>
-                <div className="flex gap-1.5">
+              <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border">
+                <span className="text-muted-foreground font-semibold text-xs">Alterar Status:</span>
+                <div className="flex gap-1.5 flex-wrap">
                   {['CONFIRMED', 'PROCESSING', 'READY', 'DELIVERED'].map((st) => (
                     <Button
                       key={st}
                       variant="outline"
                       size="sm"
-                      className="text-[10px] h-7 px-2"
+                      className="text-xs h-8 px-2.5 flex-1 sm:flex-none"
                       onClick={() =>
                         updateStatusMutation.mutate({
                           id: viewingOrder.id,
@@ -357,29 +357,30 @@ export function OrdersPage() {
         onClose={() => setCancellingOrder(null)}
         title="Cancelar Pedido e Reverter Estoque"
         description="Esta ação estornará os itens de volta ao saldo do estoque de forma atômica"
+        maxWidth="lg"
       >
         <form
           onSubmit={(e) => {
             e.preventDefault()
             cancelMutation.mutate()
           }}
-          className="space-y-4 pt-2"
+          className="space-y-4 pt-1"
         >
           {cancelError && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {cancelError}
             </div>
           )}
 
-          <div className="p-3 bg-danger/10 border border-danger/20 rounded-xl text-xs text-foreground flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-danger shrink-0" />
-            <span>
+          <div className="p-3.5 bg-danger/10 border border-danger/20 rounded-xl text-xs text-foreground flex items-center gap-2.5">
+            <AlertCircle className="h-5 w-5 text-danger shrink-0" />
+            <span className="leading-relaxed">
               Ao cancelar o pedido <b>{cancellingOrder?.order_number}</b>, todas as baixas de estoque efetuadas serão revertidas com registro de auditoria.
             </span>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Motivo do Cancelamento *</label>
+            <label className="text-xs font-semibold text-foreground">Motivo do Cancelamento *</label>
             <Input
               placeholder="Ex: Desistência do cliente ou erro de digitação"
               value={cancelReason}
@@ -388,10 +389,11 @@ export function OrdersPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => setCancellingOrder(null)}
             >
               Voltar
@@ -399,6 +401,7 @@ export function OrdersPage() {
             <Button
               type="submit"
               variant="destructive"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
               isLoading={cancelMutation.isPending}
             >
               Confirmar Cancelamento & Estorno

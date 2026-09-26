@@ -142,16 +142,17 @@ export function StoresPage() {
         onClose={() => setIsModalOpen(false)}
         title="Nova Loja"
         description="Cadastre uma nova filial ou unidade"
+        maxWidth="lg"
       >
-        <form onSubmit={handleCreate} className="space-y-4 pt-2">
+        <form onSubmit={handleCreate} className="space-y-4 pt-1">
           {error && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {error}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Nome da Loja</label>
+            <label className="text-xs font-semibold text-foreground">Nome da Loja *</label>
             <Input
               placeholder="Ex: Olivelas Jardins"
               value={name}
@@ -164,7 +165,7 @@ export function StoresPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Slug do Catálogo (URL)</label>
+            <label className="text-xs font-semibold text-foreground">Slug do Catálogo (URL) *</label>
             <Input
               placeholder="olivelas-jardins"
               value={slug}
@@ -174,7 +175,7 @@ export function StoresPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">CNPJ (Opcional)</label>
+            <label className="text-xs font-semibold text-foreground">CNPJ (Opcional)</label>
             <Input
               placeholder="00.000.000/0001-00"
               value={document}
@@ -182,15 +183,20 @@ export function StoresPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => setIsModalOpen(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" isLoading={createMutation.isPending}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+              isLoading={createMutation.isPending}
+            >
               Salvar Loja
             </Button>
           </div>

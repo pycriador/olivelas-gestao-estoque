@@ -314,6 +314,7 @@ export function InventoryPage() {
         onClose={() => setIsMovementModalOpen(false)}
         title="Lançar Movimento de Estoque"
         description="Registre entradas, saídas, perdas, quebras ou ajustes manuais"
+        maxWidth="lg"
       >
         <form
           onSubmit={(e) => {
@@ -321,16 +322,16 @@ export function InventoryPage() {
             setErrorMsg(null)
             movementMutation.mutate()
           }}
-          className="space-y-4 pt-2"
+          className="space-y-4 pt-1"
         >
           {errorMsg && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Produto *</label>
+            <label className="text-xs font-semibold text-foreground">Produto *</label>
             <select
               value={productId}
               onChange={(e) => setProductId(e.target.value)}
@@ -346,9 +347,9 @@ export function InventoryPage() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Tipo de Movimento *</label>
+              <label className="text-xs font-semibold text-foreground">Tipo de Movimento *</label>
               <select
                 value={movementType}
                 onChange={(e) => setMovementType(e.target.value as StockMovementType)}
@@ -364,7 +365,7 @@ export function InventoryPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Quantidade *</label>
+              <label className="text-xs font-semibold text-foreground">Quantidade *</label>
               <Input
                 type="number"
                 step="1"
@@ -377,7 +378,7 @@ export function InventoryPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Justificativa / Observações</label>
+            <label className="text-xs font-semibold text-foreground">Justificativa / Observações</label>
             <Input
               placeholder="Ex: Quebra de frasco durante movimentação"
               value={notes}
@@ -385,15 +386,20 @@ export function InventoryPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => setIsMovementModalOpen(false)}
             >
               Cancelar
             </Button>
-            <Button type="submit" isLoading={movementMutation.isPending}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+              isLoading={movementMutation.isPending}
+            >
               Confirmar Movimento
             </Button>
           </div>

@@ -262,16 +262,17 @@ export function CustomersPage() {
         }}
         title={editingCustomer ? 'Editar Cliente' : 'Cadastrar Novo Cliente'}
         description="Informações cadastrais e de contato do cliente"
+        maxWidth="lg"
       >
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {errorMsg && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Nome Completo / Razão Social *</label>
+            <label className="text-xs font-semibold text-foreground">Nome Completo / Razão Social *</label>
             <Input
               placeholder="Ex: Maria Fernandes"
               value={formData.name}
@@ -280,9 +281,9 @@ export function CustomersPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">CPF ou CNPJ</label>
+              <label className="text-xs font-semibold text-foreground">CPF ou CNPJ</label>
               <Input
                 placeholder="000.000.000-00"
                 value={formData.document}
@@ -290,7 +291,7 @@ export function CustomersPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Telefone / Celular</label>
+              <label className="text-xs font-semibold text-foreground">Telefone / Celular</label>
               <Input
                 placeholder="(11) 98765-4321"
                 value={formData.phone}
@@ -300,7 +301,7 @@ export function CustomersPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">E-mail</label>
+            <label className="text-xs font-semibold text-foreground">E-mail</label>
             <Input
               type="email"
               placeholder="cliente@email.com"
@@ -310,7 +311,7 @@ export function CustomersPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Observações</label>
+            <label className="text-xs font-semibold text-foreground">Observações</label>
             <Input
               placeholder="Ex: Preferência por entregas no período da tarde"
               value={formData.notes}
@@ -318,10 +319,11 @@ export function CustomersPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => {
                 setIsModalOpen(false)
                 setEditingCustomer(null)
@@ -329,7 +331,11 @@ export function CustomersPage() {
             >
               Cancelar
             </Button>
-            <Button type="submit" isLoading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+              isLoading={createMutation.isPending || updateMutation.isPending}
+            >
               Salvar Cliente
             </Button>
           </div>

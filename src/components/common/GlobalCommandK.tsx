@@ -66,33 +66,51 @@ export function GlobalCommandK() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-start justify-center sm:pt-20 p-0 sm:p-4 animate-in fade-in duration-150">
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => setIsOpen(false)}
+        aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-2xl rounded-2xl bg-surface border border-border shadow-2xl overflow-hidden z-10 flex flex-col">
+      <div className="relative w-full sm:max-w-2xl rounded-t-[1.75rem] sm:rounded-2xl bg-surface border-t sm:border border-border shadow-2xl overflow-hidden z-10 flex flex-col max-h-[85vh] sm:max-h-[80vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150">
+        {/* Mobile handle */}
+        <div className="pt-3 pb-1 sm:hidden flex justify-center items-center">
+          <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
+        </div>
+
         {/* Input Header */}
-        <div className="flex items-center px-4 py-3.5 border-b border-border bg-surface-elevated">
-          <Search className="h-5 w-5 text-muted-foreground mr-3" />
+        <div className="flex items-center px-4 sm:px-5 py-3.5 border-b border-border bg-surface-elevated">
+          <Search className="h-5 w-5 text-muted-foreground mr-3 shrink-0" />
           <input
             autoFocus
             type="text"
-            placeholder="Pesquisar produtos por nome, SKU, barcode ou clientes... (ESC para fechar)"
+            placeholder="Pesquisar produtos, SKU, código de barras ou clientes..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground text-foreground"
           />
-          {query && (
-            <button onClick={() => setQuery('')} className="p-1 text-muted-foreground hover:text-foreground">
+          {query ? (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg"
+            >
               <X className="h-4 w-4" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              className="sm:hidden text-xs text-muted-foreground hover:text-foreground font-medium px-2 py-1"
+            >
+              Fechar
             </button>
           )}
         </div>
 
         {/* Results List */}
-        <div className="max-h-96 overflow-y-auto p-2 divide-y divide-border/40">
+        <div className="flex-1 overflow-y-auto p-2 divide-y divide-border/40 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-2">
           {isLoading && (
             <div className="p-4 text-center text-xs text-muted-foreground">
               Buscando registros...

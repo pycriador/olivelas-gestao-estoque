@@ -274,16 +274,17 @@ export function SuppliersPage() {
         }}
         title={editingSupplier ? 'Editar Fornecedor' : 'Novo Fornecedor'}
         description="Dados da empresa fornecedora e canais de atendimento"
+        maxWidth="lg"
       >
-        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {errorMsg && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
+            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
               {errorMsg}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">Razão Social *</label>
+            <label className="text-xs font-semibold text-foreground">Razão Social *</label>
             <Input
               placeholder="Ex: Distribuidora de Alimentos Paulista LTDA"
               value={formData.corporateName}
@@ -292,9 +293,9 @@ export function SuppliersPage() {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Nome Fantasia</label>
+              <label className="text-xs font-semibold text-foreground">Nome Fantasia</label>
               <Input
                 placeholder="Ex: Alimentos Paulista"
                 value={formData.tradeName}
@@ -302,7 +303,7 @@ export function SuppliersPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">CNPJ</label>
+              <label className="text-xs font-semibold text-foreground">CNPJ</label>
               <Input
                 placeholder="00.000.000/0001-00"
                 value={formData.document}
@@ -311,9 +312,9 @@ export function SuppliersPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Nome do Representante</label>
+              <label className="text-xs font-semibold text-foreground">Nome do Representante</label>
               <Input
                 placeholder="Ex: Carlos Oliveira"
                 value={formData.contactName}
@@ -321,7 +322,7 @@ export function SuppliersPage() {
               />
             </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-medium">Telefone de Contato</label>
+              <label className="text-xs font-semibold text-foreground">Telefone de Contato</label>
               <Input
                 placeholder="(11) 3000-0000"
                 value={formData.phone}
@@ -331,7 +332,7 @@ export function SuppliersPage() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium">E-mail</label>
+            <label className="text-xs font-semibold text-foreground">E-mail</label>
             <Input
               type="email"
               placeholder="pedidos@fornecedor.com.br"
@@ -340,10 +341,11 @@ export function SuppliersPage() {
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
             <Button
               type="button"
               variant="outline"
+              className="w-full sm:w-auto h-11 sm:h-10"
               onClick={() => {
                 setIsModalOpen(false)
                 setEditingSupplier(null)
@@ -351,7 +353,11 @@ export function SuppliersPage() {
             >
               Cancelar
             </Button>
-            <Button type="submit" isLoading={createMutation.isPending || updateMutation.isPending}>
+            <Button
+              type="submit"
+              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
+              isLoading={createMutation.isPending || updateMutation.isPending}
+            >
               Salvar Fornecedor
             </Button>
           </div>
