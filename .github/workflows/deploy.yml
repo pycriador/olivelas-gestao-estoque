@@ -41,11 +41,22 @@ jobs:
         run: npm run lint || true
 
       - name: Build Application
-        run: npm run build
+        run: |
+          case "$VITE_SUPABASE_URL" in
+            ""|*placeholder*|*your-project-id*)
+              echo "::error::Set VITE_SUPABASE_URL (or SUPABASE_URL) in the github-pages environment or Actions variables/secrets."
+              exit 1
+              ;;
+          esac
+          if [ -z "$VITE_SUPABASE_PUBLISHABLE_KEY" ] || [ "$VITE_SUPABASE_PUBLISHABLE_KEY" = "placeholder_key" ]; then
+            echo "::error::Set VITE_SUPABASE_PUBLISHABLE_KEY or VITE_SUPABASE_ANON_KEY in the github-pages environment or Actions variables/secrets."
+            exit 1
+          fi
+          npm run build
         env:
           VITE_BASE_PATH: "/${{ github.event.repository.name }}/"
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_ANON_KEY || vars.VITE_SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || vars.VITE_SUPABASE_URL || secrets.SUPABASE_URL || vars.SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY || vars.VITE_SUPABASE_PUBLISHABLE_KEY || secrets.VITE_SUPABASE_ANON_KEY || vars.VITE_SUPABASE_ANON_KEY || secrets.SUPABASE_PUBLISHABLE_KEY || vars.SUPABASE_PUBLISHABLE_KEY || secrets.SUPABASE_ANON_KEY || vars.SUPABASE_ANON_KEY }}
 
       - name: Upload GitHub Pages Artifact
         uses: actions/upload-pages-artifact@v3
