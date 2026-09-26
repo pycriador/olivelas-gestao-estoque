@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { auditService } from '@/services/auditService'
 import type { Product, Category } from '@/types/product.types'
 
 export interface ProductFilters {
@@ -160,6 +161,14 @@ export const productService = {
       reserved_quantity: 0,
     })
 
+    auditService.logAction({
+      storeId,
+      action: 'PRODUCT_CREATED',
+      entity: 'products',
+      entityId: data.id,
+      afterData: { name: data.name, sku: data.sku, selling_price: data.selling_price },
+    })
+
     return data as Product
   },
 
@@ -180,6 +189,15 @@ export const productService = {
       .single()
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'PRODUCT_UPDATED',
+      entity: 'products',
+      entityId: id,
+      afterData: updates as Record<string, unknown>,
+    })
+
     return data as Product
   },
 
@@ -196,6 +214,13 @@ export const productService = {
       .eq('store_id', storeId)
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'PRODUCT_DELETED',
+      entity: 'products',
+      entityId: id,
+    })
   },
 
   async listCategories(storeId: string): Promise<Category[]> {
@@ -345,6 +370,15 @@ export const productService = {
         errors.push(`Linha ${rowNum}: ${err.message || 'Erro inesperado'}`)
         errorCount++
       }
+    }
+
+    if (successCount > 0) {
+      auditService.logAction({
+        storeId,
+        action: 'BULK_IMPORT_PRODUCTS',
+        entity: 'products',
+        afterData: { importedCount: successCount, errorCount },
+      })
     }
 
     return { successCount, errorCount, errors }

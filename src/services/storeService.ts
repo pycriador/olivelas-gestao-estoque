@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { auditService } from '@/services/auditService'
 import type { Store } from '@/types/store.types'
 
 export const storeService = {
@@ -85,6 +86,14 @@ export const storeService = {
       console.error('Error linking user to store:', userRelError)
     }
 
+    auditService.logAction({
+      storeId: store.id,
+      action: 'STORE_CREATED',
+      entity: 'stores',
+      entityId: store.id,
+      afterData: { name: store.name, slug: store.slug },
+    })
+
     return store as Store
   },
 
@@ -100,6 +109,15 @@ export const storeService = {
       .single()
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId: id,
+      action: 'STORE_UPDATED',
+      entity: 'stores',
+      entityId: id,
+      afterData: updates as Record<string, unknown>,
+    })
+
     return data as Store
   },
 
@@ -113,5 +131,12 @@ export const storeService = {
       .eq('id', id)
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId: id,
+      action: 'STORE_DELETED',
+      entity: 'stores',
+      entityId: id,
+    })
   },
 }

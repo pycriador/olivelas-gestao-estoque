@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { auditService } from '@/services/auditService'
 import type { Order, OrderItem, Payment } from '@/types/order.types'
 import type { OrderChannel, OrderStatus, PaymentMethod } from '@/types/database.types'
 
@@ -183,6 +184,19 @@ export const orderService = {
       console.warn('RPC stock deduction warning:', rpcErr)
     }
 
+    auditService.logAction({
+      storeId: payload.storeId,
+      action: 'ORDER_CREATED',
+      entity: 'orders',
+      entityId: order.id,
+      afterData: {
+        orderNumber: order.order_number,
+        totalAmount: order.total_amount,
+        channel: payload.channel,
+        itemCount: payload.items.length,
+      },
+    })
+
     return order as Order
   },
 
@@ -193,6 +207,13 @@ export const orderService = {
     })
 
     if (error) throw error
+
+    auditService.logAction({
+      action: 'ORDER_CANCELLED',
+      entity: 'orders',
+      entityId: orderId,
+      afterData: { reason },
+    })
   },
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<void> {
@@ -205,5 +226,12 @@ export const orderService = {
       .eq('id', orderId)
 
     if (error) throw error
+
+    auditService.logAction({
+      action: 'ORDER_STATUS_UPDATED',
+      entity: 'orders',
+      entityId: orderId,
+      afterData: { status },
+    })
   },
 }

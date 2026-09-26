@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { auditService } from '@/services/auditService'
 import type { Supplier } from '@/types/supplier.types'
 
 export interface SupplierListParams {
@@ -75,6 +76,15 @@ export const supplierService = {
       .single()
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'SUPPLIER_CREATED',
+      entity: 'suppliers',
+      entityId: data.id,
+      afterData: { corporate_name: data.corporate_name, document: data.document },
+    })
+
     return data as Supplier
   },
 
@@ -91,6 +101,15 @@ export const supplierService = {
       .single()
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'SUPPLIER_UPDATED',
+      entity: 'suppliers',
+      entityId: id,
+      afterData: updates as Record<string, unknown>,
+    })
+
     return data as Supplier
   },
 
@@ -105,5 +124,12 @@ export const supplierService = {
       .eq('store_id', storeId)
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'SUPPLIER_DELETED',
+      entity: 'suppliers',
+      entityId: id,
+    })
   },
 }

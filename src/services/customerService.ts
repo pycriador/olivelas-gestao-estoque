@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { auditService } from '@/services/auditService'
 import type { Customer } from '@/types/customer.types'
 
 export interface CustomerListParams {
@@ -74,6 +75,15 @@ export const customerService = {
       .single()
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'CUSTOMER_CREATED',
+      entity: 'customers',
+      entityId: data.id,
+      afterData: { name: data.name, email: data.email, phone: data.phone },
+    })
+
     return data as Customer
   },
 
@@ -90,6 +100,15 @@ export const customerService = {
       .single()
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'CUSTOMER_UPDATED',
+      entity: 'customers',
+      entityId: id,
+      afterData: updates as Record<string, unknown>,
+    })
+
     return data as Customer
   },
 
@@ -104,5 +123,12 @@ export const customerService = {
       .eq('store_id', storeId)
 
     if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'CUSTOMER_DELETED',
+      entity: 'customers',
+      entityId: id,
+    })
   },
 }

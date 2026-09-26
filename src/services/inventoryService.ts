@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { checkExpirationStatus } from '@/utils/dates'
+import { auditService } from '@/services/auditService'
 import type { StockBalance, StockMovement, StockBatch } from '@/types/inventory.types'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -308,5 +309,19 @@ export const inventoryService = {
         notes: params.notes || null,
         user_id: user?.id || null,
       })
+
+    auditService.logAction({
+      storeId: params.storeId,
+      action: `STOCK_MOVEMENT_${params.movementType}`,
+      entity: 'stock_movements',
+      entityId: params.productId,
+      afterData: {
+        movementType: params.movementType,
+        quantity: Math.abs(params.quantity),
+        previousQuantity: currentQty,
+        newQuantity: newQty,
+        notes: params.notes,
+      },
+    })
   },
 }

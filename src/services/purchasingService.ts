@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { auditService } from '@/services/auditService'
 import type { PurchaseOrder } from '@/types/purchasing.types'
 
 export interface CreatePurchaseOrderPayload {
@@ -152,6 +153,18 @@ export const purchasingService = {
 
     if (itemsError) throw itemsError
 
+    auditService.logAction({
+      storeId: payload.storeId,
+      action: 'PURCHASE_ORDER_CREATED',
+      entity: 'purchase_orders',
+      entityId: po.id,
+      afterData: {
+        orderNumber: po.order_number,
+        totalAmount: po.total_amount,
+        itemCount: payload.items.length,
+      },
+    })
+
     return po as PurchaseOrder
   },
 
@@ -161,5 +174,11 @@ export const purchasingService = {
     })
 
     if (error) throw error
+
+    auditService.logAction({
+      action: 'PURCHASE_ORDER_RECEIVED',
+      entity: 'purchase_orders',
+      entityId: purchaseOrderId,
+    })
   },
 }

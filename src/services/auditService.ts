@@ -10,7 +10,12 @@ export interface AuditLog {
   before_data: Record<string, unknown> | null
   after_data: Record<string, unknown> | null
   ip_address: string | null
+  user_agent: string | null
   created_at: string
+  user_name?: string
+  user_email?: string
+  store_name?: string
+  store_slug?: string
 }
 
 export interface AuditListParams {
@@ -40,14 +45,26 @@ export const auditService = {
 
     let query = supabase
       .from('audit_logs')
-      .select('*', { count: 'exact' })
+      .select(`
+        *,
+        profiles (
+          id,
+          full_name,
+          email
+        ),
+        stores (
+          id,
+          name,
+          slug
+        )
+      `, { count: 'exact' })
 
-    if (storeId) {
+    if (storeId && storeId !== 'all' && storeId !== 'global') {
       query = query.eq('store_id', storeId)
     }
 
     if (search) {
-      query = query.or(`action.ilike.%${search}%,entity.ilike.%${search}%`)
+      query = query.or(`action.ilike.%${search}%,entity.ilike.%${search}%,entity_id.ilike.%${search}%`)
     }
 
     if (action && action !== 'ALL') {
@@ -70,9 +87,28 @@ export const auditService = {
       .range(from, to)
 
     if (error) throw error
+
+    const mapped = (data || []).map((item: any) => ({
+      id: item.id,
+      store_id: item.store_id,
+      user_id: item.user_id,
+      action: item.action,
+      entity: item.entity,
+      entity_id: item.entity_id,
+      before_data: item.before_data,
+      after_data: item.after_data,
+      ip_address: item.ip_address,
+      user_agent: item.user_agent,
+      created_at: item.created_at,
+      user_name: item.profiles?.full_name || null,
+      user_email: item.profiles?.email || null,
+      store_name: item.stores?.name || (item.store_id ? 'Loja' : 'Global / Sistema'),
+      store_slug: item.stores?.slug || '',
+    }))
+
     return {
-      data: (data || []) as AuditLog[],
-      total: count || 0,
+      data: mapped,
+      total: count || mapped.length,
     }
   },
 
@@ -84,17 +120,21 @@ export const auditService = {
     beforeData?: Record<string, unknown> | null
     afterData?: Record<string, unknown> | null
   }): Promise<void> {
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
 
-    await supabase.from('audit_logs').insert({
-      store_id: params.storeId || null,
-      user_id: user?.id || null,
-      action: params.action,
-      entity: params.entity,
-      entity_id: params.entityId || null,
-      before_data: params.beforeData || null,
-      after_data: params.afterData || null,
-      user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
-    })
+      await supabase.from('audit_logs').insert({
+        store_id: params.storeId || null,
+        user_id: user?.id || null,
+        action: params.action,
+        entity: params.entity,
+        entity_id: params.entityId || null,
+        before_data: params.beforeData || null,
+        after_data: params.afterData || null,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+      })
+    } catch (err) {
+      console.warn('Audit logging failed silently:', err)
+    }
   },
 }
