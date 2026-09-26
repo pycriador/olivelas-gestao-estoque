@@ -46,6 +46,32 @@ import {
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 
+function getImportValue(item: Record<string, unknown>, ...keys: string[]): string | number | undefined {
+  for (const key of keys) {
+    const value = item[key]
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim() !== '') return value
+  }
+  return undefined
+}
+
+function parseImportPrice(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (value === undefined || value === null || String(value).trim() === '') return undefined
+
+  let normalized = String(value).replace(/[^\d,.-]/g, '')
+  if (normalized.includes(',') && normalized.includes('.')) {
+    normalized = normalized.lastIndexOf(',') > normalized.lastIndexOf('.')
+      ? normalized.replace(/\./g, '').replace(',', '.')
+      : normalized.replace(/,/g, '')
+  } else if (normalized.includes(',')) {
+    normalized = normalized.replace(',', '.')
+  }
+
+  const price = Number(normalized)
+  return Number.isFinite(price) ? price : undefined
+}
+
 export function ProductsPage() {
   const { storeId, hasActiveStore } = useTenant()
   const { t } = useI18n()
@@ -739,25 +765,53 @@ export function ProductsPage() {
                   <div className="col-span-2 text-right">Preço Venda</div>
                   <div className="col-span-2 text-center">Estoque Inicial</div>
                 </div>
-                {parsedItems.slice(0, 5).map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-12 gap-2 p-2.5 items-center font-mono text-xs">
-                    <div className="col-span-4 font-sans font-semibold text-foreground truncate">
-                      {item.name || item.Nome || item.nome || item.produto || <span className="text-danger">Sem nome</span>}
+                {parsedItems.slice(0, 5).map((item, idx) => {
+                  const name = getImportValue(item, 'name', 'Nome', 'nome', 'produto', 'Produto')
+                  const sku = getImportValue(item, 'sku', 'SKU', 'codigo', 'Codigo', 'Código')
+                  const category = getImportValue(item, 'category_name', 'category', 'categoria', 'Categoria')
+                  const price = parseImportPrice(
+                    getImportValue(
+                      item,
+                      'selling_price',
+                      'sellingPrice',
+                      'preco_venda',
+                      'Preço de Venda',
+                      'Preço Venda',
+                      'preco',
+                      'price'
+                    )
+                  )
+                  const initialStock = getImportValue(
+                    item,
+                    'initial_stock',
+                    'initialStock',
+                    'stock_quantity',
+                    'estoque',
+                    'Estoque',
+                    'quantidade',
+                    'qtd'
+                  )
+
+                  return (
+                    <div key={idx} className="grid grid-cols-12 gap-2 p-2.5 items-center font-mono text-xs">
+                      <div className="col-span-4 font-sans font-semibold text-foreground truncate">
+                        {name || <span className="text-danger">Sem nome</span>}
+                      </div>
+                      <div className="col-span-2 text-muted-foreground truncate">
+                        {sku || <span className="text-primary italic">Automático</span>}
+                      </div>
+                      <div className="col-span-2 font-sans text-muted-foreground truncate">
+                        {category || '-'}
+                      </div>
+                      <div className="col-span-2 text-right font-bold text-foreground">
+                        {formatCurrency(price ?? 0)}
+                      </div>
+                      <div className="col-span-2 text-center text-primary font-bold">
+                        {initialStock ?? 0}
+                      </div>
                     </div>
-                    <div className="col-span-2 text-muted-foreground truncate">
-                      {item.sku || item.SKU || <span className="text-primary italic">Automático</span>}
-                    </div>
-                    <div className="col-span-2 font-sans text-muted-foreground truncate">
-                      {item.category_name || item.category || item.categoria || '-'}
-                    </div>
-                    <div className="col-span-2 text-right font-bold text-foreground">
-                      {item.selling_price || item.preco_venda || item.preco || item.price ? `R$ ${item.selling_price || item.preco_venda || item.preco || item.price}` : 'R$ 0,00'}
-                    </div>
-                    <div className="col-span-2 text-center text-primary font-bold">
-                      {item.initial_stock ?? item.stock_quantity ?? item.estoque ?? item.quantidade ?? 0}
-                    </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
