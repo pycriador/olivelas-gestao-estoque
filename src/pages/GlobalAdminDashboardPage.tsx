@@ -194,15 +194,9 @@ export function GlobalAdminDashboardPage() {
           <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
             <Shield className="h-3 w-3" /> Global Admin
           </div>
-          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
             Gestão Multi-Lojas
-            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
-              {totalItems} {totalItems === 1 ? 'loja' : 'lojas'}
-            </Badge>
           </h1>
-          <span className="hidden sm:inline text-xs text-muted-foreground">
-            | Controle de tenants e infraestrutura SaaS
-          </span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
