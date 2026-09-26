@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/PageHeader'
+import { EmptyState } from '@/components/common/EmptyState'
 import {
   ShoppingBag,
   Plus,
@@ -21,7 +22,9 @@ import {
   CreditCard,
   QrCode,
   Banknote,
-  Users
+  Users,
+  Package,
+  RotateCcw,
 } from 'lucide-react'
 import type { PaymentMethod } from '@/types/database.types'
 import type { Product } from '@/types/product.types'
@@ -47,9 +50,9 @@ export function SalesPage() {
   const [successOrderNumber, setSuccessOrderNumber] = React.useState<string | null>(null)
 
   // Fetch available products
-  const { data: productsData } = useQuery({
+  const { data: productsData, isLoading: loadingProducts } = useQuery({
     queryKey: ['products-pos', storeId, search],
-    queryFn: () => productService.listProducts(storeId, { search, pageSize: 20 }),
+    queryFn: () => productService.listProducts(storeId, { search, pageSize: 50 }),
     enabled: Boolean(hasActiveStore),
   })
 
@@ -103,7 +106,15 @@ export function SalesPage() {
     setCart(cart.filter((i) => i.product.id !== productId))
   }
 
+  const clearCart = () => {
+    setCart([])
+    setDiscountTotal(0)
+    setNotes('')
+    setSelectedCustomerId('')
+  }
+
   // Calculate totals
+  const totalItemCount = cart.reduce((acc, i) => acc + i.quantity, 0)
   const subtotal = cart.reduce((acc, i) => acc + i.quantity * i.unitPrice, 0)
   const total = Math.max(0, subtotal - discountTotal)
 
@@ -130,9 +141,7 @@ export function SalesPage() {
       queryClient.invalidateQueries({ queryKey: ['orders', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
       setSuccessOrderNumber(order.order_number)
-      setCart([])
-      setDiscountTotal(0)
-      setNotes('')
+      clearCart()
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
@@ -145,11 +154,11 @@ export function SalesPage() {
   }
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-150">
+    <div className="flex-1 min-h-0 w-full h-full flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
       <PageHeader title="Frente de Caixa (PDV)">
         <Input
-          placeholder="Buscar produto por nome, SKU..."
+          placeholder="Buscar produto por nome, SKU, código..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 text-xs bg-background/90"
@@ -158,21 +167,22 @@ export function SalesPage() {
       </PageHeader>
 
       {successOrderNumber && (
-        <div className="p-4 rounded-2xl bg-success/15 border border-success/30 flex items-center justify-between animate-in zoom-in-95">
-          <div className="flex items-center gap-3">
-            <CheckCircle2 className="h-6 w-6 text-success" />
+        <div className="p-3 rounded-xl bg-success/15 border border-success/30 flex items-center justify-between animate-in zoom-in-95 flex-shrink-0">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
             <div>
-              <h3 className="text-sm font-bold text-foreground">
-                Venda {successOrderNumber} Concluída com Sucesso!
+              <h3 className="text-xs font-bold text-foreground">
+                Venda #{successOrderNumber} Concluída com Sucesso!
               </h3>
-              <p className="text-xs text-muted-foreground">
-                Estoque atualizado e comprovante gerado.
+              <p className="text-[11px] text-muted-foreground">
+                Estoque atualizado e comprovante registrado.
               </p>
             </div>
           </div>
           <Button
             variant="outline"
             size="sm"
+            className="h-7 text-xs"
             onClick={() => setSuccessOrderNumber(null)}
           >
             Nova Venda
@@ -181,113 +191,181 @@ export function SalesPage() {
       )}
 
       {errorMsg && (
-        <div className="p-4 rounded-xl bg-danger/10 border border-danger/20 text-xs text-danger">
+        <div className="p-2.5 rounded-lg bg-danger/10 border border-danger/20 text-xs text-danger flex-shrink-0">
           {errorMsg}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Product Search & Quick Picker */}
-        <div className="lg:col-span-7 space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <Input
-                placeholder="Buscar por nome do produto, SKU ou código de barras..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                icon={<Search className="h-4 w-4" />}
-                autoFocus
-              />
-            </CardHeader>
-            <CardContent className="max-h-[520px] overflow-y-auto p-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {products.map((p) => {
-                  const stock = p.stock_quantity ?? 0
-                  return (
-                    <button
-                      key={p.id}
-                      onClick={() => addToCart(p)}
-                      disabled={stock <= 0}
-                      className={`p-3 rounded-xl border border-border text-left transition-all flex flex-col justify-between ${
-                        stock <= 0
-                          ? 'opacity-50 cursor-not-allowed bg-muted/20'
-                          : 'bg-surface hover:border-primary/60 hover:shadow-sm'
-                      }`}
-                    >
-                      <div>
-                        <div className="font-semibold text-xs text-foreground line-clamp-1">
-                          {p.name}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
-                          SKU: {p.sku}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
-                        <span className="font-bold text-xs text-primary font-mono">
-                          {formatCurrency(p.selling_price)}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          Est: <b>{stock}</b> {p.unit}
-                        </span>
-                      </div>
-                    </button>
-                  )
-                })}
+      {/* Main POS Grid */}
+      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
+        {/* Left Column: Products Grid (8 cols on desktop) */}
+        <div className="lg:col-span-8 flex flex-col min-h-0 h-full overflow-hidden">
+          <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+            <CardHeader className="py-2.5 px-3 border-b border-border/60 flex flex-row items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">Catálogo de Produtos</span>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
+                  {products.length} itens disponíveis
+                </Badge>
               </div>
+              {search && (
+                <button
+                  onClick={() => setSearch('')}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline cursor-pointer"
+                >
+                  Limpar busca
+                </button>
+              )}
+            </CardHeader>
+
+            <CardContent className="p-2.5 flex-1 min-h-0 overflow-y-auto custom-scrollbar">
+              {loadingProducts ? (
+                <div className="py-12 text-center text-xs text-muted-foreground">
+                  Carregando produtos...
+                </div>
+              ) : products.length === 0 ? (
+                <div className="flex-1 flex items-center justify-center p-8">
+                  <EmptyState
+                    icon={<Package className="h-9 w-9 text-muted-foreground" />}
+                    title="Nenhum produto encontrado"
+                    description={
+                      search
+                        ? 'Nenhum resultado para a busca. Tente outro termo.'
+                        : 'Cadastre produtos para iniciar as vendas pelo PDV.'
+                    }
+                  />
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                  {products.map((p) => {
+                    const stock = p.stock_quantity ?? 0
+                    const inCart = cart.find((i) => i.product.id === p.id)
+                    const isOutOfStock = stock <= 0
+
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => addToCart(p)}
+                        disabled={isOutOfStock}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between group relative ${
+                          isOutOfStock
+                            ? 'opacity-40 cursor-not-allowed bg-muted/20 border-border/40'
+                            : inCart
+                            ? 'bg-primary/5 border-primary/40 shadow-xs ring-1 ring-primary/20'
+                            : 'bg-surface hover:border-primary/50 hover:shadow-xs border-border'
+                        }`}
+                      >
+                        {inCart && (
+                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold font-mono">
+                            {inCart.quantity}x
+                          </div>
+                        )}
+
+                        <div>
+                          <div className="font-semibold text-xs text-foreground line-clamp-1 pr-6">
+                            {p.name}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground font-mono mt-0.5 truncate">
+                            {p.sku || p.barcode || 'Sem SKU'}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-border/50">
+                          <span className="font-bold text-xs text-primary font-mono">
+                            {formatCurrency(p.selling_price)}
+                          </span>
+                          <span
+                            className={`text-[10px] ${
+                              stock <= 3 ? 'text-amber-500 font-semibold' : 'text-muted-foreground'
+                            }`}
+                          >
+                            Est: {stock}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Right Column: Active Cart & Checkout */}
-        <div className="lg:col-span-5 space-y-4">
-          <Card className="flex flex-col h-full border-primary/20">
-            <CardHeader className="pb-3 border-b border-border">
-              <CardTitle className="text-base font-bold flex items-center justify-between">
-                <span>Carrinho da Venda</span>
-                <Badge variant="default">{cart.length} itens</Badge>
-              </CardTitle>
+        {/* Right Column: Sleek Compact Cart & Checkout (4 cols on desktop) */}
+        <div className="lg:col-span-4 flex flex-col min-h-0 h-full overflow-hidden">
+          <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+            {/* Compact Cart Header */}
+            <CardHeader className="py-2.5 px-3 border-b border-border/60 flex flex-row items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-1.5">
+                <ShoppingBag className="h-4 w-4 text-primary" />
+                <CardTitle className="text-xs font-bold">Carrinho</CardTitle>
+                <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                  {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
+                </Badge>
+              </div>
+
+              {cart.length > 0 && (
+                <button
+                  onClick={clearCart}
+                  className="text-[10px] text-muted-foreground hover:text-danger inline-flex items-center gap-1 cursor-pointer transition-colors"
+                  title="Limpar carrinho"
+                >
+                  <RotateCcw className="h-3 w-3" /> Limpar
+                </button>
+              )}
             </CardHeader>
 
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[260px]">
+            {/* Cart Items List */}
+            <CardContent className="p-2 flex-1 min-h-0 overflow-y-auto custom-scrollbar space-y-1">
               {cart.length === 0 ? (
-                <div className="py-12 text-center text-xs text-muted-foreground">
-                  Selecione os produtos ao lado para iniciar a venda.
+                <div className="py-10 text-center text-xs text-muted-foreground px-4">
+                  <ShoppingBag className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="font-medium text-foreground">Carrinho vazio</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5">
+                    Toque nos produtos ao lado para adicionar à venda.
+                  </p>
                 </div>
               ) : (
-                <div className="divide-y divide-border/60">
+                <div className="divide-y divide-border/40">
                   {cart.map((item) => (
-                    <div key={item.product.id} className="py-2.5 flex items-center justify-between">
-                      <div className="max-w-[170px]">
+                    <div
+                      key={item.product.id}
+                      className="py-1.5 px-1 flex items-center justify-between gap-2 hover:bg-muted/30 rounded-lg transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
                         <div className="font-semibold text-xs text-foreground truncate">
                           {item.product.name}
                         </div>
                         <div className="text-[11px] text-muted-foreground font-mono">
-                          {formatCurrency(item.unitPrice)} cada
+                          {formatCurrency(item.unitPrice)}
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1 shrink-0">
                         <button
+                          type="button"
                           onClick={() => updateQuantity(item.product.id, -1)}
-                          className="h-7 w-7 rounded-lg border border-border flex items-center justify-center hover:bg-muted"
+                          className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="h-2.5 w-2.5" />
                         </button>
-                        <span className="w-6 text-center font-mono font-bold text-xs">
+                        <span className="w-5 text-center font-mono font-bold text-xs">
                           {item.quantity}
                         </span>
                         <button
+                          type="button"
                           onClick={() => updateQuantity(item.product.id, 1)}
-                          className="h-7 w-7 rounded-lg border border-border flex items-center justify-center hover:bg-muted"
+                          className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-2.5 w-2.5" />
                         </button>
                         <button
+                          type="button"
                           onClick={() => removeFromCart(item.product.id)}
-                          className="p-1 text-muted-foreground hover:text-danger ml-1"
+                          className="p-1 text-muted-foreground hover:text-danger ml-0.5 cursor-pointer transition-colors"
+                          title="Remover item"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </div>
                     </div>
@@ -296,17 +374,17 @@ export function SalesPage() {
               )}
             </CardContent>
 
-            {/* Checkout Options */}
-            <div className="p-4 border-t border-border bg-surface-elevated space-y-3 rounded-b-xl">
+            {/* Compact Checkout Summary & Actions Footer */}
+            <div className="p-3 border-t border-border bg-surface-elevated/80 flex-shrink-0 space-y-2.5">
               {/* Customer Selector */}
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
-                  <Users className="h-3.5 w-3.5" /> Cliente (Opcional)
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                  <Users className="h-3 w-3" /> Cliente
                 </label>
                 <select
                   value={selectedCustomerId}
                   onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="w-full h-8 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none"
+                  className="w-full h-7 px-2 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none cursor-pointer"
                 >
                   <option value="">Consumidor Final (Sem cadastro)</option>
                   {customers.map((c) => (
@@ -319,10 +397,10 @@ export function SalesPage() {
 
               {/* Payment Methods */}
               <div className="space-y-1">
-                <label className="text-[11px] font-medium text-muted-foreground">
-                  Forma de Pagamento
+                <label className="text-[10px] font-semibold text-muted-foreground uppercase">
+                  Pagamento
                 </label>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-3 gap-1">
                   {[
                     { id: 'PIX', label: 'PIX', icon: QrCode },
                     { id: 'CREDIT_CARD', label: 'Cartão', icon: CreditCard },
@@ -335,38 +413,36 @@ export function SalesPage() {
                         key={pm.id}
                         type="button"
                         onClick={() => setPaymentMethod(pm.id as PaymentMethod)}
-                        className={`flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-xs font-semibold border transition-all ${
+                        className={`flex items-center justify-center gap-1 py-1 px-1.5 rounded-lg text-[11px] font-semibold border transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                            ? 'bg-primary text-primary-foreground border-primary shadow-xs'
                             : 'bg-background border-border text-foreground hover:bg-muted'
                         }`}
                       >
-                        <Icon className="h-3.5 w-3.5" /> {pm.label}
+                        <Icon className="h-3 w-3" /> {pm.label}
                       </button>
                     )
                   })}
                 </div>
               </div>
 
-              {/* Totals Breakdown */}
-              <div className="pt-2 border-t border-border/60 space-y-1 text-xs">
-                <div className="flex justify-between text-muted-foreground">
-                  <span>Subtotal</span>
-                  <span className="font-mono">{formatCurrency(subtotal)}</span>
-                </div>
-                <div className="flex justify-between font-extrabold text-base text-foreground pt-1 border-t border-border">
+              {/* Totals Summary */}
+              <div className="pt-1.5 border-t border-border/60 space-y-1 text-xs">
+                <div className="flex justify-between items-baseline font-bold text-sm text-foreground">
                   <span>Total a Pagar</span>
-                  <span className="font-mono text-primary">{formatCurrency(total)}</span>
+                  <span className="font-mono text-base font-extrabold text-primary">
+                    {formatCurrency(total)}
+                  </span>
                 </div>
               </div>
 
               <Button
-                className="w-full h-11 text-sm font-bold shadow-lg shadow-primary/25"
+                className="w-full h-9 text-xs font-bold shadow-md shadow-primary/20"
                 disabled={cart.length === 0}
                 isLoading={saleMutation.isPending}
                 onClick={handleCheckout}
               >
-                Finalizar Venda & Baixar Estoque
+                Finalizar Venda
               </Button>
             </div>
           </Card>
