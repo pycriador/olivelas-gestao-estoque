@@ -2,6 +2,15 @@ import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
 import type { Store } from '@/types/store.types'
 
+export interface StoreListParams {
+  search?: string
+  status?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
 export const storeService = {
   async getStoreBySlug(slug: string): Promise<Store | null> {
     const { data, error } = await supabase
@@ -40,6 +49,50 @@ export const storeService = {
 
     if (error) throw error
     return (data || []) as Store[]
+  },
+
+  async listStores(params: StoreListParams = {}): Promise<{ data: Store[]; total: number }> {
+    const {
+      search,
+      status,
+      sortBy = 'name',
+      sortOrder = 'asc',
+      page = 1,
+      pageSize = 15,
+    } = params
+
+    let query = supabase
+      .from('stores')
+      .select('*', { count: 'exact' })
+      .is('deleted_at', null)
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%,document.ilike.%${search}%`)
+    }
+
+    if (status === 'ACTIVE') {
+      query = query.eq('is_active', true)
+    } else if (status === 'INACTIVE') {
+      query = query.eq('is_active', false)
+    }
+
+    const orderCol = ['name', 'slug', 'document', 'is_active', 'created_at'].includes(sortBy)
+      ? sortBy
+      : 'name'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderCol, { ascending: sortOrder === 'asc' })
+      .range(from, to)
+
+    if (error) throw error
+
+    return {
+      data: (data || []) as Store[],
+      total: count || 0,
+    }
   },
 
   async createStore(storeData: {

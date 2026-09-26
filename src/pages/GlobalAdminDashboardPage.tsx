@@ -3,202 +3,425 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { storeService } from '@/services/storeService'
 import { reportService } from '@/services/reportService'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { Badge } from '@/components/ui/badge'
-import { Store, Plus, Search, Shield, Building2, Users, ShoppingCart } from 'lucide-react'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { EmptyState } from '@/components/common/EmptyState'
+import {
+  Store,
+  Plus,
+  Search,
+  Shield,
+  Building2,
+  Users,
+  ShoppingCart,
+  ExternalLink,
+  Edit2,
+  Power,
+  CheckCircle2,
+  XCircle,
+} from 'lucide-react'
 import { formatDate } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
+import type { Store as StoreType } from '@/types/store.types'
 
 export function GlobalAdminDashboardPage() {
-  const [search, setSearch] = React.useState('')
-  const [isModalOpen, setIsModalOpen] = React.useState(false)
-  const [newStoreName, setNewStoreName] = React.useState('')
-  const [newStoreSlug, setNewStoreSlug] = React.useState('')
-  const [newStoreDoc, setNewStoreDoc] = React.useState('')
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
-
   const queryClient = useQueryClient()
+
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 15,
+    defaultSortBy: 'name',
+    defaultSortOrder: 'asc',
+  })
+
+  const statusFilter = filters.status || 'ALL'
+
+  const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [editingStore, setEditingStore] = React.useState<StoreType | null>(null)
+  const [formData, setFormData] = React.useState({
+    name: '',
+    slug: '',
+    document: '',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    description: '',
+  })
+  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
 
   const { data: globalMetrics } = useQuery({
     queryKey: ['global-admin-metrics'],
     queryFn: () => reportService.getGlobalAdminMetrics(),
   })
 
-  const { data: stores = [], isLoading } = useQuery({
-    queryKey: ['all-stores'],
-    queryFn: () => storeService.listAllStores(),
+  const { data, isLoading } = useQuery({
+    queryKey: ['all-stores', { search, statusFilter, page, pageSize, sortBy, sortOrder }],
+    queryFn: () =>
+      storeService.listStores({
+        search: search || undefined,
+        status: statusFilter,
+        sortBy,
+        sortOrder,
+        page,
+        pageSize,
+      }),
   })
 
+  const storeList = data?.data || []
+  const totalItems = data?.total || 0
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
+
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; slug: string; document?: string }) =>
-      storeService.createStore(data),
+    mutationFn: (storeData: typeof formData) => storeService.createStore(storeData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['all-stores'] })
       queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
       setIsModalOpen(false)
-      setNewStoreName('')
-      setNewStoreSlug('')
-      setNewStoreDoc('')
+      resetForm()
     },
     onError: (err) => {
       setErrorMessage(parseApiError(err))
     },
   })
 
-  const filteredStores = stores.filter(
-    (s) =>
-      s.name.toLowerCase().includes(search.toLowerCase()) ||
-      s.slug.toLowerCase().includes(search.toLowerCase())
-  )
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<StoreType> }) =>
+      storeService.updateStore(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
+      setEditingStore(null)
+      setIsModalOpen(false)
+      resetForm()
+    },
+    onError: (err) => {
+      setErrorMessage(parseApiError(err))
+    },
+  })
 
-  const handleCreateStore = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!newStoreName || !newStoreSlug) return
-    setErrorMessage(null)
-    createMutation.mutate({
-      name: newStoreName,
-      slug: newStoreSlug,
-      document: newStoreDoc || undefined,
+  const toggleStatusMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      storeService.updateStore(id, { is_active: isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
+    },
+    onError: (err) => {
+      setErrorMessage(parseApiError(err))
+    },
+  })
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      slug: '',
+      document: '',
+      email: '',
+      phone: '',
+      whatsapp: '',
+      description: '',
     })
+    setErrorMessage(null)
+    setEditingStore(null)
+  }
+
+  const handleOpenCreate = () => {
+    resetForm()
+    setIsModalOpen(true)
+  }
+
+  const handleOpenEdit = (store: StoreType) => {
+    setEditingStore(store)
+    setFormData({
+      name: store.name,
+      slug: store.slug,
+      document: store.document || '',
+      email: store.email || '',
+      phone: store.phone || '',
+      whatsapp: store.whatsapp || '',
+      description: store.description || '',
+    })
+    setErrorMessage(null)
+    setIsModalOpen(true)
+  }
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!formData.name || !formData.slug) return
+    setErrorMessage(null)
+
+    if (editingStore) {
+      updateMutation.mutate({
+        id: editingStore.id,
+        updates: {
+          name: formData.name,
+          slug: formData.slug.toLowerCase().replace(/[^a-z0-9-_]/g, '-'),
+          document: formData.document || undefined,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
+          whatsapp: formData.whatsapp || undefined,
+          description: formData.description || undefined,
+        },
+      })
+    } else {
+      createMutation.mutate(formData)
+    }
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold mb-1">
-            <Shield className="h-3 w-3" /> Painel de Controle Global (SaaS Admin)
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+      {/* Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-semibold">
+            <Shield className="h-3 w-3" /> Global Admin
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Gestão Central Multi-Lojas
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            Gestão Multi-Lojas
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
+              {totalItems} {totalItems === 1 ? 'loja' : 'lojas'}
+            </Badge>
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Administração, ativação e criação de tenants de toda a plataforma
-          </p>
+          <span className="hidden sm:inline text-xs text-muted-foreground">
+            | Controle de tenants e infraestrutura SaaS
+          </span>
         </div>
 
-        <Button onClick={() => setIsModalOpen(true)} className="shadow-md">
-          <Plus className="h-4 w-4 mr-1.5" /> Criar Nova Loja (Tenant)
-        </Button>
-      </div>
-
-      {/* Global Metrics Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Total de Lojas</span>
-            <div className="p-2 rounded-xl bg-primary/10 text-primary">
-              <Building2 className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-extrabold text-foreground">
-              {globalMetrics?.totalStores ?? 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Lojas Ativas</span>
-            <div className="p-2 rounded-xl bg-success/10 text-success">
-              <Store className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-extrabold text-foreground">
-              {globalMetrics?.activeStores ?? 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Total de Usuários</span>
-            <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
-              <Users className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-extrabold text-foreground">
-              {globalMetrics?.totalUsers ?? 0}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-5">
-            <span className="text-xs font-medium text-muted-foreground">Vendas Globais</span>
-            <div className="p-2 rounded-xl bg-violet-500/10 text-violet-500">
-              <ShoppingCart className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-5 pt-0">
-            <div className="text-2xl font-extrabold text-foreground">
-              {globalMetrics?.totalOrders ?? 0}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Stores Table */}
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
-          <CardTitle className="text-base font-bold">Lojas Cadastradas no SaaS</CardTitle>
-          <div className="w-full sm:w-64">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-48 relative">
             <Input
-              placeholder="Buscar por nome ou slug..."
+              placeholder="Buscar nome, slug, CNPJ..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
+              className="h-8 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
-        </CardHeader>
-        <CardContent>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setFilter('status', e.target.value)}
+            aria-label="Filtrar por status"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="ALL">Todos os Status</option>
+            <option value="ACTIVE">Apenas Ativas</option>
+            <option value="INACTIVE">Inativas</option>
+          </select>
+
+          <Button
+            size="sm"
+            onClick={handleOpenCreate}
+            className="h-8 text-xs px-2.5 shadow-xs font-semibold"
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" /> Nova Loja (Tenant)
+          </Button>
+        </div>
+      </div>
+
+      {/* Global Compact Metrics Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+        <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">Total de Lojas</span>
+            <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
+              <Building2 className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="text-lg sm:text-xl font-bold text-foreground mt-1">
+            {globalMetrics?.totalStores ?? 0}
+          </div>
+        </Card>
+
+        <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">Lojas Ativas</span>
+            <div className="p-1.5 rounded-lg bg-success/10 text-success">
+              <Store className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="text-lg sm:text-xl font-bold text-success mt-1">
+            {globalMetrics?.activeStores ?? 0}
+          </div>
+        </Card>
+
+        <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">Total Usuários</span>
+            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
+              <Users className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="text-lg sm:text-xl font-bold text-foreground mt-1">
+            {globalMetrics?.totalUsers ?? 0}
+          </div>
+        </Card>
+
+        <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-medium text-muted-foreground">Pedidos Globais</span>
+            <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500">
+              <ShoppingCart className="h-3.5 w-3.5" />
+            </div>
+          </div>
+          <div className="text-lg sm:text-xl font-bold text-foreground mt-1">
+            {globalMetrics?.totalOrders ?? 0}
+          </div>
+        </Card>
+      </div>
+
+      {/* Stores Table Viewport Card */}
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
-            <div className="py-8 text-center text-xs text-muted-foreground">Carregando lojas...</div>
-          ) : filteredStores.length === 0 ? (
-            <div className="py-8 text-center text-xs text-muted-foreground">
-              Nenhuma loja encontrada com os filtros informados.
+            <div className="p-6">
+              <LoadingSkeleton count={5} className="h-10" />
+            </div>
+          ) : storeList.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <EmptyState
+                icon={<Building2 className="h-10 w-10 text-primary" />}
+                title="Nenhuma loja encontrada"
+                description="Cadastre novos tenants ou ajuste os filtros para gerenciar as instâncias do sistema."
+                actionLabel="Criar Loja"
+                onAction={handleOpenCreate}
+              />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
               <table className="w-full text-xs text-left">
-                <thead className="border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
-                    <th className="py-3 px-4">Nome da Loja</th>
-                    <th className="py-3 px-4">Slug / URL</th>
-                    <th className="py-3 px-4">CNPJ / Documento</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-4">Data de Criação</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
+                    <SortableHeader
+                      column="name"
+                      label="Nome da Loja"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="slug"
+                      label="Slug / Catálogo"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="document"
+                      label="CNPJ / Documento"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="is_active"
+                      label="Status"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                      className="text-center"
+                    />
+                    <SortableHeader
+                      column="created_at"
+                      label="Criado em"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <th className="py-2.5 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {filteredStores.map((st) => (
-                    <tr key={st.id} className="hover:bg-muted/40 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-foreground">{st.name}</td>
-                      <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
-                        /store/{st.slug}
+                  {storeList.map((st) => (
+                    <tr key={st.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-2 px-4 font-semibold text-foreground">
+                        <div className="flex items-center gap-2">
+                          <div className="p-1 rounded bg-muted text-foreground">
+                            <Store className="h-3.5 w-3.5" />
+                          </div>
+                          <div>
+                            <div>{st.name}</div>
+                            {st.email && (
+                              <div className="text-[10px] text-muted-foreground font-normal">
+                                {st.email}
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </td>
-                      <td className="py-3 px-4 text-muted-foreground">{st.document || '-'}</td>
-                      <td className="py-3 px-4">
-                        <Badge variant={st.is_active ? 'success' : 'destructive'}>
-                          {st.is_active ? 'Ativo' : 'Inativo'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground">{formatDate(st.created_at)}</td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-2 px-4 font-mono text-[11px] text-muted-foreground">
                         <Link
                           to={`/store/${st.slug}`}
                           target="_blank"
-                          className="text-primary hover:underline font-medium text-xs mr-3"
+                          className="inline-flex items-center gap-1 text-primary hover:underline hover:text-primary/80"
+                          title="Abrir Catálogo da Loja"
                         >
-                          Catálogo
+                          /store/{st.slug}
+                          <ExternalLink className="h-2.5 w-2.5" />
                         </Link>
+                      </td>
+                      <td className="py-2 px-4 text-muted-foreground">
+                        {st.document || '-'}
+                      </td>
+                      <td className="py-2 px-4 text-center">
+                        <Badge
+                          variant={st.is_active ? 'success' : 'destructive'}
+                          className="text-[10px] px-2 py-0.5"
+                        >
+                          {st.is_active ? 'Ativa' : 'Inativa'}
+                        </Badge>
+                      </td>
+                      <td className="py-2 px-4 text-muted-foreground text-[11px]">
+                        {formatDate(st.created_at)}
+                      </td>
+                      <td className="py-2 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => handleOpenEdit(st)}
+                            title="Editar Loja"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-7 w-7 ${
+                              st.is_active
+                                ? 'text-destructive/80 hover:text-destructive'
+                                : 'text-success/80 hover:text-success'
+                            }`}
+                            onClick={() =>
+                              toggleStatusMutation.mutate({
+                                id: st.id,
+                                isActive: !st.is_active,
+                              })
+                            }
+                            title={st.is_active ? 'Desativar Loja' : 'Ativar Loja'}
+                          >
+                            <Power className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -206,71 +429,142 @@ export function GlobalAdminDashboardPage() {
               </table>
             </div>
           )}
+
+          {/* Pinned Pagination */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
         </CardContent>
       </Card>
 
-      {/* New Store Modal */}
+      {/* New / Edit Store Modal */}
       <Modal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        title="Cadastrar Nova Loja (Tenant)"
-        description="Criação de nova loja independente no ecossistema multi-tenant"
+        onClose={() => {
+          setIsModalOpen(false)
+          resetForm()
+        }}
+        title={editingStore ? 'Editar Loja (Tenant)' : 'Cadastrar Nova Loja (Tenant)'}
+        description={
+          editingStore
+            ? `Atualize as configurações e parâmetros da loja ${editingStore.name}`
+            : 'Criação de nova loja independente no ecossistema multi-tenant'
+        }
         maxWidth="lg"
       >
-        <form onSubmit={handleCreateStore} className="space-y-4 pt-1">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
           {errorMessage && (
-            <div className="p-3 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
+            <div className="p-2.5 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
               {errorMessage}
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">Nome da Loja *</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">Nome da Loja *</label>
+              <Input
+                placeholder="Ex: Empório Central"
+                value={formData.name}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setFormData((prev) => ({
+                    ...prev,
+                    name: val,
+                    slug: editingStore
+                      ? prev.slug
+                      : val.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+                  }))
+                }}
+                required
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">Slug do Catálogo (URL) *</label>
+              <Input
+                placeholder="emporio-central"
+                value={formData.slug}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    slug: e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, '-'),
+                  }))
+                }
+                required
+                className="h-8 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">CNPJ / CPF</label>
+              <Input
+                placeholder="00.000.000/0001-00"
+                value={formData.document}
+                onChange={(e) => setFormData((prev) => ({ ...prev, document: e.target.value }))}
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">E-mail</label>
+              <Input
+                type="email"
+                placeholder="contato@loja.com"
+                value={formData.email}
+                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">Telefone / WhatsApp</label>
+              <Input
+                placeholder="(11) 99999-9999"
+                value={formData.phone}
+                onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value }))}
+                className="h-8 text-xs"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-foreground">Descrição / Informações</label>
             <Input
-              placeholder="Ex: Empório Central Paulista"
-              value={newStoreName}
-              onChange={(e) => {
-                setNewStoreName(e.target.value)
-                setNewStoreSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]/g, '-'))
-              }}
-              required
+              placeholder="Breve descrição da filial ou segmento..."
+              value={formData.description}
+              onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
+              className="h-8 text-xs"
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">Slug do Catálogo (URL) *</label>
-            <Input
-              placeholder="emporio-central-paulista"
-              value={newStoreSlug}
-              onChange={(e) => setNewStoreSlug(e.target.value)}
-              required
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-foreground">CNPJ / CPF (Opcional)</label>
-            <Input
-              placeholder="00.000.000/0001-00"
-              value={newStoreDoc}
-              onChange={(e) => setNewStoreDoc(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-4 border-t border-border">
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
             <Button
               type="button"
               variant="outline"
-              className="w-full sm:w-auto h-11 sm:h-10"
-              onClick={() => setIsModalOpen(false)}
+              size="sm"
+              className="w-full sm:w-auto h-8 text-xs"
+              onClick={() => {
+                setIsModalOpen(false)
+                resetForm()
+              }}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
-              isLoading={createMutation.isPending}
+              size="sm"
+              className="w-full sm:w-auto h-8 text-xs font-semibold"
+              isLoading={createMutation.isPending || updateMutation.isPending}
             >
-              Criar Loja
+              {editingStore ? 'Salvar Alterações' : 'Criar Loja'}
             </Button>
           </div>
         </form>
