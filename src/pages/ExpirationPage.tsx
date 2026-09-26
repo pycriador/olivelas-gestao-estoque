@@ -117,153 +117,115 @@ export function ExpirationPage() {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-150 min-h-0">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-shrink-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Lotes & Controle de Validades
+    <div className="h-full flex flex-col space-y-2.5 animate-in fade-in duration-150 min-h-0">
+      {/* Unified Compact Header & Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            Lotes & Validades
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
+              {totalBatches} {totalBatches === 1 ? 'lote' : 'lotes'}
+            </Badge>
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            Monitoramento de produtos perecíveis com prevenção contra perdas
-          </p>
+          <span className="hidden sm:inline text-xs text-muted-foreground">| Prevenção de perdas e perecíveis</span>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCSV}
-          disabled={totalBatches === 0}
-        >
-          <Download className="h-4 w-4 mr-1.5" /> Exportar Lotes CSV
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-56 relative">
+            <Input
+              placeholder="Buscar lote ou produto..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={totalBatches === 0}
+            className="h-8 text-xs px-2.5"
+          >
+            <Download className="h-3.5 w-3.5 mr-1" /> Exportar
+          </Button>
+        </div>
       </div>
 
-      {/* KPI Alert Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-shrink-0">
-        <Card
+      {/* Ultra-compact Interactive KPI Filter Pills */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+        <button
           onClick={() => {
             setFilter('status', filterStatus === 'EXPIRED' ? 'ALL' : 'EXPIRED')
             setPage(1)
           }}
-          className={`cursor-pointer transition-all hover:scale-[1.01] ${
-            filterStatus === 'EXPIRED' ? 'ring-2 ring-danger bg-danger/5' : 'hover:border-danger/50'
+          className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-left transition-all ${
+            filterStatus === 'EXPIRED'
+              ? 'border-danger bg-danger/10 text-danger ring-1 ring-danger'
+              : 'border-border bg-card hover:border-danger/40 text-foreground'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
-            <span className="text-xs font-semibold text-muted-foreground">Produtos Vencidos</span>
-            <div className="p-1.5 rounded-lg bg-danger/10 text-danger">
-              <PackageX className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3.5 sm:p-4 pt-0">
-            <div className="text-2xl font-extrabold text-danger">
-              {summary.expired}
-            </div>
-            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Bloqueio recomendado</span>
-          </CardContent>
-        </Card>
+          <div className="flex items-center gap-1.5">
+            <PackageX className="h-3.5 w-3.5 text-danger" />
+            <span className="text-xs font-semibold">Vencidos</span>
+          </div>
+          <span className="text-xs font-bold font-mono text-danger">{summary.expired}</span>
+        </button>
 
-        <Card
+        <button
           onClick={() => {
             setFilter('status', filterStatus === '7D' ? 'ALL' : '7D')
             setPage(1)
           }}
-          className={`cursor-pointer transition-all hover:scale-[1.01] ${
-            filterStatus === '7D' ? 'ring-2 ring-orange-500 bg-orange-500/5' : 'hover:border-orange-500/50'
+          className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-left transition-all ${
+            filterStatus === '7D'
+              ? 'border-orange-500 bg-orange-500/10 text-orange-500 ring-1 ring-orange-500'
+              : 'border-border bg-card hover:border-orange-500/40 text-foreground'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
-            <span className="text-xs font-semibold text-muted-foreground">&le; 7 Dias</span>
-            <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-500">
-              <AlertTriangle className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3.5 sm:p-4 pt-0">
-            <div className="text-2xl font-extrabold text-orange-500">
-              {summary.critical7d}
-            </div>
-            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Ação promocional</span>
-          </CardContent>
-        </Card>
+          <div className="flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5 text-orange-500" />
+            <span className="text-xs font-semibold">&le; 7 Dias</span>
+          </div>
+          <span className="text-xs font-bold font-mono text-orange-500">{summary.critical7d}</span>
+        </button>
 
-        <Card
+        <button
           onClick={() => {
             setFilter('status', filterStatus === '30D' ? 'ALL' : '30D')
             setPage(1)
           }}
-          className={`cursor-pointer transition-all hover:scale-[1.01] ${
-            filterStatus === '30D' ? 'ring-2 ring-amber-500 bg-amber-500/5' : 'hover:border-amber-500/50'
+          className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-left transition-all ${
+            filterStatus === '30D'
+              ? 'border-amber-500 bg-amber-500/10 text-amber-500 ring-1 ring-amber-500'
+              : 'border-border bg-card hover:border-amber-500/40 text-foreground'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
-            <span className="text-xs font-semibold text-muted-foreground">&le; 30 Dias</span>
-            <div className="p-1.5 rounded-lg bg-amber-500/10 text-amber-500">
-              <Clock className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3.5 sm:p-4 pt-0">
-            <div className="text-2xl font-extrabold text-amber-500">
-              {summary.warning30d}
-            </div>
-            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Giro prioritário</span>
-          </CardContent>
-        </Card>
+          <div className="flex items-center gap-1.5">
+            <Clock className="h-3.5 w-3.5 text-amber-500" />
+            <span className="text-xs font-semibold">&le; 30 Dias</span>
+          </div>
+          <span className="text-xs font-bold font-mono text-amber-500">{summary.warning30d}</span>
+        </button>
 
-        <Card
+        <button
           onClick={() => {
             setFilter('status', filterStatus === 'NORMAL' ? 'ALL' : 'NORMAL')
             setPage(1)
           }}
-          className={`cursor-pointer transition-all hover:scale-[1.01] ${
-            filterStatus === 'NORMAL' ? 'ring-2 ring-success bg-success/5' : 'hover:border-success/50'
+          className={`flex items-center justify-between px-3 py-1.5 rounded-lg border text-left transition-all ${
+            filterStatus === 'NORMAL'
+              ? 'border-success bg-success/10 text-success ring-1 ring-success'
+              : 'border-border bg-card hover:border-success/40 text-foreground'
           }`}
         >
-          <CardHeader className="flex flex-row items-center justify-between pb-1 p-3.5 sm:p-4">
-            <span className="text-xs font-semibold text-muted-foreground">Dentro do Prazo</span>
-            <div className="p-1.5 rounded-lg bg-success/10 text-success">
-              <CheckCircle className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="p-3.5 sm:p-4 pt-0">
-            <div className="text-2xl font-extrabold text-success">
-              {summary.normal}
-            </div>
-            <span className="text-[10px] sm:text-[11px] text-muted-foreground">Lotes normais</span>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filter / Search Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/40 p-3 rounded-xl border border-border flex-shrink-0">
-        <div className="w-full sm:w-72">
-          <Input
-            placeholder="Buscar por lote ou produto..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            icon={<Search className="h-4 w-4" />}
-            className="h-9 text-xs"
-          />
-        </div>
-
-        {filterStatus !== 'ALL' && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
-              Filtro ativo: <b className="text-foreground">{filterStatus}</b> ({totalBatches} lotes)
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 text-xs gap-1"
-              onClick={() => {
-                setFilter('status', 'ALL')
-                setPage(1)
-              }}
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> Limpar filtro
-            </Button>
+          <div className="flex items-center gap-1.5">
+            <CheckCircle className="h-3.5 w-3.5 text-success" />
+            <span className="text-xs font-semibold">No Prazo</span>
           </div>
-        )}
+          <span className="text-xs font-bold font-mono text-success">{summary.normal}</span>
+        </button>
       </div>
 
       {/* Batches Table Card */}

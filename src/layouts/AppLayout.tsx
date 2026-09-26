@@ -234,11 +234,11 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-16 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-4 sm:px-6 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <header className="h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 sm:px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 rounded-lg text-muted-foreground hover:bg-muted"
+              className="md:hidden p-1.5 rounded-lg text-muted-foreground hover:bg-muted"
             >
               <Menu className="h-5 w-5" />
             </button>
@@ -249,7 +249,7 @@ export function AppLayout() {
                 const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true })
                 window.dispatchEvent(event)
               }}
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-background border border-border text-xs text-muted-foreground hover:border-primary/40 transition-colors w-64"
+              className="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-lg bg-background border border-border text-xs text-muted-foreground hover:border-primary/40 transition-colors w-56"
             >
               <Search className="h-3.5 w-3.5" />
               <span>Buscar... (Ctrl + K)</span>
@@ -257,12 +257,12 @@ export function AppLayout() {
           </div>
 
           {/* Right Header Utilities */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5 sm:gap-2">
             <LanguageSelector />
             <ThemeToggle />
             <Link
               to="/notifications"
-              className="p-2 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground relative transition-colors"
+              className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground relative transition-colors"
               title="Notificações"
             >
               <Bell className="h-4 w-4" />
@@ -271,7 +271,7 @@ export function AppLayout() {
         </header>
 
         {/* Page Viewport */}
-        <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-4 sm:p-5 md:p-6 max-w-7xl w-full mx-auto flex flex-col">
+        <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-2.5 sm:p-3 md:p-3.5 w-full flex flex-col">
           <Outlet />
         </main>
       </div>

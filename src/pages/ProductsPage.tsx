@@ -313,74 +313,58 @@ export function ProductsPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+      {/* Unified Compact Header & Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             {t.products.title}
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
+              {totalItems} {totalItems === 1 ? 'item' : 'itens'}
+            </Badge>
           </h1>
-          <p className="text-xs text-muted-foreground">
-            {t.products.subtitle}
-          </p>
+          <span className="hidden sm:inline text-xs text-muted-foreground">| {t.products.subtitle}</span>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handleOpenImport} className="h-9 text-xs">
-            <Upload className="h-3.5 w-3.5 mr-1.5" /> Importar (CSV / JSON)
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={products.length === 0} className="h-9 text-xs">
-            <Download className="h-3.5 w-3.5 mr-1.5" /> {t.common.export} CSV
-          </Button>
-          <Button size="sm" onClick={handleOpenCreate} className="h-9 text-xs shadow-xs font-semibold">
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> {t.products.newProduct}
-          </Button>
-        </div>
-      </div>
-
-      {/* Filter Toolbar */}
-      <Card className="flex-shrink-0">
-        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
-          <div className="flex-1 w-full relative">
+          <div className="w-full sm:w-56 relative">
             <Input
-              placeholder="Pesquisar por nome, SKU ou código de barras..."
+              placeholder="Buscar nome, SKU, código..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 text-xs"
+              className="h-8 text-xs"
               icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
 
-          <div className="w-full sm:w-56">
-            <select
-              value={selectedCategory}
-              onChange={(e) => setFilter('category', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="">Todas as Categorias</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </CardContent>
-      </Card>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setFilter('category', e.target.value)}
+            aria-label="Filtrar por categoria"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="">Todas Categorias</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+
+          <Button variant="outline" size="sm" onClick={handleOpenImport} className="h-8 text-xs px-2.5">
+            <Upload className="h-3.5 w-3.5 mr-1" /> Importar
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={products.length === 0} className="h-8 text-xs px-2.5">
+            <Download className="h-3.5 w-3.5 mr-1" /> Exportar
+          </Button>
+          <Button size="sm" onClick={handleOpenCreate} className="h-8 text-xs px-2.5 shadow-xs font-semibold">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Novo Produto
+          </Button>
+        </div>
+      </div>
 
       {/* Products Table Card - Viewport fitting with internal scroll */}
-      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
-        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
-          <div>
-            <CardTitle className="text-sm font-semibold text-foreground">
-              Catálogo de Produtos
-            </CardTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Total de {totalItems} produto(s) cadastrado(s)
-            </p>
-          </div>
-        </CardHeader>
-
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">

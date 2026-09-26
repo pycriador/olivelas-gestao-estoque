@@ -157,74 +157,91 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="h-full flex flex-col space-y-4 animate-in fade-in duration-150 min-h-0">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 flex-shrink-0">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+    <div className="h-full flex flex-col space-y-2.5 animate-in fade-in duration-150 min-h-0">
+      {/* Unified Compact Header & Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground">
             {t.inventory.title}
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            {t.inventory.subtitle}
-          </p>
+          {/* Tab Selector Pills */}
+          <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
+            <button
+              onClick={() => {
+                setFilter('tab', 'balances')
+                setPage(1)
+              }}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'balances'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Layers className="h-3.5 w-3.5 inline mr-1" /> Saldos ({totalBalances})
+            </button>
+            <button
+              onClick={() => {
+                setFilter('tab', 'movements')
+                setPage(1)
+              }}
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+                activeTab === 'movements'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <History className="h-3.5 w-3.5 inline mr-1" /> Movimentos ({totalMovements})
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportBalances}>
-            <Download className="h-4 w-4 mr-1.5" /> Exportar Saldos
-          </Button>
-          <Button size="sm" onClick={() => setIsMovementModalOpen(true)} className="shadow-md">
-            <Plus className="h-4 w-4 mr-1.5" /> Lançar Movimento
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-56 relative">
+            <Input
+              placeholder={activeTab === 'balances' ? 'Buscar produto ou SKU...' : 'Buscar em observações...'}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
+            />
+          </div>
+
+          {activeTab === 'movements' && (
+            <select
+              value={movementTypeFilter}
+              onChange={(e) => {
+                setFilter('movementType', e.target.value)
+                setPage(1)
+              }}
+              aria-label="Filtrar por tipo"
+              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="ALL">Todos os Tipos</option>
+              <option value="ENTRY">Entrada</option>
+              <option value="EXIT">Saída</option>
+              <option value="ADJUSTMENT">Ajuste</option>
+              <option value="LOSS">Perda</option>
+              <option value="DAMAGE">Avaria</option>
+              <option value="EXPIRATION">Vencimento</option>
+              <option value="RETURN">Devolução</option>
+            </select>
+          )}
+
+          {activeTab === 'balances' && (
+            <Button variant="outline" size="sm" onClick={handleExportBalances} className="h-8 text-xs px-2.5">
+              <Download className="h-3.5 w-3.5 mr-1" /> Exportar
+            </Button>
+          )}
+
+          <Button size="sm" onClick={() => setIsMovementModalOpen(true)} className="h-8 text-xs px-2.5 shadow-xs font-semibold">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Lançar Movimento
           </Button>
         </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-border pb-2 flex-shrink-0">
-        <button
-          onClick={() => {
-            setFilter('tab', 'balances')
-            setPage(1)
-          }}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'balances'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <Layers className="h-4 w-4 inline mr-1.5" /> Saldos Atuais por Produto
-        </button>
-        <button
-          onClick={() => {
-            setFilter('tab', 'movements')
-            setPage(1)
-          }}
-          className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
-            activeTab === 'movements'
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-        >
-          <History className="h-4 w-4 inline mr-1.5" /> Histórico de Movimentações
-        </button>
       </div>
 
       {/* Balances View */}
       {activeTab === 'balances' && (
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-sm bg-card">
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-3 flex-shrink-0">
-            <CardTitle className="text-base font-bold">Posição de Estoque</CardTitle>
-            <div className="w-full sm:w-72">
-              <Input
-                placeholder="Filtrar por produto ou SKU..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                icon={<Search className="h-4 w-4" />}
-                className="h-9 text-xs"
-              />
-            </div>
-          </CardHeader>
-
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
           <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
             {loadingBalances ? (
               <div className="p-6">
@@ -327,43 +344,7 @@ export function InventoryPage() {
 
       {/* Movements View */}
       {activeTab === 'movements' && (
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-sm bg-card">
-          <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 flex-shrink-0">
-            <CardTitle className="text-base font-bold">Trilha de Movimentos de Estoque</CardTitle>
-            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-              <div className="w-full sm:w-56">
-                <Input
-                  placeholder="Buscar em observações..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  icon={<Search className="h-4 w-4" />}
-                  className="h-9 text-xs"
-                />
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Filter className="h-3.5 w-3.5 text-muted-foreground" />
-                <select
-                  value={movementTypeFilter}
-                  onChange={(e) => {
-                    setFilter('movementType', e.target.value)
-                    setPage(1)
-                  }}
-                  aria-label="Filtrar por tipo de movimentação"
-                  className="h-9 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  <option value="ALL">Todos os Tipos</option>
-                  <option value="ENTRY">Entrada</option>
-                  <option value="EXIT">Saída</option>
-                  <option value="ADJUSTMENT">Ajuste</option>
-                  <option value="LOSS">Perda</option>
-                  <option value="DAMAGE">Avaria</option>
-                  <option value="EXPIRATION">Vencimento</option>
-                  <option value="RETURN">Devolução</option>
-                </select>
-              </div>
-            </div>
-          </CardHeader>
-
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
           <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
             {loadingMovements ? (
               <div className="p-6">

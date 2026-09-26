@@ -56,66 +56,49 @@ export function AuditLogsPage() {
   const totalPages = Math.ceil(totalItems / pageSize) || 1
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
-        <div>
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-semibold mb-1">
-            <Shield className="h-3 w-3" /> Trilha de Auditoria & Conformidade
-          </div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+      {/* Unified Compact Header & Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             Logs de Auditoria
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
+              {totalItems} {totalItems === 1 ? 'evento' : 'eventos'}
+            </Badge>
           </h1>
-          <p className="text-xs text-muted-foreground">
-            Histórico imutável de operações críticas realizadas por usuários na loja
-          </p>
+          <span className="hidden sm:inline text-xs text-muted-foreground">| Trilha de conformidade e segurança</span>
         </div>
-      </div>
 
-      {/* Filter Toolbar */}
-      <Card className="flex-shrink-0">
-        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
-          <div className="flex-1 w-full relative">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-56 relative">
             <Input
-              placeholder="Buscar por ação ou entidade..."
+              placeholder="Buscar por ação..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 text-xs"
+              className="h-8 text-xs"
               icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
 
-          <div className="w-full sm:w-56">
-            <select
-              value={selectedEntity}
-              onChange={(e) => setFilter('entity', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todas as Entidades</option>
-              <option value="products">Produtos</option>
-              <option value="orders">Pedidos / Vendas</option>
-              <option value="purchase_orders">Compras</option>
-              <option value="stock">Estoque</option>
-              <option value="customers">Clientes</option>
-              <option value="suppliers">Fornecedores</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
+          <select
+            value={selectedEntity}
+            onChange={(e) => setFilter('entity', e.target.value)}
+            aria-label="Filtrar por entidade"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="ALL">Todas Entidades</option>
+            <option value="products">Produtos</option>
+            <option value="orders">Pedidos / Vendas</option>
+            <option value="purchase_orders">Compras</option>
+            <option value="stock">Estoque</option>
+            <option value="customers">Clientes</option>
+            <option value="suppliers">Fornecedores</option>
+          </select>
+        </div>
+      </div>
 
       {/* Audit Logs Table Card - Viewport fitting with internal scroll */}
-      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
-        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
-          <div>
-            <CardTitle className="text-sm font-semibold text-foreground">
-              Eventos Registrados
-            </CardTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Total de {totalItems} evento(s) auditado(s)
-            </p>
-          </div>
-        </CardHeader>
-
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="py-8 text-center text-xs text-muted-foreground">

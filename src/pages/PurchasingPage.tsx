@@ -163,80 +163,65 @@ export function PurchasingPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
-            Ordens de Compra & Entrada de Estoque
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+      {/* Unified Compact Header & Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
+            Ordens de Compra
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
+              {totalItems} {totalItems === 1 ? 'ordem' : 'ordens'}
+            </Badge>
           </h1>
-          <p className="text-xs text-muted-foreground">
-            Emissão de compras de fornecedores e conferência física com geração de lotes
-          </p>
+          <span className="hidden sm:inline text-xs text-muted-foreground">| Compras de fornecedores e lotes</span>
         </div>
 
-        <Button onClick={() => setIsNewModalOpen(true)} className="h-9 text-xs shadow-xs font-semibold">
-          <Plus className="h-3.5 w-3.5 mr-1.5" /> Nova Ordem de Compra
-        </Button>
-      </div>
-
-      {/* Filter Toolbar */}
-      <Card className="flex-shrink-0">
-        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
-          <div className="flex-1 w-full relative">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-48 relative">
             <Input
-              placeholder="Buscar por número da ordem de compra..."
+              placeholder="Buscar Nº ordem..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 text-xs"
+              className="h-8 text-xs"
               icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
 
-          <div className="w-full sm:w-56">
-            <select
-              value={selectedSupplier}
-              onChange={(e) => setFilter('supplier', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todos os Fornecedores</option>
-              {suppliers.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.trade_name || s.corporate_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={selectedSupplier}
+            onChange={(e) => setFilter('supplier', e.target.value)}
+            aria-label="Filtrar por fornecedor"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="ALL">Todos Fornecedores</option>
+            {suppliers.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.trade_name || s.corporate_name}
+              </option>
+            ))}
+          </select>
 
-          <div className="w-full sm:w-48">
-            <select
-              value={selectedStatus}
-              onChange={(e) => setFilter('status', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todos os Status</option>
-              <option value="DRAFT">Rascunho</option>
-              <option value="PENDING">Pendente</option>
-              <option value="RECEIVED">Recebido</option>
-              <option value="CANCELLED">Cancelado</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setFilter('status', e.target.value)}
+            aria-label="Filtrar por status"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="ALL">Todos Status</option>
+            <option value="DRAFT">Rascunho</option>
+            <option value="PENDING">Pendente</option>
+            <option value="RECEIVED">Recebido</option>
+            <option value="CANCELLED">Cancelado</option>
+          </select>
+
+          <Button onClick={() => setIsNewModalOpen(true)} className="h-8 text-xs px-2.5 shadow-xs font-semibold">
+            <Plus className="h-3.5 w-3.5 mr-1" /> Nova Ordem
+          </Button>
+        </div>
+      </div>
 
       {/* Table Card - Viewport fitting with internal scroll */}
-      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
-        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
-          <div>
-            <CardTitle className="text-sm font-semibold text-foreground">
-              Ordens de Compra
-            </CardTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Total de {totalItems} ordem(ns) registrada(s)
-            </p>
-          </div>
-        </CardHeader>
-
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">

@@ -157,21 +157,43 @@ export function CustomersPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+      {/* Unified Compact Header & Toolbar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
             Gestão de Clientes
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0">
+              {totalItems} {totalItems === 1 ? 'cliente' : 'clientes'}
+            </Badge>
           </h1>
-          <p className="text-xs text-muted-foreground">
-            Cadastro e histórico de clientes vinculados à loja
-          </p>
+          <span className="hidden sm:inline text-xs text-muted-foreground">| Cadastro e contatos da loja</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={customerList.length === 0} className="h-9 text-xs">
-            <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar CSV
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="w-full sm:w-56 relative">
+            <Input
+              placeholder="Buscar nome, CPF, e-mail..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-8 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
+            />
+          </div>
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setFilter('status', e.target.value)}
+            aria-label="Filtrar por status"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="ALL">Todos os Status</option>
+            <option value="ACTIVE">Apenas Ativos</option>
+            <option value="INACTIVE">Inativos</option>
+          </select>
+
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={customerList.length === 0} className="h-8 text-xs px-2.5">
+            <Download className="h-3.5 w-3.5 mr-1" /> Exportar
           </Button>
           <Button
             size="sm"
@@ -179,53 +201,15 @@ export function CustomersPage() {
               resetForm()
               setIsModalOpen(true)
             }}
-            className="h-9 text-xs shadow-xs font-semibold"
+            className="h-8 text-xs px-2.5 shadow-xs font-semibold"
           >
-            <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo Cliente
+            <Plus className="h-3.5 w-3.5 mr-1" /> Novo Cliente
           </Button>
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <Card className="flex-shrink-0">
-        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
-          <div className="flex-1 w-full relative">
-            <Input
-              placeholder="Buscar por nome, documento, e-mail ou telefone..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="h-9 text-xs"
-              icon={<Search className="h-3.5 w-3.5" />}
-            />
-          </div>
-
-          <div className="w-full sm:w-48">
-            <select
-              value={statusFilter}
-              onChange={(e) => setFilter('status', e.target.value)}
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todos os Status</option>
-              <option value="ACTIVE">Apenas Ativos</option>
-              <option value="INACTIVE">Inativos</option>
-            </select>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Table Card - Viewport fitting with internal scroll */}
-      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
-        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
-          <div>
-            <CardTitle className="text-sm font-semibold text-foreground">
-              Base de Clientes
-            </CardTitle>
-            <p className="text-[11px] text-muted-foreground mt-0.5">
-              Total de {totalItems} cliente(s) cadastrado(s)
-            </p>
-          </div>
-        </CardHeader>
-
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">
