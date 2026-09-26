@@ -16,20 +16,78 @@ interface AuthStoreState {
 }
 
 const ACTIVE_STORE_KEY = 'olivelas_active_store_id'
+const USER_PROFILE_KEY = 'olivelas_user_profile'
+const USER_STORES_KEY = 'olivelas_user_stores'
+
+const getCachedSession = (): {
+  user: UserProfile | null
+  activeStore: StoreUserMembership | null
+  userStores: StoreUserMembership[]
+  isAuthenticated: boolean
+  isLoading: boolean
+} => {
+  if (typeof window === 'undefined') {
+    return { user: null, activeStore: null, userStores: [], isAuthenticated: false, isLoading: true }
+  }
+  try {
+    const rawUser = localStorage.getItem(USER_PROFILE_KEY) || sessionStorage.getItem(USER_PROFILE_KEY)
+    const rawStores = localStorage.getItem(USER_STORES_KEY) || sessionStorage.getItem(USER_STORES_KEY)
+    const savedStoreId = localStorage.getItem(ACTIVE_STORE_KEY)
+
+    if (rawUser && rawStores) {
+      const user: UserProfile = JSON.parse(rawUser)
+      const userStores: StoreUserMembership[] = JSON.parse(rawStores)
+      let activeStore = userStores.find((s) => s.storeId === savedStoreId) || userStores[0] || null
+
+      if (!activeStore && user.isGlobalAdmin) {
+        activeStore = {
+          id: 'global',
+          storeId: 'all',
+          storeName: 'Visão Global (Todas as Lojas)',
+          storeSlug: 'global',
+          role: 'GLOBAL_ADMIN',
+          isActive: true,
+        }
+      }
+
+      return {
+        user,
+        userStores,
+        activeStore,
+        isAuthenticated: true,
+        isLoading: false,
+      }
+    }
+  } catch {
+    // Ignore parse error
+  }
+  return { user: null, activeStore: null, userStores: [], isAuthenticated: false, isLoading: true }
+}
+
+const initialCached = getCachedSession()
 
 export const useAuthStore = create<AuthStoreState>((set, get) => ({
-  user: null,
-  activeStore: null,
-  userStores: [],
-  isLoading: true,
-  isAuthenticated: false,
+  user: initialCached.user,
+  activeStore: initialCached.activeStore,
+  userStores: initialCached.userStores,
+  isLoading: initialCached.isLoading,
+  isAuthenticated: initialCached.isAuthenticated,
 
   initAuth: async () => {
-    try {
+    const isAlreadyLoaded = Boolean(get().user)
+    if (!isAlreadyLoaded) {
       set({ isLoading: true })
+    }
+
+    try {
       const currentUser = await authService.getCurrentUser()
 
       if (!currentUser) {
+        localStorage.removeItem(USER_PROFILE_KEY)
+        localStorage.removeItem(USER_STORES_KEY)
+        sessionStorage.removeItem(USER_PROFILE_KEY)
+        sessionStorage.removeItem(USER_STORES_KEY)
+
         set({
           user: null,
           activeStore: null,
@@ -42,9 +100,8 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
 
       const stores = await authService.getUserStores(currentUser.id)
       const savedStoreId = localStorage.getItem(ACTIVE_STORE_KEY)
-      let selectedStore = stores.find(s => s.storeId === savedStoreId) || stores[0] || null
+      let selectedStore = stores.find((s) => s.storeId === savedStoreId) || stores[0] || null
 
-      // If user is global admin and has no direct store, make placeholder or leave selectedStore
       if (!selectedStore && currentUser.isGlobalAdmin) {
         selectedStore = {
           id: 'global',
@@ -56,6 +113,13 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
         }
       }
 
+      try {
+        localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(currentUser))
+        localStorage.setItem(USER_STORES_KEY, JSON.stringify(stores))
+      } catch {
+        // Fallback or ignore storage quota
+      }
+
       set({
         user: currentUser,
         userStores: stores,
@@ -65,13 +129,15 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
       })
     } catch (err) {
       console.error('Auth initialization error:', err)
-      set({
-        user: null,
-        activeStore: null,
-        userStores: [],
-        isLoading: false,
-        isAuthenticated: false,
-      })
+      if (!isAlreadyLoaded) {
+        set({
+          user: null,
+          activeStore: null,
+          userStores: [],
+          isLoading: false,
+          isAuthenticated: false,
+        })
+      }
     }
   },
 
@@ -85,7 +151,13 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
     if (!user) return
     const stores = await authService.getUserStores(user.id)
     const currentActive = get().activeStore
-    const stillExists = stores.find(s => s.storeId === currentActive?.storeId)
+    const stillExists = stores.find((s) => s.storeId === currentActive?.storeId)
+
+    try {
+      localStorage.setItem(USER_STORES_KEY, JSON.stringify(stores))
+    } catch {
+      // Ignore storage error
+    }
 
     set({
       userStores: stores,
@@ -96,6 +168,11 @@ export const useAuthStore = create<AuthStoreState>((set, get) => ({
   signOut: async () => {
     await authService.signOut()
     localStorage.removeItem(ACTIVE_STORE_KEY)
+    localStorage.removeItem(USER_PROFILE_KEY)
+    localStorage.removeItem(USER_STORES_KEY)
+    sessionStorage.removeItem(USER_PROFILE_KEY)
+    sessionStorage.removeItem(USER_STORES_KEY)
+
     set({
       user: null,
       activeStore: null,
