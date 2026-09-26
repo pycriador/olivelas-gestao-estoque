@@ -67,7 +67,7 @@ export function AppLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row">
+    <div className="h-screen max-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
       <GlobalCommandK />
 
       {/* Mobile Backdrop */}
@@ -232,9 +232,9 @@ export function AppLayout() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-16 border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-30 px-4 sm:px-6 flex items-center justify-between">
+        <header className="h-16 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-4 sm:px-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -271,7 +271,7 @@ export function AppLayout() {
         </header>
 
         {/* Page Viewport */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto animate-in fade-in duration-200">
+        <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-4 sm:p-5 md:p-6 max-w-7xl w-full mx-auto flex flex-col">
           <Outlet />
         </main>
       </div>

@@ -43,10 +43,10 @@ export function GlobalCommandK() {
       try {
         const [prodRes, custRes] = await Promise.all([
           productService.listProducts(storeId, { search: query, pageSize: 5 }),
-          customerService.listCustomers(storeId, query),
+          customerService.listCustomers(storeId, { search: query, pageSize: 5 }),
         ])
         setProducts(prodRes.data)
-        setCustomers(custRes.slice(0, 5))
+        setCustomers(custRes.data)
       } catch (err) {
         console.error('Search error:', err)
       } finally {

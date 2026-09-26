@@ -33,11 +33,12 @@ export function ReportsPage() {
     enabled: Boolean(hasActiveStore),
   })
 
-  const { data: orders = [] } = useQuery({
+  const { data: ordersData } = useQuery({
     queryKey: ['report-orders', storeId],
-    queryFn: () => orderService.listOrders(storeId),
+    queryFn: () => orderService.listOrders(storeId, { pageSize: 1000 }),
     enabled: Boolean(hasActiveStore),
   })
+  const orders = ordersData?.data || []
 
   const { data: balances = [] } = useQuery({
     queryKey: ['report-balances', storeId],
@@ -45,11 +46,12 @@ export function ReportsPage() {
     enabled: Boolean(hasActiveStore),
   })
 
-  const { data: customers = [] } = useQuery({
+  const { data: customersData } = useQuery({
     queryKey: ['report-customers', storeId],
-    queryFn: () => customerService.listCustomers(storeId),
+    queryFn: () => customerService.listCustomers(storeId, { pageSize: 1000 }),
     enabled: Boolean(hasActiveStore),
   })
+  const customers = customersData?.data || []
 
   // Export Sales Report
   const handleExportSales = () => {

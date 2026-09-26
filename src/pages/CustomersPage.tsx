@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerService } from '@/services/customerService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { parseApiError } from '@/utils/errorHandler'
 import { exportToCSV } from '@/utils/export'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Users, Plus, Search, Download, Trash2, Edit2, Phone, Mail } from 'lucide-react'
@@ -20,7 +23,26 @@ export function CustomersPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
-  const [search, setSearch] = React.useState('')
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 15,
+    defaultSortBy: 'name',
+    defaultSortOrder: 'asc',
+  })
+
+  const statusFilter = filters.status || 'ALL'
+
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -34,11 +56,23 @@ export function CustomersPage() {
     notes: '',
   })
 
-  const { data: customers = [], isLoading } = useQuery({
-    queryKey: ['customers', storeId, search],
-    queryFn: () => customerService.listCustomers(storeId, search),
+  const { data, isLoading } = useQuery({
+    queryKey: ['customers', storeId, { search, statusFilter, page, pageSize, sortBy, sortOrder }],
+    queryFn: () =>
+      customerService.listCustomers(storeId, {
+        search: search || undefined,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        sortBy,
+        sortOrder,
+        page,
+        pageSize,
+      }),
     enabled: Boolean(hasActiveStore),
   })
+
+  const customerList = Array.isArray(data) ? data : data?.data || []
+  const totalItems = Array.isArray(data) ? data.length : data?.total || 0
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
 
   const createMutation = useMutation({
     mutationFn: (c: Partial<Customer>) => customerService.createCustomer(storeId, c),
@@ -107,10 +141,10 @@ export function CustomersPage() {
   }
 
   const handleExportCSV = () => {
-    if (customers.length === 0) return
+    if (customerList.length === 0) return
     exportToCSV(
       'clientes',
-      customers,
+      customerList,
       [
         { header: 'Nome', key: 'name' },
         { header: 'CPF/CNPJ', key: (r) => r.document || '-' },
@@ -123,20 +157,21 @@ export function CustomersPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             Gestão de Clientes
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             Cadastro e histórico de clientes vinculados à loja
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={customers.length === 0}>
-            <Download className="h-4 w-4 mr-1.5" /> Exportar Clientes CSV
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={customerList.length === 0} className="h-9 text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar CSV
           </Button>
           <Button
             size="sm"
@@ -144,31 +179,60 @@ export function CustomersPage() {
               resetForm()
               setIsModalOpen(true)
             }}
-            className="shadow-md"
+            className="h-9 text-xs shadow-xs font-semibold"
           >
-            <Plus className="h-4 w-4 mr-1.5" /> Novo Cliente
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo Cliente
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
-          <div className="w-full sm:w-80">
+      {/* Filter Toolbar */}
+      <Card className="flex-shrink-0">
+        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
+          <div className="flex-1 w-full relative">
             <Input
               placeholder="Buscar por nome, documento, e-mail ou telefone..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
+              className="h-9 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
+
+          <div className="w-full sm:w-48">
+            <select
+              value={statusFilter}
+              onChange={(e) => setFilter('status', e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="ALL">Todos os Status</option>
+              <option value="ACTIVE">Apenas Ativos</option>
+              <option value="INACTIVE">Inativos</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table Card - Viewport fitting with internal scroll */}
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
+        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              Base de Clientes
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Total de {totalItems} cliente(s) cadastrado(s)
+            </p>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
+
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">
               <LoadingSkeleton count={5} className="h-10" />
             </div>
-          ) : customers.length === 0 ? (
-            <div className="p-8">
+          ) : customerList.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center p-8">
               <EmptyState
                 icon={<Users className="h-10 w-10 text-primary" />}
                 title="Nenhum cliente encontrado"
@@ -181,21 +245,33 @@ export function CustomersPage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
               <table className="w-full text-xs text-left">
-                <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
-                    <th className="py-3 px-4">Nome do Cliente</th>
-                    <th className="py-3 px-4">CPF / CNPJ</th>
+                    <SortableHeader
+                      column="name"
+                      label="Nome do Cliente"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="document"
+                      label="CPF / CNPJ"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
                     <th className="py-3 px-4">Contatos</th>
                     <th className="py-3 px-4 text-center">Status</th>
                     <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {customers.map((c) => (
+                  {customerList.map((c) => (
                     <tr key={c.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-foreground">
+                      <td className="py-2.5 px-4 font-semibold text-foreground">
                         {c.name}
                         {c.notes && (
                           <span className="block text-[11px] text-muted-foreground font-normal">
@@ -203,8 +279,8 @@ export function CustomersPage() {
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 text-muted-foreground font-mono">{c.document || '-'}</td>
-                      <td className="py-3 px-4 text-muted-foreground">
+                      <td className="py-2.5 px-4 text-muted-foreground font-mono">{c.document || '-'}</td>
+                      <td className="py-2.5 px-4 text-muted-foreground">
                         <div className="space-y-0.5">
                           {c.phone && (
                             <div className="flex items-center gap-1">
@@ -219,16 +295,17 @@ export function CustomersPage() {
                           {!c.phone && !c.email && <span>-</span>}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-2.5 px-4 text-center">
                         <Badge variant={c.status === 'ACTIVE' ? 'success' : 'secondary'}>
                           {c.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-2.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEdit(c)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            title="Editar"
                           >
                             <Edit2 className="h-4 w-4" />
                           </button>
@@ -238,7 +315,8 @@ export function CustomersPage() {
                                 deleteMutation.mutate(c.id)
                               }
                             }}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger"
+                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger transition-colors"
+                            title="Desativar"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -251,6 +329,18 @@ export function CustomersPage() {
             </div>
           )}
         </CardContent>
+
+        {/* Pin Pagination at the bottom of the card */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </Card>
 
       {/* Customer Modal */}

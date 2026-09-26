@@ -20,11 +20,35 @@ export interface CreateOrderPayload {
   paymentMethod?: PaymentMethod
 }
 
+export interface OrderListParams {
+  search?: string
+  status?: string
+  channel?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
 export const orderService = {
-  async listOrders(storeId: string): Promise<Order[]> {
-    const { data, error } = await supabase
+  async listOrders(
+    storeId: string,
+    params: OrderListParams = {}
+  ): Promise<{ data: Order[]; total: number }> {
+    const {
+      search,
+      status,
+      channel,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
+      page = 1,
+      pageSize = 20,
+    } = params
+
+    let query = supabase
       .from('orders')
-      .select(`
+      .select(
+        `
         *,
         customers ( name, phone, email ),
         order_items (
@@ -36,17 +60,41 @@ export const orderService = {
           products ( name, sku )
         ),
         payments ( id, method, amount, status )
-      `)
+      `,
+        { count: 'exact' }
+      )
       .eq('store_id', storeId)
-      .order('created_at', { ascending: false })
+
+    if (search) {
+      query = query.or(`order_number.ilike.%${search}%,customer_name.ilike.%${search}%`)
+    }
+
+    if (status && status !== 'ALL') {
+      query = query.eq('status', status)
+    }
+
+    if (channel && channel !== 'ALL') {
+      query = query.eq('channel', channel)
+    }
+
+    const orderCol = ['order_number', 'total_amount', 'created_at', 'status', 'channel'].includes(sortBy)
+      ? sortBy
+      : 'created_at'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderCol, { ascending: sortOrder === 'asc' })
+      .range(from, to)
 
     if (error) throw error
 
-    return (data || []).map((o: any) => ({
+    const mapped = (data || []).map((o: any) => ({
       ...o,
-      customer_name: o.customers?.name || 'Consumidor Final',
-      customer_phone: o.customers?.phone,
-      customer_email: o.customers?.email,
+      customer_name: o.customers?.name || o.customer_name || 'Consumidor Final',
+      customer_phone: o.customers?.phone || o.customer_phone,
+      customer_email: o.customers?.email || o.customer_email,
       items: (o.order_items || []).map((oi: any) => ({
         ...oi,
         product_name: oi.products?.name || 'Produto',
@@ -54,6 +102,11 @@ export const orderService = {
       })),
       payments: o.payments || [],
     }))
+
+    return {
+      data: mapped,
+      total: count || 0,
+    }
   },
 
   async createOrder(payload: CreateOrderPayload): Promise<Order> {

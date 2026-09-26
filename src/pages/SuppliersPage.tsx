@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supplierService } from '@/services/supplierService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { parseApiError } from '@/utils/errorHandler'
 import { exportToCSV } from '@/utils/export'
 import { Button } from '@/components/ui/button'
@@ -10,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { Truck, Plus, Search, Download, Trash2, Edit2, Phone, Mail } from 'lucide-react'
@@ -20,7 +23,26 @@ export function SuppliersPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
-  const [search, setSearch] = React.useState('')
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 15,
+    defaultSortBy: 'corporate_name',
+    defaultSortOrder: 'asc',
+  })
+
+  const statusFilter = filters.status || 'ALL'
+
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingSupplier, setEditingSupplier] = React.useState<Supplier | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -35,11 +57,23 @@ export function SuppliersPage() {
     notes: '',
   })
 
-  const { data: suppliers = [], isLoading } = useQuery({
-    queryKey: ['suppliers', storeId, search],
-    queryFn: () => supplierService.listSuppliers(storeId, search),
+  const { data, isLoading } = useQuery({
+    queryKey: ['suppliers', storeId, { search, statusFilter, page, pageSize, sortBy, sortOrder }],
+    queryFn: () =>
+      supplierService.listSuppliers(storeId, {
+        search: search || undefined,
+        status: statusFilter !== 'ALL' ? statusFilter : undefined,
+        sortBy,
+        sortOrder,
+        page,
+        pageSize,
+      }),
     enabled: Boolean(hasActiveStore),
   })
+
+  const suppliers = Array.isArray(data) ? data : data?.data || []
+  const totalItems = Array.isArray(data) ? data.length : data?.total || 0
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
 
   const createMutation = useMutation({
     mutationFn: (s: Partial<Supplier>) => supplierService.createSupplier(storeId, s),
@@ -134,20 +168,21 @@ export function SuppliersPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             {t.nav.suppliers}
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             Cadastro de distribuidores, indústrias e fornecedores
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={suppliers.length === 0}>
-            <Download className="h-4 w-4 mr-1.5" /> Exportar CSV
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={suppliers.length === 0} className="h-9 text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar CSV
           </Button>
           <Button
             size="sm"
@@ -155,36 +190,65 @@ export function SuppliersPage() {
               resetForm()
               setIsModalOpen(true)
             }}
-            className="shadow-md"
+            className="h-9 text-xs shadow-xs font-semibold"
           >
-            <Plus className="h-4 w-4 mr-1.5" /> Novo Fornecedor
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo Fornecedor
           </Button>
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="pb-4">
-          <div className="w-full sm:w-80">
+      {/* Filter Toolbar */}
+      <Card className="flex-shrink-0">
+        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
+          <div className="flex-1 w-full relative">
             <Input
-              placeholder="Buscar por razão social, nome fantasia ou CNPJ..."
+              placeholder="Buscar por razão social, nome fantasia, CNPJ ou contato..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
+              className="h-9 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
+
+          <div className="w-full sm:w-48">
+            <select
+              value={statusFilter}
+              onChange={(e) => setFilter('status', e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="ALL">Todos os Status</option>
+              <option value="ACTIVE">Apenas Ativos</option>
+              <option value="INACTIVE">Inativos</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Table Card - Viewport fitting with internal scroll */}
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
+        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              Base de Fornecedores
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Total de {totalItems} fornecedor(es) cadastrado(s)
+            </p>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
+
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">
               <LoadingSkeleton count={5} className="h-10" />
             </div>
           ) : suppliers.length === 0 ? (
-            <div className="p-8">
+            <div className="flex-1 flex items-center justify-center p-8">
               <EmptyState
                 icon={<Truck className="h-10 w-10 text-primary" />}
-                title="Nenhum fornecedor cadastrado"
-                description="Cadastre fornecedores para registrar ordens de compra e dar entrada no estoque com conferência de lote e validade."
-                actionLabel="Cadastrar Fornecedor"
+                title="Nenhum fornecedor encontrado"
+                description="Cadastre seus fornecedores para emitir ordens de compra e dar entrada no estoque com controle de lotes."
+                actionLabel="Novo Fornecedor"
                 onAction={() => {
                   resetForm()
                   setIsModalOpen(true)
@@ -192,14 +256,25 @@ export function SuppliersPage() {
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
               <table className="w-full text-xs text-left">
-                <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
-                    <th className="py-3 px-4">Fornecedor</th>
-                    <th className="py-3 px-4">CNPJ</th>
-                    <th className="py-3 px-4">Responsável</th>
-                    <th className="py-3 px-4">Contatos</th>
+                    <SortableHeader
+                      column="corporate_name"
+                      label="Empresa / Razão Social"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="document"
+                      label="CNPJ"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <th className="py-3 px-4">Representante & Contato</th>
                     <th className="py-3 px-4 text-center">Status</th>
                     <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
@@ -207,36 +282,39 @@ export function SuppliersPage() {
                 <tbody className="divide-y divide-border/60">
                   {suppliers.map((s) => (
                     <tr key={s.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-4 font-semibold text-foreground">
+                      <td className="py-2.5 px-4 font-semibold text-foreground">
                         {s.corporate_name}
                         {s.trade_name && (
                           <span className="block text-[11px] text-muted-foreground font-normal">
-                            {s.trade_name}
+                            Fantasia: {s.trade_name}
                           </span>
                         )}
                       </td>
-                      <td className="py-3 px-4 font-mono text-muted-foreground">{s.document || '-'}</td>
-                      <td className="py-3 px-4 text-muted-foreground">{s.contact_name || '-'}</td>
-                      <td className="py-3 px-4 text-muted-foreground">
+                      <td className="py-2.5 px-4 text-muted-foreground font-mono">{s.document || '-'}</td>
+                      <td className="py-2.5 px-4 text-muted-foreground">
                         <div className="space-y-0.5">
+                          {s.contact_name && (
+                            <div className="font-medium text-foreground text-[11px]">{s.contact_name}</div>
+                          )}
                           {s.phone && (
                             <div className="flex items-center gap-1">
-                              <Phone className="h-3 w-3" /> {s.phone}
+                              <Phone className="h-3 w-3 text-muted-foreground" /> {s.phone}
                             </div>
                           )}
                           {s.email && (
                             <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" /> {s.email}
+                              <Mail className="h-3 w-3 text-muted-foreground" /> {s.email}
                             </div>
                           )}
+                          {!s.phone && !s.email && !s.contact_name && <span>-</span>}
                         </div>
                       </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-2.5 px-4 text-center">
                         <Badge variant={s.status === 'ACTIVE' ? 'success' : 'secondary'}>
                           {s.status === 'ACTIVE' ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-2.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleOpenEdit(s)}
@@ -263,6 +341,18 @@ export function SuppliersPage() {
             </div>
           )}
         </CardContent>
+
+        {/* Pin Pagination at the bottom of the card */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </Card>
 
       {/* Supplier Modal */}

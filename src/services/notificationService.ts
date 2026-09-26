@@ -12,17 +12,45 @@ export interface AppNotification {
   created_at: string
 }
 
+export interface NotificationListParams {
+  search?: string
+  isRead?: boolean
+  page?: number
+  pageSize?: number
+}
+
 export const notificationService = {
-  async listNotifications(storeId: string): Promise<AppNotification[]> {
-    const { data, error } = await supabase
+  async listNotifications(
+    storeId: string,
+    params: NotificationListParams = {}
+  ): Promise<{ data: AppNotification[]; total: number }> {
+    const { search, isRead, page = 1, pageSize = 20 } = params
+
+    let query = supabase
       .from('notifications')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('store_id', storeId)
+
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,message.ilike.%${search}%`)
+    }
+
+    if (typeof isRead === 'boolean') {
+      query = query.eq('is_read', isRead)
+    }
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
       .order('created_at', { ascending: false })
-      .limit(30)
+      .range(from, to)
 
     if (error) throw error
-    return (data || []) as AppNotification[]
+    return {
+      data: (data || []) as AppNotification[],
+      total: count || 0,
+    }
   },
 
   async markAsRead(id: string): Promise<void> {

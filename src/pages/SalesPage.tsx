@@ -53,12 +53,13 @@ export function SalesPage() {
   })
 
   // Fetch customers
-  const { data: customers = [] } = useQuery({
+  const { data: customersData } = useQuery({
     queryKey: ['customers-pos', storeId],
-    queryFn: () => customerService.listCustomers(storeId),
+    queryFn: () => customerService.listCustomers(storeId, { pageSize: 500 }),
     enabled: Boolean(hasActiveStore),
   })
 
+  const customers = customersData?.data || []
   const products = productsData?.data || []
 
   // Add to cart

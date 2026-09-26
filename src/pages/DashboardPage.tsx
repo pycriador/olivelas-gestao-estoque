@@ -36,11 +36,13 @@ export function DashboardPage() {
     enabled: Boolean(hasActiveStore),
   })
 
-  const { data: recentOrders, isLoading: loadingOrders } = useQuery({
+  const { data: recentOrdersData, isLoading: loadingOrders } = useQuery({
     queryKey: ['recent-orders', storeId],
-    queryFn: () => orderService.listOrders(storeId),
+    queryFn: () => orderService.listOrders(storeId, { pageSize: 5 }),
     enabled: Boolean(hasActiveStore),
   })
+
+  const recentOrders = recentOrdersData?.data || []
 
   if (!hasActiveStore) {
     return (

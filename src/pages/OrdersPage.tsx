@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { orderService } from '@/services/orderService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatCurrency } from '@/utils/currency'
 import { formatDateTime } from '@/utils/dates'
 import { exportToCSV } from '@/utils/export'
@@ -12,6 +13,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import {
   ShoppingCart,
@@ -22,7 +25,7 @@ import {
   MessageCircle,
   Store,
   Globe,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react'
 import type { Order } from '@/types/order.types'
 import type { OrderStatus } from '@/types/database.types'
@@ -32,18 +35,50 @@ export function OrdersPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
-  const [search, setSearch] = React.useState('')
-  const [selectedStatus, setSelectedStatus] = React.useState<string>('ALL')
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 15,
+    defaultSortBy: 'created_at',
+    defaultSortOrder: 'desc',
+  })
+
+  const selectedStatus = filters.status || 'ALL'
+  const selectedChannel = filters.channel || 'ALL'
+
   const [viewingOrder, setViewingOrder] = React.useState<Order | null>(null)
   const [cancellingOrder, setCancellingOrder] = React.useState<Order | null>(null)
   const [cancelReason, setCancelReason] = React.useState('')
   const [cancelError, setCancelError] = React.useState<string | null>(null)
 
-  const { data: orders = [], isLoading } = useQuery({
-    queryKey: ['orders', storeId],
-    queryFn: () => orderService.listOrders(storeId),
+  const { data, isLoading } = useQuery({
+    queryKey: ['orders', storeId, { search, selectedStatus, selectedChannel, page, pageSize, sortBy, sortOrder }],
+    queryFn: () =>
+      orderService.listOrders(storeId, {
+        search: search || undefined,
+        status: selectedStatus !== 'ALL' ? selectedStatus : undefined,
+        channel: selectedChannel !== 'ALL' ? selectedChannel : undefined,
+        sortBy,
+        sortOrder,
+        page,
+        pageSize,
+      }),
     enabled: Boolean(hasActiveStore),
   })
+
+  const orders = data?.data || []
+  const totalItems = data?.total || 0
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
 
   // Cancel order mutation
   const cancelMutation = useMutation({
@@ -68,15 +103,6 @@ export function OrdersPage() {
         setViewingOrder(null)
       }
     },
-  })
-
-  const filteredOrders = orders.filter((o) => {
-    const matchesSearch =
-      o.order_number.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer_name?.toLowerCase().includes(search.toLowerCase())
-
-    if (selectedStatus === 'ALL') return matchesSearch
-    return matchesSearch && o.status === selectedStatus
   })
 
   const handleExportCSV = () => {
@@ -119,107 +145,155 @@ export function OrdersPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             {t.orders.title}
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             {t.orders.subtitle}
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={orders.length === 0}>
-          <Download className="h-4 w-4 mr-1.5" /> Exportar Pedidos CSV
+        <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={orders.length === 0} className="h-9 text-xs">
+          <Download className="h-3.5 w-3.5 mr-1.5" /> Exportar Pedidos CSV
         </Button>
       </div>
 
       {/* Filter Toolbar */}
-      <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-3">
-          <div className="flex-1 w-full">
+      <Card className="flex-shrink-0">
+        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
+          <div className="flex-1 w-full relative">
             <Input
-              placeholder="Pesquisar por número do pedido ou cliente..."
+              placeholder="Buscar por número do pedido ou nome do cliente..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              icon={<Search className="h-4 w-4" />}
+              className="h-9 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
 
-          <div className="w-full sm:w-56">
+          <div className="w-full sm:w-48">
             <select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none"
+              onChange={(e) => setFilter('status', e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
               <option value="ALL">Todos os Status</option>
               <option value="PENDING">Pendentes</option>
               <option value="CONFIRMED">Confirmados</option>
-              <option value="PROCESSING">Em Preparação</option>
+              <option value="PROCESSING">Em Separação</option>
               <option value="READY">Prontos</option>
+              <option value="SHIPPED">Enviados</option>
               <option value="DELIVERED">Entregues</option>
               <option value="CANCELLED">Cancelados</option>
+            </select>
+          </div>
+
+          <div className="w-full sm:w-44">
+            <select
+              value={selectedChannel}
+              onChange={(e) => setFilter('channel', e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="ALL">Todos os Canais</option>
+              <option value="IN_STORE">Loja Física (PDV)</option>
+              <option value="WHATSAPP">WhatsApp</option>
+              <option value="CATALOG">Catálogo Online</option>
             </select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Orders Table */}
-      <Card>
-        <CardContent className="p-0">
+      {/* Orders Table Card - Viewport fitting with internal scroll */}
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
+        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
+          <div>
+            <CardTitle className="text-sm font-semibold text-foreground">
+              Histórico de Pedidos
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Total de {totalItems} pedido(s) registrado(s)
+            </p>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">
-              <LoadingSkeleton count={6} className="h-10" />
+              <LoadingSkeleton count={5} className="h-10" />
             </div>
-          ) : filteredOrders.length === 0 ? (
-            <div className="py-12 text-center text-xs text-muted-foreground">
-              Nenhum pedido encontrado com os filtros selecionados.
+          ) : orders.length === 0 ? (
+            <div className="flex-1 flex items-center justify-center p-8 text-center text-muted-foreground">
+              <div>
+                <ShoppingCart className="h-10 w-10 mx-auto mb-2 text-muted-foreground/60" />
+                <div className="font-semibold text-foreground text-sm">Nenhum pedido encontrado</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Vendas realizadas pelo PDV ou catálogo público aparecerão listadas aqui.
+                </div>
+              </div>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
               <table className="w-full text-xs text-left">
-                <thead className="border-b border-border bg-muted/40 text-muted-foreground font-semibold uppercase text-[10px]">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
-                    <th className="py-3 px-4">Pedido</th>
-                    <th className="py-3 px-4">Canal</th>
+                    <SortableHeader
+                      column="order_number"
+                      label="Nº Pedido"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="created_at"
+                      label="Data / Hora"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
                     <th className="py-3 px-4">Cliente</th>
-                    <th className="py-3 px-4">Data</th>
-                    <th className="py-3 px-4 text-right">Total</th>
+                    <th className="py-3 px-4">Canal</th>
                     <th className="py-3 px-4 text-center">Status</th>
+                    <SortableHeader
+                      column="total_amount"
+                      label="Total"
+                      align="right"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
                     <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {filteredOrders.map((o) => (
+                  {orders.map((o) => (
                     <tr key={o.id} className="hover:bg-muted/30 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-foreground">
-                        {o.order_number}
+                      <td className="py-2.5 px-4 font-mono font-semibold text-primary">{o.order_number}</td>
+                      <td className="py-2.5 px-4 text-muted-foreground">{formatDateTime(o.created_at)}</td>
+                      <td className="py-2.5 px-4 font-medium text-foreground">
+                        {o.customer_name || 'Consumidor Final'}
                       </td>
-                      <td className="py-3 px-4">{getChannelBadge(o.channel)}</td>
-                      <td className="py-3 px-4 font-medium text-foreground">
-                        {o.customer_name}
-                      </td>
-                      <td className="py-3 px-4 text-muted-foreground font-mono text-[11px]">
-                        {formatDateTime(o.created_at)}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
-                        {formatCurrency(o.total_amount)}
-                      </td>
-                      <td className="py-3 px-4 text-center">
+                      <td className="py-2.5 px-4">{getChannelBadge(o.channel)}</td>
+                      <td className="py-2.5 px-4 text-center">
                         <Badge
                           variant={
-                            o.status === 'CONFIRMED' || o.status === 'DELIVERED'
-                              ? 'success'
-                              : o.status === 'CANCELLED'
+                            o.status === 'CANCELLED'
                               ? 'destructive'
-                              : 'warning'
+                              : o.status === 'DELIVERED'
+                              ? 'success'
+                              : 'outline'
                           }
                         >
                           {o.status}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                        {formatCurrency(o.total_amount)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => setViewingOrder(o)}
@@ -236,7 +310,7 @@ export function OrdersPage() {
                                 setCancelError(null)
                               }}
                               className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger"
-                              title="Cancelar Pedido e Estornar Estoque"
+                              title="Cancelar Pedido"
                             >
                               <Ban className="h-4 w-4" />
                             </button>
@@ -250,6 +324,18 @@ export function OrdersPage() {
             </div>
           )}
         </CardContent>
+
+        {/* Pin Pagination at the bottom of the card */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </Card>
 
       {/* Order Details Modal */}

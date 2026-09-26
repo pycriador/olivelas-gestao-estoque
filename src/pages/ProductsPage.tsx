@@ -1,8 +1,9 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { productService, type ProductFilters } from '@/services/productService'
+import { productService } from '@/services/productService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatCurrency } from '@/utils/currency'
 import { exportToCSV } from '@/utils/export'
 import { generateSKU } from '@/utils/barcode'
@@ -18,6 +19,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { Pagination } from '@/components/ui/pagination'
+import { SortableHeader } from '@/components/ui/SortableHeader'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import {
@@ -32,7 +35,6 @@ import {
   FileSpreadsheet,
   FileCode,
   CheckCircle2,
-  FileText,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 
@@ -41,11 +43,26 @@ export function ProductsPage() {
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
-  // Filter states
-  const [search, setSearch] = React.useState('')
-  const [selectedCategory, setSelectedCategory] = React.useState<string>('')
-  const [page, setPage] = React.useState(1)
-  const pageSize = 15
+  // URL-bound Pagination, Sorting and Filters
+  const {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    toggleSort,
+    setFilter,
+  } = useTablePagination({
+    defaultPageSize: 15,
+    defaultSortBy: 'created_at',
+    defaultSortOrder: 'desc',
+  })
+
+  const selectedCategory = filters.category || ''
 
   // Modals
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false)
@@ -82,16 +99,17 @@ export function ProductsPage() {
     isPublished: true,
   })
 
-  const filters: ProductFilters = {
-    search: search || undefined,
-    categoryId: selectedCategory || undefined,
-    page,
-    pageSize,
-  }
-
   const { data, isLoading } = useQuery({
-    queryKey: ['products', storeId, filters],
-    queryFn: () => productService.listProducts(storeId, filters),
+    queryKey: ['products', storeId, { search, selectedCategory, page, pageSize, sortBy, sortOrder }],
+    queryFn: () =>
+      productService.listProducts(storeId, {
+        search: search || undefined,
+        categoryId: selectedCategory || undefined,
+        sortBy,
+        sortOrder,
+        page,
+        pageSize,
+      }),
     enabled: Boolean(hasActiveStore),
   })
 
@@ -295,54 +313,49 @@ export function ProductsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-150">
+    <div className="flex-1 min-h-0 flex flex-col space-y-4 animate-in fade-in duration-150">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-shrink-0">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
             {t.products.title}
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground">
             {t.products.subtitle}
           </p>
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={handleOpenImport} className="shadow-xs">
-            <Upload className="h-4 w-4 mr-1.5" /> Importar (CSV / JSON)
+          <Button variant="outline" size="sm" onClick={handleOpenImport} className="h-9 text-xs">
+            <Upload className="h-3.5 w-3.5 mr-1.5" /> Importar (CSV / JSON)
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={products.length === 0}>
-            <Download className="h-4 w-4 mr-1.5" /> {t.common.export} CSV
+          <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={products.length === 0} className="h-9 text-xs">
+            <Download className="h-3.5 w-3.5 mr-1.5" /> {t.common.export} CSV
           </Button>
-          <Button size="sm" onClick={handleOpenCreate} className="shadow-md">
-            <Plus className="h-4 w-4 mr-1.5" /> {t.products.newProduct}
+          <Button size="sm" onClick={handleOpenCreate} className="h-9 text-xs shadow-xs font-semibold">
+            <Plus className="h-3.5 w-3.5 mr-1.5" /> {t.products.newProduct}
           </Button>
         </div>
       </div>
 
       {/* Filter Toolbar */}
-      <Card>
-        <CardContent className="p-4 flex flex-col sm:flex-row items-center gap-3">
+      <Card className="flex-shrink-0">
+        <CardContent className="p-3 flex flex-col sm:flex-row items-center gap-2.5">
           <div className="flex-1 w-full relative">
             <Input
               placeholder="Pesquisar por nome, SKU ou código de barras..."
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value)
-                setPage(1)
-              }}
-              icon={<Search className="h-4 w-4" />}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-9 text-xs"
+              icon={<Search className="h-3.5 w-3.5" />}
             />
           </div>
 
           <div className="w-full sm:w-56">
             <select
               value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value)
-                setPage(1)
-              }}
-              className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              onChange={(e) => setFilter('category', e.target.value)}
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
               <option value="">Todas as Categorias</option>
               {categories.map((c) => (
@@ -355,45 +368,73 @@ export function ProductsPage() {
         </CardContent>
       </Card>
 
-      {/* Products Table Card */}
-      <Card>
-        <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
+      {/* Products Table Card - Viewport fitting with internal scroll */}
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden shadow-xs">
+        <CardHeader className="py-3 px-4 border-b border-border flex flex-row items-center justify-between flex-shrink-0">
           <div>
-            <CardTitle className="text-base font-semibold text-foreground">
+            <CardTitle className="text-sm font-semibold text-foreground">
               Catálogo de Produtos
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
+            <p className="text-[11px] text-muted-foreground mt-0.5">
               Total de {totalItems} produto(s) cadastrado(s)
             </p>
           </div>
         </CardHeader>
 
-        <CardContent className="p-0">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {isLoading ? (
             <div className="p-6">
               <LoadingSkeleton count={6} />
             </div>
           ) : products.length === 0 ? (
-            <EmptyState
-              icon={<Package className="h-10 w-10 text-muted-foreground" />}
-              title="Nenhum produto cadastrado"
-              description="Cadastre seu primeiro produto ou importe em massa via CSV/JSON para iniciar as vendas"
-              actionLabel={t.products.newProduct}
-              onAction={handleOpenCreate}
-            />
+            <div className="flex-1 flex items-center justify-center p-6">
+              <EmptyState
+                icon={<Package className="h-10 w-10 text-muted-foreground" />}
+                title="Nenhum produto cadastrado"
+                description="Cadastre seu primeiro produto ou importe em massa via CSV/JSON para iniciar as vendas"
+                actionLabel={t.products.newProduct}
+                onAction={handleOpenCreate}
+              />
+            </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-muted/50 border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
-                    <th className="py-3 px-4">Produto</th>
-                    <th className="py-3 px-4">SKU / Barcode</th>
-                    <th className="py-3 px-4">Categoria</th>
-                    <th className="py-3 px-4 text-right">Preço de Custo</th>
-                    <th className="py-3 px-4 text-right">Preço de Venda</th>
-                    <th className="py-3 px-4 text-center">Estoque</th>
-                    <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Ações</th>
+                    <SortableHeader
+                      column="name"
+                      label="Produto"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="sku"
+                      label="SKU / Barcode"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <th className="py-3 px-4 font-semibold">Categoria</th>
+                    <SortableHeader
+                      column="cost_price"
+                      label="Preço de Custo"
+                      align="right"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <SortableHeader
+                      column="selling_price"
+                      label="Preço de Venda"
+                      align="right"
+                      currentSortBy={sortBy}
+                      currentSortOrder={sortOrder}
+                      onSort={toggleSort}
+                    />
+                    <th className="py-3 px-4 font-semibold text-center">Estoque</th>
+                    <th className="py-3 px-4 font-semibold text-center">Status</th>
+                    <th className="py-3 px-4 font-semibold text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -401,7 +442,7 @@ export function ProductsPage() {
                     const isLowStock = (p.stock_quantity ?? 0) <= (p.min_stock ?? 5)
                     return (
                       <tr key={p.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-3 px-4">
+                        <td className="py-2.5 px-4">
                           <div className="font-semibold text-foreground">{p.name}</div>
                           {p.description && (
                             <div className="text-[11px] text-muted-foreground truncate max-w-xs">
@@ -410,14 +451,14 @@ export function ProductsPage() {
                           )}
                         </td>
 
-                        <td className="py-3 px-4 font-mono">
+                        <td className="py-2.5 px-4 font-mono">
                           <div className="text-foreground">{p.sku}</div>
                           {p.barcode && (
                             <div className="text-[10px] text-muted-foreground">{p.barcode}</div>
                           )}
                         </td>
 
-                        <td className="py-3 px-4">
+                        <td className="py-2.5 px-4">
                           {p.category_name ? (
                             <Badge variant="outline">{p.category_name}</Badge>
                           ) : (
@@ -425,15 +466,15 @@ export function ProductsPage() {
                           )}
                         </td>
 
-                        <td className="py-3 px-4 text-right font-mono text-muted-foreground">
+                        <td className="py-2.5 px-4 text-right font-mono text-muted-foreground">
                           {formatCurrency(p.cost_price || 0)}
                         </td>
 
-                        <td className="py-3 px-4 text-right font-mono font-semibold text-foreground">
+                        <td className="py-2.5 px-4 text-right font-mono font-semibold text-foreground">
                           {formatCurrency(p.selling_price || 0)}
                         </td>
 
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-2.5 px-4 text-center">
                           <span
                             className={`font-mono font-bold px-2 py-0.5 rounded-md text-xs ${
                               isLowStock
@@ -445,13 +486,13 @@ export function ProductsPage() {
                           </span>
                         </td>
 
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-2.5 px-4 text-center">
                           <Badge variant={p.is_active ? 'success' : 'secondary'}>
                             {p.is_active ? 'Ativo' : 'Inativo'}
                           </Badge>
                         </td>
 
-                        <td className="py-3 px-4 text-right space-x-1">
+                        <td className="py-2.5 px-4 text-right space-x-1">
                           <button
                             onClick={() => handleOpenEdit(p)}
                             className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -478,34 +519,19 @@ export function ProductsPage() {
               </table>
             </div>
           )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-border flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                Página {page} de {totalPages}
-              </span>
-              <div className="flex gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  Próxima
-                </Button>
-              </div>
-            </div>
-          )}
         </CardContent>
+
+        {/* Pin Pagination at the bottom of the card */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </Card>
 
       {/* Bulk Import Modal (CSV & JSON) */}
@@ -547,7 +573,7 @@ export function ProductsPage() {
             </div>
           </div>
 
-          {/* Format Tabs: File Upload vs Direct Text Paste */}
+          {/* Format Tabs */}
           <div className="flex border-b border-border gap-4 text-xs font-semibold">
             <button
               type="button"

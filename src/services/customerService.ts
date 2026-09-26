@@ -1,22 +1,60 @@
 import { supabase } from '@/lib/supabase/client'
 import type { Customer } from '@/types/customer.types'
 
+export interface CustomerListParams {
+  search?: string
+  status?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
 export const customerService = {
-  async listCustomers(storeId: string, search?: string): Promise<Customer[]> {
+  async listCustomers(
+    storeId: string,
+    params: CustomerListParams = {}
+  ): Promise<{ data: Customer[]; total: number }> {
+    const {
+      search,
+      status,
+      sortBy = 'name',
+      sortOrder = 'asc',
+      page = 1,
+      pageSize = 20,
+    } = params
+
     let query = supabase
       .from('customers')
-      .select('*')
+      .select('*', { count: 'exact' })
       .eq('store_id', storeId)
       .is('deleted_at', null)
-      .order('name', { ascending: true })
 
     if (search) {
       query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%,document.ilike.%${search}%`)
     }
 
-    const { data, error } = await query
+    if (status && status !== 'ALL') {
+      query = query.eq('status', status)
+    }
+
+    const orderCol = ['name', 'email', 'phone', 'created_at', 'status'].includes(sortBy)
+      ? sortBy
+      : 'name'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderCol, { ascending: sortOrder === 'asc' })
+      .range(from, to)
+
     if (error) throw error
-    return (data || []) as Customer[]
+
+    return {
+      data: (data || []) as Customer[],
+      total: count || 0,
+    }
   },
 
   async createCustomer(storeId: string, customerData: Partial<Customer>): Promise<Customer> {

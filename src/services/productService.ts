@@ -7,6 +7,8 @@ export interface ProductFilters {
   isActive?: boolean
   isPublished?: boolean
   lowStockOnly?: boolean
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
   page?: number
   pageSize?: number
 }
@@ -21,6 +23,8 @@ export const productService = {
       categoryId,
       isActive,
       isPublished,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
       page = 1,
       pageSize = 20,
     } = filters
@@ -59,8 +63,12 @@ export const productService = {
     const from = (page - 1) * pageSize
     const to = from + pageSize - 1
 
+    const orderColumn = ['name', 'sku', 'selling_price', 'cost_price', 'created_at', 'min_stock'].includes(sortBy)
+      ? sortBy
+      : 'created_at'
+
     const { data, count, error } = await query
-      .order('created_at', { ascending: false })
+      .order(orderColumn, { ascending: sortOrder === 'asc' })
       .range(from, to)
 
     if (error) throw error

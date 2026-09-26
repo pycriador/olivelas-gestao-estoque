@@ -15,11 +15,35 @@ export interface CreatePurchaseOrderPayload {
   notes?: string
 }
 
+export interface PurchaseOrderListParams {
+  search?: string
+  supplierId?: string
+  status?: string
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
+}
+
 export const purchasingService = {
-  async listPurchaseOrders(storeId: string): Promise<PurchaseOrder[]> {
-    const { data, error } = await supabase
+  async listPurchaseOrders(
+    storeId: string,
+    params: PurchaseOrderListParams = {}
+  ): Promise<{ data: PurchaseOrder[]; total: number }> {
+    const {
+      search,
+      supplierId,
+      status,
+      sortBy = 'created_at',
+      sortOrder = 'desc',
+      page = 1,
+      pageSize = 20,
+    } = params
+
+    let query = supabase
       .from('purchase_orders')
-      .select(`
+      .select(
+        `
         *,
         suppliers ( corporate_name, trade_name ),
         purchase_order_items (
@@ -33,13 +57,37 @@ export const purchasingService = {
           expiration_date,
           products ( name )
         )
-      `)
+      `,
+        { count: 'exact' }
+      )
       .eq('store_id', storeId)
-      .order('created_at', { ascending: false })
+
+    if (search) {
+      query = query.or(`order_number.ilike.%${search}%`)
+    }
+
+    if (supplierId && supplierId !== 'ALL') {
+      query = query.eq('supplier_id', supplierId)
+    }
+
+    if (status && status !== 'ALL') {
+      query = query.eq('status', status)
+    }
+
+    const orderCol = ['order_number', 'total_amount', 'created_at', 'status'].includes(sortBy)
+      ? sortBy
+      : 'created_at'
+
+    const from = (page - 1) * pageSize
+    const to = from + pageSize - 1
+
+    const { data, count, error } = await query
+      .order(orderCol, { ascending: sortOrder === 'asc' })
+      .range(from, to)
 
     if (error) throw error
 
-    return (data || []).map((po: any) => ({
+    const mapped = (data || []).map((po: any) => ({
       ...po,
       supplier_name: po.suppliers?.trade_name || po.suppliers?.corporate_name || 'Fornecedor',
       items: (po.purchase_order_items || []).map((poi: any) => ({
@@ -47,6 +95,11 @@ export const purchasingService = {
         product_name: poi.products?.name || 'Produto',
       })),
     }))
+
+    return {
+      data: mapped,
+      total: count || 0,
+    }
   },
 
   async createPurchaseOrder(payload: CreatePurchaseOrderPayload): Promise<PurchaseOrder> {
