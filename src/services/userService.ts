@@ -30,8 +30,9 @@ export const userService = {
       .from('profiles')
       .select('*', { count: 'exact' })
 
-    if (search) {
-      query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%,phone.ilike.%${search}%`)
+    if (search && search.trim()) {
+      const q = search.trim()
+      query = query.or(`email.ilike.%${q}%,full_name.ilike.%${q}%`)
     }
 
     if (isGlobalAdmin !== undefined) {
@@ -49,7 +50,10 @@ export const userService = {
       .order(orderCol, { ascending: sortOrder === 'asc' })
       .range(from, to)
 
-    if (error) throw error
+    if (error) {
+      console.error('Error fetching platform profiles:', error)
+      throw error
+    }
 
     if (!profiles || profiles.length === 0) {
       return { data: [], total: count || 0 }
@@ -57,36 +61,40 @@ export const userService = {
 
     const userIds = profiles.map((p) => p.id)
 
-    // Fetch store relations for these users
-    const { data: storeUsers } = await supabase
-      .from('store_users')
-      .select(`
-        user_id,
-        role,
-        is_active,
-        stores (
-          id,
-          name,
-          slug
-        )
-      `)
-      .in('user_id', userIds)
-
+    // Fetch store relations for these users safely
     const userStoresMap = new Map<string, any[]>()
-    if (storeUsers) {
-      for (const su of storeUsers as any[]) {
-        const list = userStoresMap.get(su.user_id) || []
-        if (su.stores) {
-          list.push({
-            storeId: su.stores.id,
-            storeName: su.stores.name,
-            storeSlug: su.stores.slug,
-            role: su.role,
-            isActive: su.is_active,
-          })
+    try {
+      const { data: storeUsers, error: storeErr } = await supabase
+        .from('store_users')
+        .select(`
+          user_id,
+          role,
+          is_active,
+          stores (
+            id,
+            name,
+            slug
+          )
+        `)
+        .in('user_id', userIds)
+
+      if (!storeErr && storeUsers) {
+        for (const su of storeUsers as any[]) {
+          const list = userStoresMap.get(su.user_id) || []
+          if (su.stores) {
+            list.push({
+              storeId: su.stores.id,
+              storeName: su.stores.name,
+              storeSlug: su.stores.slug,
+              role: su.role,
+              isActive: su.is_active,
+            })
+          }
+          userStoresMap.set(su.user_id, list)
         }
-        userStoresMap.set(su.user_id, list)
       }
+    } catch (e) {
+      console.warn('Could not load user store relations:', e)
     }
 
     const result: PlatformUser[] = profiles.map((p) => ({

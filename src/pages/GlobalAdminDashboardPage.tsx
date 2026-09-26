@@ -107,7 +107,10 @@ export function GlobalAdminDashboardPage() {
   })
 
   // Stores Query
-  const { data: storesData, isLoading: loadingStores } = useQuery({
+  const userRoleFilter = filters.userRole || 'ALL'
+
+  // Stores Query
+  const { data: storesData, isLoading: loadingStores, error: storesQueryError, refetch: refetchStores } = useQuery({
     queryKey: ['all-stores', { search, statusFilter, page, pageSize, sortBy, sortOrder }],
     queryFn: () =>
       storeService.listStores({
@@ -122,11 +125,18 @@ export function GlobalAdminDashboardPage() {
   })
 
   // Users Query
-  const { data: usersData, isLoading: loadingUsers } = useQuery({
-    queryKey: ['platform-users', { search, page, pageSize, sortBy, sortOrder }],
+  const {
+    data: usersData,
+    isLoading: loadingUsers,
+    error: usersQueryError,
+    refetch: refetchUsers,
+  } = useQuery({
+    queryKey: ['platform-users', { search, userRoleFilter, page, pageSize, sortBy, sortOrder }],
     queryFn: () =>
       userService.listPlatformUsers({
         search: search || undefined,
+        isGlobalAdmin:
+          userRoleFilter === 'GLOBAL_ADMIN' ? true : userRoleFilter === 'STANDARD' ? false : undefined,
         sortBy,
         sortOrder,
         page,
@@ -403,10 +413,11 @@ export function GlobalAdminDashboardPage() {
             onClick={() => {
               setFilter('tab', 'stores')
               setPage(1)
+              setSearch('')
             }}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'stores'
-                ? 'bg-card text-foreground shadow-xs'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -416,10 +427,11 @@ export function GlobalAdminDashboardPage() {
             onClick={() => {
               setFilter('tab', 'users')
               setPage(1)
+              setSearch('')
             }}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'users'
-                ? 'bg-card text-foreground shadow-xs'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -456,16 +468,29 @@ export function GlobalAdminDashboardPage() {
           )}
 
           {activeTab === 'users' && (
-            <Button
-              size="sm"
-              onClick={() => {
-                resetUserForm()
-                setIsUserModalOpen(true)
-              }}
-              className="h-8 text-xs px-2.5 shadow-xs font-semibold"
-            >
-              <Plus className="h-3.5 w-3.5 mr-1" /> Novo Usuário
-            </Button>
+            <>
+              <select
+                value={userRoleFilter}
+                onChange={(e) => setFilter('userRole', e.target.value)}
+                aria-label="Filtrar tipo de usuário"
+                className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="ALL">Todos os Usuários</option>
+                <option value="GLOBAL_ADMIN">Apenas Global Admins</option>
+                <option value="STANDARD">Usuários Padrão</option>
+              </select>
+
+              <Button
+                size="sm"
+                onClick={() => {
+                  resetUserForm()
+                  setIsUserModalOpen(true)
+                }}
+                className="h-8 text-xs px-2.5 shadow-xs font-semibold"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Novo Usuário
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -695,6 +720,23 @@ export function GlobalAdminDashboardPage() {
             loadingUsers ? (
               <div className="p-6">
                 <LoadingSkeleton count={5} className="h-10" />
+              </div>
+            ) : usersQueryError ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+                <div className="p-3 rounded-xl bg-destructive/10 text-destructive mb-3">
+                  <Shield className="h-8 w-8" />
+                </div>
+                <div className="font-semibold text-foreground text-sm">Erro ao carregar usuários da plataforma</div>
+                <p className="text-xs text-muted-foreground mt-1 max-w-md">
+                  {parseApiError(usersQueryError)}
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => refetchUsers()}
+                  className="mt-4 h-8 text-xs font-semibold"
+                >
+                  Tentar Novamente
+                </Button>
               </div>
             ) : userList.length === 0 ? (
               <div className="flex-1 flex items-center justify-center p-8">
