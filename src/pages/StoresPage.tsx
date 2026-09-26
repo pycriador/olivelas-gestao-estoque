@@ -64,7 +64,7 @@ export function StoresPage() {
   }
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-150">
+    <div className="flex-1 min-h-0 w-full h-full overflow-y-auto pr-1 sm:pr-2 space-y-4 animate-in fade-in duration-150 custom-scrollbar">
       {/* Top Navbar Title */}
       <PageHeader title="Lojas & Filiais" />
 
