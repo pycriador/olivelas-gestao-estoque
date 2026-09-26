@@ -423,7 +423,10 @@ export function GlobalAdminDashboardPage() {
             </div>
           )}
 
-          {/* Pinned Pagination */}
+        </CardContent>
+
+        {/* Pin Pagination at the bottom of the card */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
           <Pagination
             currentPage={page}
             totalPages={totalPages}
@@ -432,7 +435,7 @@ export function GlobalAdminDashboardPage() {
             onPageChange={setPage}
             onPageSizeChange={setPageSize}
           />
-        </CardContent>
+        </div>
       </Card>
 
       {/* New / Edit Store Modal */}
