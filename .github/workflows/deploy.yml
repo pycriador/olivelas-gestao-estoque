@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   build-and-test:
+    environment:
+      name: github-pages
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
