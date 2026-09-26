@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
+import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
@@ -77,6 +79,8 @@ export function ExpirationPage() {
     warning30d: 0,
     normal: 0,
   }
+
+  const [writeoffBatch, setWriteoffBatch] = React.useState<any | null>(null)
 
   // Writeoff expired batch mutation
   const writeoffMutation = useMutation({
@@ -323,15 +327,7 @@ export function ExpirationPage() {
                               variant="destructive"
                               size="sm"
                               className="text-[11px] h-7 px-2"
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    `Confirmar descarte/baixa por vencimento do lote ${batch.lot_number}?`
-                                  )
-                                ) {
-                                  writeoffMutation.mutate(batch)
-                                }
-                              }}
+                              onClick={() => setWriteoffBatch(batch)}
                             >
                               Dar Baixa
                             </Button>
@@ -344,20 +340,38 @@ export function ExpirationPage() {
               </table>
             </div>
           )}
-
-          {/* Pinned Pagination */}
-          <div className="border-t border-border bg-card/80 flex-shrink-0">
-            <Pagination
-              currentPage={page}
-              totalPages={totalBatchesPages}
-              totalItems={totalBatches}
-              pageSize={pageSize}
-              onPageChange={setPage}
-              onPageSizeChange={setPageSize}
-            />
-          </div>
         </CardContent>
+
+        {/* Pin Pagination at the bottom of the card */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalBatchesPages}
+            totalItems={totalBatches}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </Card>
+
+      {/* Confirm Writeoff Modal */}
+      <ConfirmModal
+        isOpen={Boolean(writeoffBatch)}
+        onClose={() => setWriteoffBatch(null)}
+        onConfirm={() => {
+          if (writeoffBatch) {
+            writeoffMutation.mutate(writeoffBatch)
+            setWriteoffBatch(null)
+          }
+        }}
+        title="Confirmar Baixa por Vencimento"
+        description={`Deseja registrar o descarte/baixa por validade do lote "${writeoffBatch?.lot_number}" (${writeoffBatch?.quantity} unidades de "${writeoffBatch?.products?.name}")? O saldo será deduzido do estoque e registrado no histórico.`}
+        confirmText="Sim, Dar Baixa"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={writeoffMutation.isPending}
+      />
     </div>
   )
 }

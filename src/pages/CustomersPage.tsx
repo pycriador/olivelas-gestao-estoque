@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
@@ -47,6 +48,7 @@ export function CustomersPage() {
 
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingCustomer, setEditingCustomer] = React.useState<Customer | null>(null)
+  const [deletingCustomer, setDeletingCustomer] = React.useState<Customer | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   const [formData, setFormData] = React.useState({
@@ -293,11 +295,7 @@ export function CustomersPage() {
                             <Edit2 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`Deseja desativar o cliente "${c.name}"?`)) {
-                                deleteMutation.mutate(c.id)
-                              }
-                            }}
+                            onClick={() => setDeletingCustomer(c)}
                             className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger transition-colors"
                             title="Desativar"
                           >
@@ -414,6 +412,24 @@ export function CustomersPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm Deactivation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingCustomer)}
+        onClose={() => setDeletingCustomer(null)}
+        onConfirm={() => {
+          if (deletingCustomer) {
+            deleteMutation.mutate(deletingCustomer.id)
+            setDeletingCustomer(null)
+          }
+        }}
+        title="Desativar Cliente"
+        description={`Tem certeza que deseja desativar o cliente "${deletingCustomer?.name}"? O histórico de compras e saldo permanecerão preservados.`}
+        confirmText="Sim, Desativar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

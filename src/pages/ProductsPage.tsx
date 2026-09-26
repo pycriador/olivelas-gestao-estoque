@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -69,6 +70,7 @@ export function ProductsPage() {
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null)
+  const [deletingProduct, setDeletingProduct] = React.useState<Product | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   // Bulk Import state
@@ -153,7 +155,7 @@ export function ProductsPage() {
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
     },
-    onError: (err) => alert(parseApiError(err)),
+    onError: (err) => setErrorMsg(parseApiError(err)),
   })
 
   const bulkImportMutation = useMutation({
@@ -483,11 +485,7 @@ export function ProductsPage() {
                             <Edit2 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`Deseja realmente desativar o produto ${p.name}?`)) {
-                                deleteMutation.mutate(p.id)
-                              }
-                            }}
+                            onClick={() => setDeletingProduct(p)}
                             className="p-1.5 rounded-lg text-muted-foreground hover:text-danger hover:bg-danger/10 transition-colors"
                             title="Desativar"
                           >
@@ -909,6 +907,24 @@ export function ProductsPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm Deactivation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingProduct)}
+        onClose={() => setDeletingProduct(null)}
+        onConfirm={() => {
+          if (deletingProduct) {
+            deleteMutation.mutate(deletingProduct.id)
+            setDeletingProduct(null)
+          }
+        }}
+        title="Desativar Produto"
+        description={`Tem certeza que deseja desativar o produto "${deletingProduct?.name}"? Ele deixará de aparecer no catálogo público e PDV, mas suas vendas e movimentações passadas continuarão intactas.`}
+        confirmText="Sim, Desativar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }

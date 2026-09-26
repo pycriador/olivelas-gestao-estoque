@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
@@ -78,6 +79,7 @@ export function StoresPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingStore, setEditingStore] = React.useState<StoreDisplayRow | null>(null)
+  const [togglingStore, setTogglingStore] = React.useState<StoreDisplayRow | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   const [formData, setFormData] = React.useState({
@@ -228,7 +230,7 @@ export function StoresPage() {
       queryClient.invalidateQueries({ queryKey: ['stores-list'] })
       queryClient.invalidateQueries({ queryKey: ['all-stores'] })
     },
-    onError: (err) => alert(parseApiError(err)),
+    onError: (err) => setErrorMsg(parseApiError(err)),
   })
 
   const resetForm = () => {
@@ -560,16 +562,7 @@ export function StoresPage() {
                             </button>
 
                             <button
-                              onClick={() => {
-                                const newStatus = !s.isActive
-                                if (
-                                  confirm(
-                                    `Deseja ${newStatus ? 'ativar' : 'desativar'} a loja "${s.name}"?`
-                                  )
-                                ) {
-                                  toggleStatusMutation.mutate({ id: s.id, isActive: newStatus })
-                                }
-                              }}
+                              onClick={() => setTogglingStore(s)}
                               title={s.isActive ? 'Desativar Loja' : 'Ativar Loja'}
                               className={`p-1.5 rounded-lg transition-colors ${
                                 s.isActive
@@ -752,6 +745,31 @@ export function StoresPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm Toggle Status Modal */}
+      <ConfirmModal
+        isOpen={Boolean(togglingStore)}
+        onClose={() => setTogglingStore(null)}
+        onConfirm={() => {
+          if (togglingStore) {
+            toggleStatusMutation.mutate({
+              id: togglingStore.id,
+              isActive: !togglingStore.isActive,
+            })
+            setTogglingStore(null)
+          }
+        }}
+        title={togglingStore?.isActive ? 'Desativar Loja' : 'Ativar Loja'}
+        description={
+          togglingStore?.isActive
+            ? `Tem certeza que deseja desativar a loja "${togglingStore?.name}"? Os usuários não poderão realizar novas operações nem acessar seu catálogo público até que ela seja reativada.`
+            : `Deseja reativar a loja "${togglingStore?.name}" para permitir vendas e acesso ao catálogo público?`
+        }
+        confirmText={togglingStore?.isActive ? 'Sim, Desativar' : 'Sim, Ativar'}
+        cancelText="Cancelar"
+        variant={togglingStore?.isActive ? 'danger' : 'primary'}
+        isLoading={toggleStatusMutation.isPending}
+      />
     </div>
   )
 }

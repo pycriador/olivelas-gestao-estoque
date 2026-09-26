@@ -131,7 +131,7 @@ export function PurchasingPage() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
       setReceivingPO(null)
     },
-    onError: (err) => alert(parseApiError(err)),
+    onError: (err) => setErrorMsg(parseApiError(err)),
   })
 
   const resetForm = () => {

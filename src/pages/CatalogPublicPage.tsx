@@ -32,6 +32,7 @@ export function CatalogPublicPage() {
   const [isCartOpen, setIsCartOpen] = React.useState(false)
   const [customerName, setCustomerName] = React.useState('')
   const [customerAddress, setCustomerAddress] = React.useState('')
+  const [noWhatsAppModal, setNoWhatsAppModal] = React.useState(false)
 
   const {
     items: cartItems,
@@ -81,7 +82,7 @@ export function CatalogPublicPage() {
 
     const phone = (store.whatsapp || store.phone || '').replace(/\D/g, '')
     if (!phone) {
-      alert('Esta loja não possui número de WhatsApp cadastrado no momento.')
+      setNoWhatsAppModal(true)
       return
     }
 
@@ -415,6 +416,32 @@ export function CatalogPublicPage() {
               </Button>
             </div>
           )}
+        </div>
+      </Modal>
+
+      {/* Missing WhatsApp Notice Modal */}
+      <Modal
+        isOpen={noWhatsAppModal}
+        onClose={() => setNoWhatsAppModal(false)}
+        maxWidth="sm"
+        title="WhatsApp Indisponível"
+      >
+        <div className="space-y-4 pt-1 text-center">
+          <div className="h-12 w-12 rounded-full bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center">
+            <Phone className="h-6 w-6" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-foreground">Loja sem WhatsApp Cadastrado</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Esta loja ainda não cadastrou um número de WhatsApp ou telefone para receber pedidos automáticos online. Por favor, entre em contato diretamente com o estabelecimento.
+            </p>
+          </div>
+          <Button
+            className="w-full h-9 text-xs font-semibold"
+            onClick={() => setNoWhatsAppModal(false)}
+          >
+            Entendido
+          </Button>
         </div>
       </Modal>
     </div>

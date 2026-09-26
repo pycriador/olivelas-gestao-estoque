@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
@@ -84,6 +85,8 @@ export function GlobalAdminDashboardPage() {
   // User modal states
   const [isUserModalOpen, setIsUserModalOpen] = React.useState(false)
   const [editingUser, setEditingUser] = React.useState<PlatformUser | null>(null)
+  const [deletingUser, setDeletingUser] = React.useState<PlatformUser | null>(null)
+  const [togglingStore, setTogglingStore] = React.useState<StoreType | null>(null)
   const [userFormData, setUserFormData] = React.useState({
     fullName: '',
     email: '',
@@ -695,12 +698,7 @@ export function GlobalAdminDashboardPage() {
                                   ? 'text-destructive/80 hover:text-destructive'
                                   : 'text-success/80 hover:text-success'
                               }`}
-                              onClick={() =>
-                                toggleStoreStatusMutation.mutate({
-                                  id: st.id,
-                                  isActive: !st.is_active,
-                                })
-                              }
+                              onClick={() => setTogglingStore(st)}
                               title={st.is_active ? 'Desativar Loja' : 'Ativar Loja'}
                             >
                               <Power className="h-3.5 w-3.5" />
@@ -857,11 +855,7 @@ export function GlobalAdminDashboardPage() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-destructive/80 hover:text-destructive"
-                              onClick={() => {
-                                if (confirm(`Deseja remover o usuário ${u.email}?`)) {
-                                  deleteUserMutation.mutate(u.id)
-                                }
-                              }}
+                              onClick={() => setDeletingUser(u)}
                               title="Remover Usuário"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -1193,6 +1187,49 @@ export function GlobalAdminDashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Confirm Delete User Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingUser)}
+        onClose={() => setDeletingUser(null)}
+        onConfirm={() => {
+          if (deletingUser) {
+            deleteUserMutation.mutate(deletingUser.id)
+            setDeletingUser(null)
+          }
+        }}
+        title="Remover Usuário da Plataforma"
+        description={`Tem certeza que deseja excluir o usuário "${deletingUser?.fullName || deletingUser?.email}"? Todos os acessos e vínculos com lojas serão revogados imediatamente.`}
+        confirmText="Sim, Excluir Usuário"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteUserMutation.isPending}
+      />
+
+      {/* Confirm Toggle Store Status Modal */}
+      <ConfirmModal
+        isOpen={Boolean(togglingStore)}
+        onClose={() => setTogglingStore(null)}
+        onConfirm={() => {
+          if (togglingStore) {
+            toggleStoreStatusMutation.mutate({
+              id: togglingStore.id,
+              isActive: !togglingStore.is_active,
+            })
+            setTogglingStore(null)
+          }
+        }}
+        title={togglingStore?.is_active ? 'Desativar Loja' : 'Ativar Loja'}
+        description={
+          togglingStore?.is_active
+            ? `Tem certeza que deseja desativar a loja "${togglingStore?.name}"? Os usuários desta filial e seu catálogo público ficarão suspensos.`
+            : `Deseja reativar as operações da loja "${togglingStore?.name}"?`
+        }
+        confirmText={togglingStore?.is_active ? 'Sim, Desativar' : 'Sim, Ativar'}
+        cancelText="Cancelar"
+        variant={togglingStore?.is_active ? 'danger' : 'primary'}
+        isLoading={toggleStoreStatusMutation.isPending}
+      />
     </div>
   )
 }

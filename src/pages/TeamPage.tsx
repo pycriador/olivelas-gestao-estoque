@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -85,6 +86,8 @@ export function TeamPage() {
   // Modal states
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false)
   const [editingMember, setEditingMember] = React.useState<StoreMember | null>(null)
+  const [removingMember, setRemovingMember] = React.useState<StoreMember | null>(null)
+  const [togglingMember, setTogglingMember] = React.useState<StoreMember | null>(null)
   const [modalMode, setModalMode] = React.useState<'create' | 'invite'>('create')
 
   const [formData, setFormData] = React.useState({
@@ -389,12 +392,7 @@ export function TeamPage() {
                                   ? 'text-destructive/80 hover:text-destructive'
                                   : 'text-success/80 hover:text-success'
                               }`}
-                              onClick={() =>
-                                updateRoleMutation.mutate({
-                                  id: m.id,
-                                  isActive: !m.isActive,
-                                })
-                              }
+                              onClick={() => setTogglingMember(m)}
                               title={m.isActive ? 'Desativar Acesso' : 'Ativar Acesso'}
                             >
                               <Power className="h-3.5 w-3.5" />
@@ -404,11 +402,7 @@ export function TeamPage() {
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                              onClick={() => {
-                                if (confirm(`Deseja desvincular o funcionário ${m.email} desta loja?`)) {
-                                  removeMemberMutation.mutate(m.id)
-                                }
-                              }}
+                              onClick={() => setRemovingMember(m)}
                               title="Remover da Loja"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -577,6 +571,49 @@ export function TeamPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm Remove Member Modal */}
+      <ConfirmModal
+        isOpen={Boolean(removingMember)}
+        onClose={() => setRemovingMember(null)}
+        onConfirm={() => {
+          if (removingMember) {
+            removeMemberMutation.mutate(removingMember.id)
+            setRemovingMember(null)
+          }
+        }}
+        title="Remover Funcionário da Loja"
+        description={`Tem certeza que deseja desvincular o funcionário "${removingMember?.fullName || removingMember?.email}" desta loja? Ele perderá o acesso às rotinas da filial imediatamente.`}
+        confirmText="Sim, Remover"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={removeMemberMutation.isPending}
+      />
+
+      {/* Confirm Toggle Member Status Modal */}
+      <ConfirmModal
+        isOpen={Boolean(togglingMember)}
+        onClose={() => setTogglingMember(null)}
+        onConfirm={() => {
+          if (togglingMember) {
+            updateRoleMutation.mutate({
+              id: togglingMember.id,
+              isActive: !togglingMember.isActive,
+            })
+            setTogglingMember(null)
+          }
+        }}
+        title={togglingMember?.isActive ? 'Desativar Acesso do Funcionário' : 'Ativar Acesso do Funcionário'}
+        description={
+          togglingMember?.isActive
+            ? `Deseja suspender temporariamente o acesso de "${togglingMember?.fullName || togglingMember?.email}" à loja?`
+            : `Deseja reativar o acesso de "${togglingMember?.fullName || togglingMember?.email}" para operar na loja?`
+        }
+        confirmText={togglingMember?.isActive ? 'Sim, Desativar' : 'Sim, Ativar'}
+        cancelText="Cancelar"
+        variant={togglingMember?.isActive ? 'warning' : 'primary'}
+        isLoading={updateRoleMutation.isPending}
+      />
     </div>
   )
 }

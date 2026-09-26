@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
@@ -46,6 +47,7 @@ export function SuppliersPage() {
 
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingSupplier, setEditingSupplier] = React.useState<Supplier | null>(null)
+  const [deletingSupplier, setDeletingSupplier] = React.useState<Supplier | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   const [formData, setFormData] = React.useState({
@@ -305,12 +307,9 @@ export function SuppliersPage() {
                             <Edit2 className="h-4 w-4" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm(`Deseja desativar o fornecedor "${s.corporate_name}"?`)) {
-                                deleteMutation.mutate(s.id)
-                              }
-                            }}
+                            onClick={() => setDeletingSupplier(s)}
                             className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger"
+                            title="Desativar"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -435,6 +434,24 @@ export function SuppliersPage() {
           </div>
         </form>
       </Modal>
+
+      {/* Confirm Deactivation Modal */}
+      <ConfirmModal
+        isOpen={Boolean(deletingSupplier)}
+        onClose={() => setDeletingSupplier(null)}
+        onConfirm={() => {
+          if (deletingSupplier) {
+            deleteMutation.mutate(deletingSupplier.id)
+            setDeletingSupplier(null)
+          }
+        }}
+        title="Desativar Fornecedor"
+        description={`Tem certeza que deseja desativar o fornecedor "${deletingSupplier?.corporate_name}"? As ordens de compra e histórico anteriores serão mantidos.`}
+        confirmText="Sim, Desativar"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   )
 }
