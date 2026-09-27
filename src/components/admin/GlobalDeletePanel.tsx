@@ -19,6 +19,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { Trash2, Search, Store as StoreIcon, AlertTriangle } from 'lucide-react'
 
 /**
@@ -202,7 +203,7 @@ export function GlobalDeletePanel() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto">
-              <table className="w-full text-xs">
+              <ResponsiveTable className="w-full text-xs">
                 <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-4 text-left">Registro</th>
@@ -249,7 +250,7 @@ export function GlobalDeletePanel() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           )}
         </CardContent>

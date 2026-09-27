@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import {
@@ -304,7 +305,7 @@ export function TeamPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-              <table className="w-full text-xs text-left">
+              <ResponsiveTable className="w-full text-xs text-left">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
                     <th className="py-2.5 px-4">Funcionário</th>
@@ -413,7 +414,7 @@ export function TeamPage() {
                     )
                   })}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           )}
         </CardContent>

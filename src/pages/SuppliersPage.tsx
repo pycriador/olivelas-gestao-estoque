@@ -17,6 +17,7 @@ import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { Truck, Plus, Search, Download, Trash2, Edit2, Phone, Mail } from 'lucide-react'
 import type { Supplier } from '@/types/supplier.types'
 
@@ -241,7 +242,7 @@ export function SuppliersPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-              <table className="w-full text-xs text-left">
+              <ResponsiveTable className="w-full text-xs text-left">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
                     <SortableHeader
@@ -318,7 +319,7 @@ export function SuppliersPage() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           )}
         </CardContent>

@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { useTenant } from '@/hooks/useTenant'
@@ -207,7 +208,7 @@ export function CategoriesPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse">
+              <ResponsiveTable className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="py-3 px-4 font-semibold">Nome</th>
@@ -283,7 +284,7 @@ export function CategoriesPage() {
                     )
                   })}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           )}
         </CardContent>

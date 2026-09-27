@@ -19,6 +19,7 @@ import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import type { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import {
   Clock,
   AlertTriangle,
@@ -325,7 +326,7 @@ export function ExpirationPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-auto">
-              <table className="w-full text-xs text-left">
+              <ResponsiveTable className="w-full text-xs text-left">
                 <thead className="border-b border-border bg-card/95 backdrop-blur text-muted-foreground font-semibold uppercase text-[10px] sticky top-0 z-10">
                   <tr>
                     <th className="py-3 px-4">Produto</th>
@@ -440,7 +441,7 @@ export function ExpirationPage() {
                     )
                   })}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           )}
         </CardContent>

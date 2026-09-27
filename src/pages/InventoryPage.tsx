@@ -17,6 +17,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
 import { StockImportModal } from '@/components/inventory/StockImportModal'
 import {
@@ -332,7 +333,7 @@ export function InventoryPage() {
               </div>
             ) : (
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-xs border-collapse">
+                <ResponsiveTable className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                     <tr>
                       <th className="py-3 px-4 font-semibold">Produto</th>
@@ -401,7 +402,7 @@ export function InventoryPage() {
                       )
                     })}
                   </tbody>
-                </table>
+                </ResponsiveTable>
               </div>
             )}
           </CardContent>
@@ -435,7 +436,7 @@ export function InventoryPage() {
               </div>
             ) : (
               <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-                <table className="w-full text-left text-xs border-collapse">
+                <ResponsiveTable className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                     <tr>
                       <SortableHeader
@@ -560,7 +561,7 @@ export function InventoryPage() {
                       )
                     })}
                   </tbody>
-                </table>
+                </ResponsiveTable>
               </div>
             )}
           </CardContent>

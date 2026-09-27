@@ -15,6 +15,7 @@ import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { Shield, Eye, Search, Store as StoreIcon, User, Globe, Laptop, FileDown, Braces, X } from 'lucide-react'
 
 export function AuditLogsPage() {
@@ -296,7 +297,7 @@ export function AuditLogsPage() {
             </div>
           ) : (
             <div className="flex-1 min-h-0 overflow-auto">
-              <table className="w-full text-xs text-left">
+              <ResponsiveTable className="w-full text-xs text-left">
                 <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
                     <SortableHeader
@@ -392,7 +393,7 @@ export function AuditLogsPage() {
                     )
                   })}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
           )}
         </CardContent>
