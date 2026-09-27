@@ -16,12 +16,18 @@ ALTER TABLE public.notifications
   ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'MANUAL',
   ADD COLUMN IF NOT EXISTS severity SMALLINT NOT NULL DEFAULT 1;
 
+-- A tela de notificacoes e store-scoped (markAllAsRead atualiza a loja
+-- inteira), entao alertas automaticos sao da loja, nao de um usuario.
+ALTER TABLE public.notifications ALTER COLUMN user_id DROP NOT NULL;
+
 COMMENT ON COLUMN public.notifications.dedupe_key IS
   'Chave estavel do alerta automatico. NULL em notificacoes manuais.';
 COMMENT ON COLUMN public.notifications.source IS
   'MANUAL (criada no app) ou AUTO (gerada por generate_stock_alerts).';
 COMMENT ON COLUMN public.notifications.severity IS
-  '1=info, 2=atencao, 3=critico. Usado para re-abrir o alerta quando escala.';
+  '1=info, 2=atencao, 3=critico. Usado para reabrir o alerta quando escala.';
+COMMENT ON COLUMN public.notifications.user_id IS
+  'NULL em alertas automaticos, que sao da loja inteira.';
 
 -- So alertas automaticos sao unicos; manuais ficam livres (NULL nunca colide).
 CREATE UNIQUE INDEX IF NOT EXISTS uq_notifications_dedupe_key
@@ -34,6 +40,11 @@ CREATE INDEX IF NOT EXISTS idx_notifications_auto
 
 -- -----------------------------------------------------------------------------
 -- 2. RPC: sincroniza os alertas automaticos da loja
+--
+-- SECURITY DEFINER porque notifications nao tem policy de INSERT/DELETE: a
+-- RPC e o unico caminho de escrita e a guarda has_store_access() abaixo e a
+-- checagem de acesso. Quem nao tem acesso a loja recebe erro.
+-- search_path fixo evita hijack de schema.
 -- -----------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.generate_stock_alerts(p_store_id UUID)
 RETURNS TABLE (
@@ -44,7 +55,8 @@ RETURNS TABLE (
   reorder BIGINT
 )
 LANGUAGE plpgsql
-SECURITY INVOKER
+SECURITY DEFINER
+SET search_path = public, pg_temp
 AS $$
 DECLARE
   v_today DATE := CURRENT_DATE;
@@ -53,26 +65,17 @@ BEGIN
     RAISE EXCEPTION 'Loja nao informada para geracao de alertas';
   END IF;
 
+  -- Guarda de acesso. vale_global_admin passa por has_store_access.
   IF NOT public.has_store_access(p_store_id) THEN
     RAISE EXCEPTION 'Sem acesso a loja %', p_store_id;
   END IF;
 
   ------------------------------------------------------------------
-  -- Alertas desejados: validades + saldos, com chave estavel
-  --
-  -- notifications.user_id e NOT NULL, entao cada condicao e materializada
-  -- uma vez por membro ativo da loja. Por isso a dedupe_key leva o user_id:
-  -- o mesmo alerta de estoque nao pode colidir entre usuarios.
+  -- Alertas desejados: validades + saldos, com chave estavel por condicao
   ------------------------------------------------------------------
   CREATE TEMP TABLE _desired_alerts ON COMMIT DROP AS
-  WITH members AS (
-    SELECT su.user_id
-    FROM public.store_users su
-    WHERE su.store_id = p_store_id
-      AND su.is_active = TRUE
-  ),
-  stock AS (
-    -- Saldo disponivel por produto. LEFT JOIN cobre produtos que nunca
+  WITH stock AS (
+    -- Saldo disponivel por produto. O LEFT JOIN cobre produtos que nunca
     -- tiveram movimentacao (sem linha em stock_balances).
     SELECT
       p.id AS product_id,
@@ -108,30 +111,29 @@ BEGIN
       AND sb.expiration_date IS NOT NULL
       -- Janela de 30 dias, incluindo o que ja venceu (dias negativos).
       AND sb.expiration_date <= v_today + 30
-      -- Lote ja baixado ou bloqueado nao gera alerta novo.
+      -- Lote baixado, bloqueado ou sem saldo nao gera alerta novo.
       AND sb.quantity > 0
       AND sb.status = 'ACTIVE'
   )
-  -- Validade: uma chave por lote/usuario; a severidade escala com os dias.
+  -- Validade <= 7 dias (ou ja vencido). Uma chave por lote; a severidade
+  -- escala sozinha conforme os dias passam.
   SELECT
-    ('expiry:' || b.batch_id::TEXT || ':' || m.user_id::TEXT) AS dedupe_key,
-    ('expiry:' || b.batch_id::TEXT) AS cond_key,
-    b.store_id,
-    m.user_id,
+    ('expiry:' || b.batch_id::TEXT) AS dedupe_key,
     'EXPIRING_7D'::TEXT AS type,
     3::SMALLINT AS severity,
     CASE
       WHEN b.days_left < 0 THEN
-        'Lote "' || b.product_name || '" (lote ' || b.lot_number || ') venceu ha '
+        'Lote "' || b.product_name || '" (' || b.lot_number || ') venceu ha '
         || ABS(b.days_left) || ' dia(s)'
       ELSE
-        'Lote "' || b.product_name || '" (lote ' || b.lot_number || ') vence em '
+        'Lote "' || b.product_name || '" (' || b.lot_number || ') vence em '
         || b.days_left || ' dia(s)'
     END AS title,
     'Quantidade em estoque: ' || b.quantity
       || ' | SKU ' || COALESCE(b.sku, '-')
       || ' | Vencimento: ' || b.expiration_date AS message,
     jsonb_build_object(
+      'kind', 'expiry',
       'batch_id', b.batch_id,
       'product_name', b.product_name,
       'sku', b.sku,
@@ -141,24 +143,22 @@ BEGIN
       'days_left', b.days_left
     ) AS metadata
   FROM batches b
-  CROSS JOIN members m
   WHERE b.days_left <= 7
 
   UNION ALL
 
+  -- Validade entre 8 e 30 dias
   SELECT
-    ('expiry:' || b.batch_id::TEXT || ':' || m.user_id::TEXT),
     ('expiry:' || b.batch_id::TEXT),
-    b.store_id,
-    m.user_id,
     'EXPIRING_30D'::TEXT,
     2::SMALLINT,
-    'Lote "' || b.product_name || '" (lote ' || b.lot_number || ') vence em '
+    'Lote "' || b.product_name || '" (' || b.lot_number || ') vence em '
       || b.days_left || ' dia(s)',
     'Quantidade em estoque: ' || b.quantity
       || ' | SKU ' || COALESCE(b.sku, '-')
       || ' | Vencimento: ' || b.expiration_date,
     jsonb_build_object(
+      'kind', 'expiry',
       'batch_id', b.batch_id,
       'product_name', b.product_name,
       'sku', b.sku,
@@ -168,23 +168,20 @@ BEGIN
       'days_left', b.days_left
     )
   FROM batches b
-  CROSS JOIN members m
   WHERE b.days_left > 7 AND b.days_left <= 30
 
   UNION ALL
 
-  -- Estoque zerado
+  -- Ruptura: disponivel zerado
   SELECT
-    ('stock:' || s.product_id::TEXT || ':' || m.user_id::TEXT),
     ('stock:' || s.product_id::TEXT),
-    s.store_id,
-    m.user_id,
     'OUT_OF_STOCK'::TEXT,
     3::SMALLINT,
     'Produto "' || s.name || '" esta sem estoque',
     'SKU ' || COALESCE(s.sku, '-') || ' | Disponivel: ' || s.available
       || ' | Estoque minimo: ' || s.min_stock,
     jsonb_build_object(
+      'kind', 'stock',
       'product_id', s.product_id,
       'product_name', s.name,
       'sku', s.sku,
@@ -193,7 +190,6 @@ BEGIN
       'max_stock', s.max_stock
     )
   FROM stock s
-  CROSS JOIN members m
   WHERE s.available <= 0
     AND s.min_stock > 0
 
@@ -201,16 +197,14 @@ BEGIN
 
   -- Estoque baixo: ainda vende, mas ja tocou o minimo
   SELECT
-    ('stock:' || s.product_id::TEXT || ':' || m.user_id::TEXT),
     ('stock:' || s.product_id::TEXT),
-    s.store_id,
-    m.user_id,
     'LOW_STOCK'::TEXT,
     2::SMALLINT,
     'Estoque baixo: "' || s.name || '"',
     'Disponivel: ' || s.available || ' | Estoque minimo: ' || s.min_stock
       || ' | SKU ' || COALESCE(s.sku, '-'),
     jsonb_build_object(
+      'kind', 'stock',
       'product_id', s.product_id,
       'product_name', s.name,
       'sku', s.sku,
@@ -219,27 +213,25 @@ BEGIN
       'max_stock', s.max_stock
     )
   FROM stock s
-  CROSS JOIN members m
   WHERE s.available > 0
     AND s.min_stock > 0
     AND s.available <= s.min_stock
 
   UNION ALL
 
-  -- Reposicao: suggestao de compra. Dispara na metade do estoque minimo,
+  -- Reposicao: sugestao de compra. Dispara na metade do estoque minimo,
   -- sugerindo repor ate o maximo cadastrado.
   SELECT
-    ('reorder:' || s.product_id::TEXT || ':' || m.user_id::TEXT),
     ('reorder:' || s.product_id::TEXT),
-    s.store_id,
-    m.user_id,
     'REORDER_SUGGESTED'::TEXT,
     1::SMALLINT,
     'Reposicao sugerida: "' || s.name || '"',
-    'Disponivel: ' || s.available || ' | Estoque minimo: ' || s.min_stock
+    'Disponivel: ' || s.available
+      || ' | Estoque minimo: ' || s.min_stock
       || ' | Sugestao de compra: ' || GREATEST(s.max_stock - s.available, 0)
       || ' un | SKU ' || COALESCE(s.sku, '-'),
     jsonb_build_object(
+      'kind', 'reorder',
       'product_id', s.product_id,
       'product_name', s.name,
       'sku', s.sku,
@@ -249,21 +241,21 @@ BEGIN
       'suggested_quantity', GREATEST(s.max_stock - s.available, 0)
     )
   FROM stock s
-  CROSS JOIN members m
   WHERE s.max_stock > 0
     AND s.available <= GREATEST(s.min_stock / 2, 0.001);
 
   ------------------------------------------------------------------
   -- Insere/atualiza o que ainda vale
-  ------------------------------------------------------------------
+  --
   -- is_read so volta a false quando o alerta escala de severidade, para
-  -- nao reabrir notificacoes que o usuario ja traiter.
+  -- nao reabrir notificacoes que ja foram tratadas.
+  ------------------------------------------------------------------
   INSERT INTO public.notifications (
     store_id, user_id, type, title, message, metadata, severity, source, dedupe_key
   )
   SELECT
-    d.store_id,
-    d.user_id,
+    p_store_id,
+    NULL,
     d.type,
     d.title,
     d.message,
@@ -285,7 +277,7 @@ BEGIN
     END;
 
   ------------------------------------------------------------------
-  -- Remove o que deixou de valer (lote reposto, estoque normalizado)
+  -- Remove o que deixou de valer (lote baixado, estoque normalizado)
   ------------------------------------------------------------------
   DELETE FROM public.notifications n
   WHERE n.store_id = p_store_id
@@ -296,12 +288,12 @@ BEGIN
     );
 
   ------------------------------------------------------------------
-  -- Contagens para o resumo da tela
+  -- Resumo por condicao para a tela
   ------------------------------------------------------------------
   RETURN QUERY
   SELECT
-    COUNT(*) FILTER (WHERE d.dedupe_key LIKE 'expiry:%' AND d.severity = 3),
-    COUNT(*) FILTER (WHERE d.dedupe_key LIKE 'expiry:%' AND d.severity = 2),
+    COUNT(*) FILTER (WHERE d.severity = 3 AND d.metadata->>'kind' = 'expiry'),
+    COUNT(*) FILTER (WHERE d.severity = 2 AND d.metadata->>'kind' = 'expiry'),
     COUNT(*) FILTER (WHERE d.type = 'LOW_STOCK'),
     COUNT(*) FILTER (WHERE d.type = 'OUT_OF_STOCK'),
     COUNT(*) FILTER (WHERE d.type = 'REORDER_SUGGESTED')
@@ -314,6 +306,7 @@ COMMENT ON FUNCTION public.generate_stock_alerts(UUID) IS
   'Sincroniza alertas automaticos de validade/estoque/reposicao da loja.';
 
 -- -----------------------------------------------------------------------------
--- 3. Grants: usuarios autenticados da loja podem rodar a sincronizacao
+-- 3. Grants: so usuarios autenticados podem rodar a sincronizacao
 -- -----------------------------------------------------------------------------
+REVOKE ALL ON FUNCTION public.generate_stock_alerts(UUID) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.generate_stock_alerts(UUID) TO authenticated;

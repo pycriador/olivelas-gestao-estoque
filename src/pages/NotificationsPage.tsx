@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { notificationService } from '@/services/notificationService'
+import type { StockAlertSummary } from '@/services/notificationService'
 import { useTenant } from '@/hooks/useTenant'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatDateTime } from '@/utils/dates'
@@ -10,35 +11,90 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
-import { Bell, CheckCheck, AlertTriangle, Search } from 'lucide-react'
+import {
+  Bell,
+  CheckCheck,
+  AlertTriangle,
+  Search,
+  Clock,
+  PackageX,
+  TrendingUp,
+} from 'lucide-react'
+
+/** Cor e icone por tipo de alerta. */
+const NOTIFICATION_TONE: Record<
+  string,
+  { icon: React.ReactNode; bg: string; fg: string }
+> = {
+  EXPIRING_7D: { icon: <AlertTriangle className="h-4 w-4" />, bg: 'bg-orange-500/10', fg: 'text-orange-500' },
+  EXPIRING_30D: { icon: <Clock className="h-4 w-4" />, bg: 'bg-warning/10', fg: 'text-warning' },
+  OUT_OF_STOCK: { icon: <PackageX className="h-4 w-4" />, bg: 'bg-danger/10', fg: 'text-danger' },
+  LOW_STOCK: { icon: <AlertTriangle className="h-4 w-4" />, bg: 'bg-warning/10', fg: 'text-warning' },
+  REORDER_SUGGESTED: { icon: <TrendingUp className="h-4 w-4" />, bg: 'bg-primary/10', fg: 'text-primary' },
+}
 
 export function NotificationsPage() {
   const { storeId, hasActiveStore } = useTenant()
   const queryClient = useQueryClient()
 
-  const {
-    page,
-    pageSize,
-    search,
-    filters,
-    setPage,
-    setPageSize,
-    setSearch,
-    setFilter,
-  } = useTablePagination({
-    defaultPageSize: 10,
-    defaultSortBy: 'created_at',
-    defaultSortOrder: 'desc',
-  })
+  const { page, pageSize, search, filters, setPage, setPageSize, setSearch, setFilter } =
+    useTablePagination({
+      defaultPageSize: 10,
+      defaultSortBy: 'created_at',
+      defaultSortOrder: 'desc',
+      defaultFilters: {
+        readStatus: 'ALL',
+        type: 'ALL',
+      },
+    })
 
   const readStatusFilter = filters.readStatus || 'ALL'
+  const typeFilter = filters.type || 'ALL'
+
+  // Sincroniza os alertas automaticos de validade/estoque/reposicao. A RPC e
+  // idempotente, entao rodar a cada visita mantem a lista coerente sem
+  // duplicar nada.
+  const [alertSummary, setAlertSummary] = React.useState<StockAlertSummary | null>(null)
+  const [alertError, setAlertError] = React.useState('')
+  const alertsSyncedFor = React.useRef<string | null>(null)
+
+  React.useEffect(() => {
+    if (!hasActiveStore) return
+    if (alertsSyncedFor.current === storeId) return
+    alertsSyncedFor.current = storeId
+
+    let cancelled = false
+    notificationService
+      .generateStockAlerts(storeId)
+      .then((summary) => {
+        if (cancelled) return
+        setAlertSummary(summary)
+        queryClient.invalidateQueries({ queryKey: ['notifications', storeId] })
+      })
+      .catch((err: any) => {
+        if (cancelled) return
+        setAlertError(
+          err?.message || 'Não foi possível atualizar os alertas automáticos.'
+        )
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [storeId, hasActiveStore, queryClient])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['notifications', storeId, { search, readStatusFilter, page, pageSize }],
+    queryKey: [
+      'notifications',
+      storeId,
+      { search, readStatusFilter, typeFilter, page, pageSize },
+    ],
     queryFn: () =>
       notificationService.listNotifications(storeId, {
         search: search || undefined,
-        isRead: readStatusFilter === 'UNREAD' ? false : readStatusFilter === 'READ' ? true : undefined,
+        isRead:
+          readStatusFilter === 'UNREAD' ? false : readStatusFilter === 'READ' ? true : undefined,
+        type: typeFilter !== 'ALL' ? typeFilter : undefined,
         page,
         pageSize,
       }),
@@ -82,9 +138,27 @@ export function NotificationsPage() {
           <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
             {totalItems} {totalItems === 1 ? 'notificação' : 'notificações'}
           </Badge>
+          {alertError && <span className="text-[11px] text-danger">{alertError}</span>}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
+          <select
+            value={typeFilter}
+            onChange={(e) => {
+              setFilter('type', e.target.value)
+              setPage(1)
+            }}
+            aria-label="Filtrar por tipo"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+          >
+            <option value="ALL">Todos os Alertas</option>
+            <option value="EXPIRING_7D">Vencendo em até 7 dias</option>
+            <option value="EXPIRING_30D">Vencendo em até 30 dias</option>
+            <option value="OUT_OF_STOCK">Estoque zerado</option>
+            <option value="LOW_STOCK">Estoque baixo</option>
+            <option value="REORDER_SUGGESTED">Reposição sugerida</option>
+          </select>
+
           <select
             value={readStatusFilter}
             onChange={(e) => setFilter('readStatus', e.target.value)}
@@ -110,6 +184,81 @@ export function NotificationsPage() {
         </div>
       </div>
 
+      {/* Resumo dos alertas automaticos */}
+      {alertSummary && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 flex-shrink-0">
+          {(
+            [
+              {
+                key: 'expiring7d',
+                label: 'Vence em ≤ 7 dias',
+                value: alertSummary.expiring7d,
+                icon: AlertTriangle,
+                tone: 'text-orange-500',
+              },
+              {
+                key: 'expiring30d',
+                label: 'Vence em ≤ 30 dias',
+                value: alertSummary.expiring30d,
+                icon: Clock,
+                tone: 'text-warning',
+              },
+              {
+                key: 'outOfStock',
+                label: 'Estoque zerado',
+                value: alertSummary.outOfStock,
+                icon: PackageX,
+                tone: 'text-danger',
+              },
+              {
+                key: 'lowStock',
+                label: 'Estoque baixo',
+                value: alertSummary.lowStock,
+                icon: AlertTriangle,
+                tone: 'text-warning',
+              },
+              {
+                key: 'reorder',
+                label: 'Reposição sugerida',
+                value: alertSummary.reorder,
+                icon: TrendingUp,
+                tone: 'text-primary',
+              },
+            ] as const
+          ).map((card) => {
+            const Icon = card.icon
+            return (
+              <button
+                key={card.key}
+                type="button"
+                onClick={() => {
+                  const map: Record<string, string> = {
+                    expiring7d: 'EXPIRING_7D',
+                    expiring30d: 'EXPIRING_30D',
+                    outOfStock: 'OUT_OF_STOCK',
+                    lowStock: 'LOW_STOCK',
+                    reorder: 'REORDER_SUGGESTED',
+                  }
+                  setFilter('type', map[card.key])
+                  setPage(1)
+                }}
+                className="flex items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2.5 text-left transition-colors hover:bg-muted/40"
+              >
+                <Icon className={`h-4 w-4 shrink-0 ${card.tone}`} />
+                <div className="min-w-0">
+                  <div className="font-extrabold text-sm font-mono text-foreground leading-none">
+                    {card.value}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground truncate mt-0.5">
+                    {card.label}
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
+
       {/* Notifications Card - Viewport fitting with internal scroll */}
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -134,12 +283,12 @@ export function NotificationsPage() {
                   }`}
                 >
                   <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-primary/10 text-primary mt-0.5 shrink-0">
-                      {n.type === 'LOW_STOCK' ? (
-                        <AlertTriangle className="h-4 w-4 text-warning" />
-                      ) : (
-                        <Bell className="h-4 w-4" />
-                      )}
+                    <div
+                      className={`p-2 rounded-xl mt-0.5 shrink-0 ${
+                        NOTIFICATION_TONE[n.type]?.bg || 'bg-primary/10'
+                      } ${NOTIFICATION_TONE[n.type]?.fg || 'text-primary'}`}
+                    >
+                      {NOTIFICATION_TONE[n.type]?.icon || <Bell className="h-4 w-4" />}
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
