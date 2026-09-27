@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { storeService } from '@/services/storeService'
 import { reportService } from '@/services/reportService'
 import { userService } from '@/services/userService'
@@ -48,6 +48,7 @@ import type { PlatformUser } from '@/types/user.types'
 export function GlobalAdminDashboardPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
+  const [, setSearchParams] = useSearchParams()
   const { setActiveStore } = useTenant()
 
   const {
@@ -68,8 +69,18 @@ export function GlobalAdminDashboardPage() {
     defaultSortOrder: 'asc',
   })
 
-  const activeTab = filters.tab || 'stores' // 'stores' | 'users'
+  const activeTab = filters.tab || 'stores' // 'stores' | 'users' | 'delete'
   const statusFilter = filters.status || 'ALL'
+
+  const selectTab = (tab: 'stores' | 'users' | 'delete') => {
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous)
+      next.set('tab', tab)
+      next.delete('page')
+      next.delete('search')
+      return next
+    }, { replace: true })
+  }
 
   // Store modal states
   const [isStoreModalOpen, setIsStoreModalOpen] = React.useState(false)
@@ -421,11 +432,7 @@ export function GlobalAdminDashboardPage() {
         {/* Tab Pills */}
         <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
           <button
-            onClick={() => {
-              setFilter('tab', 'stores')
-              setPage(1)
-              setSearch('')
-            }}
+            onClick={() => selectTab('stores')}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'stores'
                 ? 'bg-primary text-primary-foreground shadow-xs'
@@ -435,11 +442,7 @@ export function GlobalAdminDashboardPage() {
             <Building2 className="h-3.5 w-3.5 inline mr-1.5" /> Lojas da Plataforma ({globalMetrics?.totalStores ?? 0})
           </button>
           <button
-            onClick={() => {
-              setFilter('tab', 'users')
-              setPage(1)
-              setSearch('')
-            }}
+            onClick={() => selectTab('users')}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-primary text-primary-foreground shadow-xs'
@@ -449,11 +452,7 @@ export function GlobalAdminDashboardPage() {
             <Users className="h-3.5 w-3.5 inline mr-1.5" /> Usuários ({globalMetrics?.totalUsers ?? 0})
           </button>
           <button
-            onClick={() => {
-              setFilter('tab', 'delete')
-              setPage(1)
-              setSearch('')
-            }}
+            onClick={() => selectTab('delete')}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'delete'
                 ? 'bg-danger text-white shadow-xs'
