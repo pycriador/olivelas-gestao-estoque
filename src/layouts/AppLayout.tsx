@@ -42,6 +42,7 @@ import { Badge } from '@/components/ui/badge'
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
   const [storeMenuOpen, setStoreMenuOpen] = React.useState(false)
+  const [mobileExpandedGroup, setMobileExpandedGroup] = React.useState<string | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { user, userStores, signOut, isGlobalAdmin } = useAuth()
@@ -122,13 +123,23 @@ export function AppLayout() {
     { label: t.nav.settings, path: '/settings', icon: Settings },
   ]
 
+  const activeNavGroup = navGroups.find((group) =>
+    group.items.some((item) => item.path === location.pathname),
+  )
+  const openMobileGroup = mobileExpandedGroup ?? activeNavGroup?.id ?? null
+
+  const closeMobileNavigation = () => {
+    setSidebarOpen(false)
+    setMobileExpandedGroup(null)
+  }
+
   const handleLogout = async () => {
     await signOut()
     navigate('/login')
   }
 
   return (
-    <div className="h-screen max-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
+    <div className="h-dvh max-h-dvh bg-background flex flex-col md:flex-row overflow-hidden">
       <GlobalCommandK />
 
       {/* Mobile Backdrop */}
@@ -240,7 +251,7 @@ export function AppLayout() {
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={() => setSidebarOpen(false)}
+                onClick={closeMobileNavigation}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
                   isActive
                     ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold'
@@ -260,14 +271,26 @@ export function AppLayout() {
 
               return (
                 <section key={group.id}>
-                  <div className="w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/70">
+                  <div className="hidden md:flex w-full items-center gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/70">
                     <GroupIcon className="h-4 w-4 text-muted-foreground" />
                     <span className="flex-1">{group.label}</span>
                   </div>
 
+                  <button
+                    type="button"
+                    onClick={() => setMobileExpandedGroup(openMobileGroup === group.id ? '' : group.id)}
+                    aria-expanded={openMobileGroup === group.id}
+                    aria-controls={`nav-group-${group.id}`}
+                    className="md:hidden w-full flex items-center gap-3 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/70"
+                  >
+                    <GroupIcon className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 text-left">{group.label}</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${openMobileGroup === group.id ? 'rotate-180' : ''}`} />
+                  </button>
+
                   <div
                     id={`nav-group-${group.id}`}
-                    className="mt-0.5 space-y-0.5 pl-3 ml-3 border-l border-sidebar-border"
+                    className={`${openMobileGroup === group.id ? 'block' : 'hidden'} md:block mt-0.5 space-y-0.5 pl-3 ml-3 border-l border-sidebar-border`}
                   >
                     {group.items.map((item) => {
                       const Icon = item.icon
@@ -276,7 +299,7 @@ export function AppLayout() {
                         <Link
                           key={item.path}
                           to={item.path}
-                          onClick={() => setSidebarOpen(false)}
+                          onClick={closeMobileNavigation}
                           aria-current={isActive ? 'page' : undefined}
                           className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
                             isActive
@@ -299,7 +322,7 @@ export function AppLayout() {
             })}
           </div>
 
-          <div className="pt-2 space-y-1">
+          <div className="grid grid-cols-2 gap-1 pt-2 md:block md:space-y-1">
             {bottomNavItems.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.path
@@ -307,15 +330,15 @@ export function AppLayout() {
                 <Link
                   key={item.path}
                   to={item.path}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all ${
+                  onClick={closeMobileNavigation}
+                  className={`flex min-w-0 items-center gap-2 px-2.5 py-2.5 rounded-xl text-xs font-medium transition-all md:gap-3 md:px-3 ${
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-sm shadow-primary/25 font-semibold'
                       : 'text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
-                  {item.label}
+                  <Icon className={`h-4 w-4 shrink-0 ${isActive ? 'text-primary-foreground' : 'text-muted-foreground'}`} />
+                  <span className="truncate">{item.label}</span>
                 </Link>
               )
             })}
@@ -365,7 +388,7 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 sm:px-4 flex items-center justify-between gap-3">
+        <header className="min-h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 py-2 sm:px-4 flex flex-col gap-2 md:h-12 md:flex-row md:items-center md:justify-between md:gap-3 md:py-0">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -380,7 +403,7 @@ export function AppLayout() {
           </div>
 
           {/* Right Header Utilities */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
             <LanguageSelector />
             <ThemeToggle />
             <Link

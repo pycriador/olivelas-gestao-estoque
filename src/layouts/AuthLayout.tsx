@@ -6,7 +6,7 @@ export function AuthLayout() {
   return (
     <div className="min-h-screen bg-background flex flex-col justify-between p-4 sm:p-6">
       {/* Top Navbar */}
-      <header className="max-w-6xl w-full mx-auto flex items-center justify-between py-2">
+      <header className="max-w-6xl w-full mx-auto flex flex-col gap-3 py-2 sm:flex-row sm:items-center sm:justify-between">
         <Link to="/" className="flex items-center gap-2.5">
           <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-md shadow-primary/20">
             O
@@ -15,7 +15,7 @@ export function AuthLayout() {
             Olivelas SaaS
           </span>
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-2">
           <LanguageSelector />
           <ThemeToggle />
         </div>

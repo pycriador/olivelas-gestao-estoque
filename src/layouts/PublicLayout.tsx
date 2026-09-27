@@ -1,4 +1,6 @@
+import * as React from 'react'
 import { Outlet, Link } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { Button } from '@/components/ui/button'
@@ -6,13 +8,14 @@ import { useAuth } from '@/hooks/useAuth'
 
 export function PublicLayout() {
   const { isAuthenticated } = useAuth()
+  const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
       {/* Navbar */}
       <header className="sticky top-0 z-40 w-full border-b border-border/50 bg-background/80 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2.5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 min-h-16 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 py-3 md:h-16 md:flex-nowrap md:py-0">
+          <Link to="/" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-primary-foreground font-bold shadow-lg shadow-primary/25">
               O
             </div>
@@ -35,7 +38,7 @@ export function PublicLayout() {
             </Link>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
             <LanguageSelector />
             <ThemeToggle />
             {isAuthenticated ? (
@@ -59,6 +62,53 @@ export function PublicLayout() {
               </div>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen((open) => !open)}
+            aria-label={mobileMenuOpen ? 'Fechar menu' : 'Abrir menu'}
+            aria-expanded={mobileMenuOpen}
+            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+
+          {mobileMenuOpen && (
+            <div className="basis-full border-t border-border/60 pt-3 md:hidden">
+              <nav className="grid grid-cols-2 gap-1 text-sm font-medium text-muted-foreground">
+                <Link to="/features" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
+                  Recursos
+                </Link>
+                <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
+                  Planos & Preços
+                </Link>
+                <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
+                  Contato
+                </Link>
+                {isAuthenticated && (
+                  <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
+                    Acessar Painel
+                  </Link>
+                )}
+              </nav>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
+                <div className="flex items-center gap-2">
+                  <LanguageSelector />
+                  <ThemeToggle />
+                </div>
+                {!isAuthenticated && (
+                  <div className="flex items-center gap-2">
+                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="ghost" size="sm">Entrar</Button>
+                    </Link>
+                    <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
+                      <Button variant="default" size="sm">Começar Grátis</Button>
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </header>
 
