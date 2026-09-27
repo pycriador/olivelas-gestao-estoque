@@ -16,6 +16,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -28,6 +29,7 @@ import {
   CheckCircle2,
   PackageCheck,
   AlertCircle,
+  Eye,
 } from 'lucide-react'
 import type { PurchaseOrder } from '@/types/purchasing.types'
 
@@ -59,6 +61,7 @@ export function PurchasingPage() {
 
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false)
   const [receivingPO, setReceivingPO] = React.useState<PurchaseOrder | null>(null)
+  const [viewingPO, setViewingPO] = React.useState<PurchaseOrder | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   // Form states for new purchase order
@@ -315,16 +318,25 @@ export function PurchasingPage() {
                         </Badge>
                       </td>
                       <td className="py-2.5 px-4 text-right">
-                        {po.status !== 'RECEIVED' && (
-                          <Button
-                            size="sm"
-                            variant="default"
-                            className="text-[11px] h-7 px-2.5 shadow-xs"
-                            onClick={() => setReceivingPO(po)}
-                          >
-                            <PackageCheck className="h-3.5 w-3.5 mr-1" /> Receber Mercadoria
-                          </Button>
-                        )}
+                        <DropdownMenu
+                          triggerLabel="Ações"
+                          items={[
+                            {
+                              key: 'details',
+                              label: 'Ver detalhes',
+                              icon: <Eye className="h-3.5 w-3.5 shrink-0" />,
+                              onSelect: () => setViewingPO(po),
+                            },
+                            ...(po.status === 'ISSUED'
+                              ? [{
+                                  key: 'receive',
+                                  label: 'Receber Mercadoria',
+                                  icon: <PackageCheck className="h-3.5 w-3.5 shrink-0" />,
+                                  onSelect: () => setReceivingPO(po),
+                                }]
+                              : []),
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -346,6 +358,75 @@ export function PurchasingPage() {
           />
         </div>
       </Card>
+
+      <Modal
+        isOpen={Boolean(viewingPO)}
+        onClose={() => setViewingPO(null)}
+        title={viewingPO ? `Ordem ${viewingPO.order_number}` : 'Detalhes da Ordem'}
+        description={viewingPO?.supplier_name}
+        maxWidth="lg"
+      >
+        {viewingPO && (
+          <div className="space-y-4 pt-1 text-xs">
+            <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3">
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground">Emitida em</div>
+                <div className="mt-1 font-medium text-foreground">
+                  {formatDate(viewingPO.issued_at || viewingPO.created_at)}
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground">Status</div>
+                <div className="mt-1">
+                  <Badge variant={viewingPO.status === 'RECEIVED' ? 'success' : 'default'}>
+                    {viewingPO.status === 'RECEIVED' ? 'RECEBIDA & ESTOCADA' : viewingPO.status}
+                  </Badge>
+                </div>
+              </div>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground">Total</div>
+                <div className="mt-1 font-mono font-bold text-foreground">
+                  {formatCurrency(viewingPO.total_amount)}
+                </div>
+              </div>
+              {viewingPO.notes && (
+                <div className="col-span-2">
+                  <div className="text-[10px] uppercase text-muted-foreground">Observações</div>
+                  <div className="mt-1 text-foreground">{viewingPO.notes}</div>
+                </div>
+              )}
+            </div>
+
+            <div className="overflow-hidden rounded-lg border border-border divide-y divide-border">
+              {viewingPO.items?.map((item) => (
+                <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 p-3">
+                  <div className="min-w-0">
+                    <div className="truncate font-semibold text-foreground">{item.product_name}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      {item.quantity_received} / {item.quantity_ordered} recebidos
+                      {item.lot_number ? ` · Lote ${item.lot_number}` : ''}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono font-semibold text-foreground">
+                      {formatCurrency(item.total_cost)}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {formatCurrency(item.unit_cost)} / unidade
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end border-t border-border pt-3">
+              <Button variant="outline" size="sm" onClick={() => setViewingPO(null)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       {/* New Purchase Order Modal */}
       <Modal
