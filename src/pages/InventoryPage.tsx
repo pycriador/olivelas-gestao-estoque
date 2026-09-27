@@ -1,8 +1,10 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryService } from '@/services/inventoryService'
 import { productService } from '@/services/productService'
 import { useTenant } from '@/hooks/useTenant'
+import { useAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/hooks/useI18n'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatDate, formatDateTime } from '@/utils/dates'
@@ -31,6 +33,7 @@ import {
   History,
   ShieldAlert,
   Upload,
+  Trash2,
 } from 'lucide-react'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -50,6 +53,7 @@ const MOVEMENT_LABELS: Record<string, string> = {
 
 export function InventoryPage() {
   const { storeId, hasActiveStore } = useTenant()
+  const { isGlobalAdmin } = useAuth()
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
@@ -250,6 +254,14 @@ export function InventoryPage() {
         <div className="flex items-center gap-2 flex-wrap ml-auto">
           {activeTab === 'movements' && (
             <>
+              {isGlobalAdmin && (
+                <Link
+                  to={{ pathname: '/global-admin', search: '?tab=delete&entity=stock_movements' }}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-md border border-danger/30 bg-danger/5 px-2.5 text-xs font-medium text-danger transition-colors hover:bg-danger/10"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Exclusão Global
+                </Link>
+              )}
               <select
                 value={movementTypeFilter}
                 onChange={(e) => {
