@@ -210,12 +210,15 @@ export const userService = {
     if (updates.phone !== undefined) payload.phone = updates.phone
     if (updates.isGlobalAdmin !== undefined) payload.is_global_admin = updates.isGlobalAdmin
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('profiles')
       .update(payload)
       .eq('id', userId)
+      .select('id')
+      .maybeSingle()
 
     if (error) throw error
+    if (!data) throw new Error('Usuário não encontrado ou você não tem permissão para editá-lo.')
 
     auditService.logAction({
       action: 'USER_UPDATED',
@@ -245,12 +248,32 @@ export const userService = {
    * Delete or deactivate user
    */
   async deleteUser(userId: string): Promise<void> {
-    // 1. Remove store links
-    await supabase.from('store_users').delete().eq('user_id', userId)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user?.id === userId) throw new Error('Você não pode remover sua própria conta.')
 
-    // 2. Remove profile
-    const { error } = await supabase.from('profiles').delete().eq('id', userId)
+    const { data: target, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (lookupError) throw lookupError
+    if (!target) throw new Error('Usuário não encontrado ou você não tem permissão para removê-lo.')
+
+    const { error: storeUsersError } = await supabase
+      .from('store_users')
+      .delete()
+      .eq('user_id', userId)
+    if (storeUsersError) throw storeUsersError
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .delete()
+      .eq('id', userId)
+      .select('id')
+      .maybeSingle()
     if (error) throw error
+    if (!data) throw new Error('Usuário não foi removido. Verifique as permissões do Admin Global.')
 
     auditService.logAction({
       action: 'USER_DELETED',
