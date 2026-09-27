@@ -111,91 +111,43 @@ export const orderService = {
   },
 
   async createOrder(payload: CreateOrderPayload): Promise<Order> {
-    const { data: { user } } = await supabase.auth.getUser()
-
-    // Calculate totals
-    const subtotal = payload.items.reduce(
-      (acc, item) => acc + (item.quantity * item.unitPrice - (item.discount || 0)),
-      0
-    )
-    const discount = payload.discountAmount || 0
-    const shipping = payload.shippingAmount || 0
-    const total = Math.max(0, subtotal - discount + shipping)
-
     const orderNumber = `PED-${Date.now().toString().slice(-6)}`
 
-    // 1. Create order
-    const { data: order, error: orderError } = await supabase
+    // Tudo em uma transacao no servidor: pedido, itens, pagamento, baixa de
+    // estoque e auditoria. A RPC trava a linha de saldo de cada produto
+    // (FOR UPDATE) e recusa com "Estoque insuficiente para ..." quando o
+    // disponivel nao cobre o carrinho, entao nao existe venda acima do
+    // estoque nem pedido orfao por insert parcial.
+    const { data: orderId, error } = await supabase.rpc('create_order_with_stock', {
+      p_store_id: payload.storeId,
+      p_customer_id: payload.customerId || null,
+      p_channel: payload.channel,
+      p_order_number: orderNumber,
+      p_items: payload.items.map((item) => ({
+        productId: item.productId,
+        batchId: item.batchId || null,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        unitCost: item.unitCost ?? null,
+        discount: item.discount || 0,
+      })),
+      p_discount_amount: payload.discountAmount || 0,
+      p_shipping_amount: payload.shippingAmount || 0,
+      p_notes: payload.notes || null,
+      p_payment_method: payload.paymentMethod || null,
+      p_deduct_stock: true,
+    })
+
+    if (error) throw error
+    if (!orderId) throw new Error('O pedido não foi criado.')
+
+    const { data: order, error: fetchError } = await supabase
       .from('orders')
-      .insert({
-        store_id: payload.storeId,
-        customer_id: payload.customerId || null,
-        user_id: user?.id || null,
-        order_number: orderNumber,
-        channel: payload.channel,
-        status: 'PENDING',
-        subtotal,
-        discount_amount: discount,
-        shipping_amount: shipping,
-        total_amount: total,
-        notes: payload.notes || null,
-      })
-      .select()
+      .select('*')
+      .eq('id', orderId)
       .single()
 
-    if (orderError) throw orderError
-
-    // 2. Insert items
-    const orderItems = payload.items.map(item => ({
-      order_id: order.id,
-      store_id: payload.storeId,
-      product_id: item.productId,
-      batch_id: item.batchId || null,
-      quantity: item.quantity,
-      unit_price: item.unitPrice,
-      unit_cost: item.unitCost || null,
-      discount: item.discount || 0,
-      total_price: item.quantity * item.unitPrice - (item.discount || 0),
-    }))
-
-    const { error: itemsError } = await supabase
-      .from('order_items')
-      .insert(orderItems)
-
-    if (itemsError) throw itemsError
-
-    // 3. Insert payment if method is provided
-    if (payload.paymentMethod) {
-      await supabase.from('payments').insert({
-        order_id: order.id,
-        store_id: payload.storeId,
-        method: payload.paymentMethod,
-        amount: total,
-        status: payload.channel === 'IN_STORE' ? 'PAID' : 'PENDING',
-      })
-    }
-
-    // 4. Auto-deduct stock if in-store / confirmed sale
-    try {
-      await supabase.rpc('process_sale_stock_deduction', {
-        p_order_id: order.id,
-      })
-    } catch (rpcErr) {
-      console.warn('RPC stock deduction warning:', rpcErr)
-    }
-
-    auditService.logAction({
-      storeId: payload.storeId,
-      action: 'ORDER_CREATED',
-      entity: 'orders',
-      entityId: order.id,
-      afterData: {
-        orderNumber: order.order_number,
-        totalAmount: order.total_amount,
-        channel: payload.channel,
-        itemCount: payload.items.length,
-      },
-    })
+    if (fetchError) throw fetchError
 
     return order as Order
   },
