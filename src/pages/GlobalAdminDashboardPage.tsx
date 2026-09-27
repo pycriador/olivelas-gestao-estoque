@@ -17,6 +17,7 @@ import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
+import { GlobalDeletePanel } from '@/components/admin/GlobalDeletePanel'
 import {
   Store,
   Plus,
@@ -387,7 +388,13 @@ export function GlobalAdminDashboardPage() {
         }
       >
         <Input
-          placeholder={activeTab === 'stores' ? 'Buscar loja, slug, CNPJ...' : 'Buscar usuário, email...'}
+          placeholder={
+            activeTab === 'stores'
+              ? 'Buscar loja, slug, CNPJ...'
+              : activeTab === 'users'
+                ? 'Buscar usuário, email...'
+                : 'Buscar registro para excluir...'
+          }
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 text-xs bg-background/90"
@@ -439,6 +446,20 @@ export function GlobalAdminDashboardPage() {
             }`}
           >
             <Users className="h-3.5 w-3.5 inline mr-1.5" /> Usuários ({globalMetrics?.totalUsers ?? 0})
+          </button>
+          <button
+            onClick={() => {
+              setFilter('tab', 'delete')
+              setPage(1)
+              setSearch('')
+            }}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'delete'
+                ? 'bg-danger text-white shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Trash2 className="h-3.5 w-3.5 inline mr-1.5" /> Exclusão Definitiva
           </button>
         </div>
 
@@ -498,8 +519,12 @@ export function GlobalAdminDashboardPage() {
         </div>
       </div>
 
-      {/* Global Compact Metrics Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+      {/* Global Compact Metrics Cards (so nas abas de leitura) */}
+      <div
+        className={`grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0 ${
+          activeTab === 'delete' ? 'hidden' : ''
+        }`}
+      >
         <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium text-muted-foreground">Total de Lojas</span>
@@ -549,7 +574,11 @@ export function GlobalAdminDashboardPage() {
         </Card>
       </div>
 
+      {/* TAB 3: CROSS-STORE HARD DELETE */}
+      {activeTab === 'delete' && <GlobalDeletePanel />}
+
       {/* Main Table Card (Stores or Users Viewport) */}
+      {activeTab !== 'delete' && (
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* TAB 1: STORES TABLE */}
@@ -883,6 +912,7 @@ export function GlobalAdminDashboardPage() {
           />
         </div>
       </Card>
+      )}
 
       {/* MODAL 1: NEW / EDIT STORE */}
       <Modal
