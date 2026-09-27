@@ -251,35 +251,13 @@ export const userService = {
     const { data: { user } } = await supabase.auth.getUser()
     if (user?.id === userId) throw new Error('Você não pode remover sua própria conta.')
 
-    const { data: target, error: lookupError } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (lookupError) throw lookupError
-    if (!target) throw new Error('Usuário não encontrado ou você não tem permissão para removê-lo.')
-
-    const { error: storeUsersError } = await supabase
-      .from('store_users')
-      .delete()
-      .eq('user_id', userId)
-    if (storeUsersError) throw storeUsersError
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .delete()
-      .eq('id', userId)
-      .select('id')
-      .maybeSingle()
-    if (error) throw error
-    if (!data) throw new Error('Usuário não foi removido. Verifique as permissões do Admin Global.')
-
-    auditService.logAction({
-      action: 'USER_DELETED',
-      entity: 'profiles',
-      entityId: userId,
+    const { data, error } = await supabase.rpc('global_admin_delete_platform_user', {
+      p_user_id: userId,
     })
+    if (error) throw error
+    if (typeof data !== 'string' || !data) {
+      throw new Error('O servidor não confirmou a remoção do usuário.')
+    }
   },
 
   /**
