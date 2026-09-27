@@ -420,7 +420,8 @@ export function ProductsPage() {
               />
             </div>
           ) : (
-            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+            <>
+            <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
@@ -580,6 +581,117 @@ export function ProductsPage() {
                 </tbody>
               </table>
             </div>
+            <div className="md:hidden flex-1 min-h-0 overflow-y-auto divide-y divide-border custom-scrollbar">
+              {products.map((p) => {
+                const isLowStock = (p.stock_quantity ?? 0) <= (p.min_stock ?? 5)
+                const primaryImage =
+                  (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
+                const imageCount = (p.images || []).length
+
+                return (
+                  <article key={p.id} className="px-3 py-3">
+                    <div className="flex min-w-0 items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => setGalleryProduct(p)}
+                        title="Gerenciar imagens do produto"
+                        className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40"
+                      >
+                        {primaryImage ? (
+                          <img
+                            src={primaryImage.public_url}
+                            alt={p.name}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <ImageOff className="h-4 w-4" />
+                          </span>
+                        )}
+                        {imageCount > 1 && (
+                          <span className="absolute bottom-0 inset-x-0 bg-black/70 py-px text-[9px] font-bold leading-tight text-white">
+                            +{imageCount - 1}
+                          </span>
+                        )}
+                      </button>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <h3 className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" title={p.name}>
+                            {p.name}
+                          </h3>
+                          <Badge variant={p.is_active ? 'success' : 'secondary'} className="shrink-0 px-1.5 py-0 text-[9px]">
+                            {p.is_active ? 'Ativo' : 'Inativo'}
+                          </Badge>
+                        </div>
+                        <div className="truncate text-[10px] text-muted-foreground">
+                          <span className="font-mono">{p.sku}</span>
+                          <span className="mx-1">·</span>
+                          {p.category_name || 'Sem categoria'}
+                        </div>
+                      </div>
+
+                      <DropdownMenu
+                        items={[
+                          {
+                            key: 'foto',
+                            label: 'Foto',
+                            icon: <Images className="h-3.5 w-3.5 shrink-0" />,
+                            onSelect: () => setGalleryProduct(p),
+                          },
+                          {
+                            key: 'editar',
+                            label: 'Editar',
+                            icon: <Edit2 className="h-3.5 w-3.5 shrink-0" />,
+                            onSelect: () => handleOpenEdit(p),
+                          },
+                          {
+                            key: 'deletar',
+                            label: 'Deletar',
+                            variant: 'danger',
+                            icon: <Trash2 className="h-3.5 w-3.5 shrink-0" />,
+                            onSelect: () => setDeletingProduct(p),
+                          },
+                        ]}
+                        buttonClassName="h-8 w-8 px-0"
+                      />
+                    </div>
+
+                    {p.barcode && (
+                      <div className="ml-[50px] mt-1 truncate font-mono text-[10px] text-muted-foreground">
+                        Cód. barras: {p.barcode}
+                      </div>
+                    )}
+
+                    <div className="ml-[50px] mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                      <div className="min-w-0">
+                        <div className="text-[9px] uppercase text-muted-foreground">Venda</div>
+                        <div className="truncate text-xs font-semibold text-foreground">
+                          {formatCurrency(p.selling_price || 0)}
+                        </div>
+                        <div className="truncate text-[10px] text-muted-foreground">
+                          Custo {formatCurrency(p.cost_price || 0)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[9px] uppercase text-muted-foreground">Estoque</div>
+                        <span
+                          className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 font-mono text-xs font-bold ${
+                            isLowStock
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          }`}
+                        >
+                          {p.stock_quantity ?? 0} {p.unit || 'UN'}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                )
+              })}
+            </div>
+            </>
           )}
         </CardContent>
 
