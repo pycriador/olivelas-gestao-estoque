@@ -135,7 +135,6 @@ export const orderService = {
       p_shipping_amount: payload.shippingAmount || 0,
       p_notes: payload.notes || null,
       p_payment_method: payload.paymentMethod || null,
-      p_deduct_stock: true,
     })
 
     if (error) throw error

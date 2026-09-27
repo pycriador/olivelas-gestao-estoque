@@ -9,9 +9,131 @@
 -- cascatear e destruir o historico financeiro de terceiros.
 --   - produto  referenciado por order_items / purchase_order_items -> bloqueia
 --   - fornecedor referenciado por purchase_orders              -> bloqueia
+--   - compra ja recebida (estoque lançado)                      -> bloqueia
 -- O que nao tem historico e removido em cascata (itens do pedido, pagamentos,
 -- imagens, lotes e saldos do produto).
+--
+-- Estoque: stock_balances.quantity e um contador, nao um valor derivado, e
+-- nao ha trigger que o mantenha. Apagar um pedido ou uma movimentacao sem
+-- tocar no saldo deixaria o estoque permanentemente errado, sem nenhum
+-- registro do porque. Por isso os dois ramos usam
+-- restore_stock_after_delete, que so reverte quando o saldo ainda e
+-- exatamente o que a movimentacao deixou -- se ja mexeu no produto depois, a
+-- operacao e recusada em vez de inventar um numero.
 -- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- Helper: reverte o efeito de um conjunto de movimentacoes sobre o saldo.
+--
+-- Exige que o saldo atual do produto seja igual ao new_quantity da ultima
+-- movimentacao do grupo. Isso garante que nada mexeu no produto entre a
+-- movimentacao e a exclusao. Se nao bater, devolve false e a RPC aborta.
+-- -----------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.restore_stock_after_delete(
+  p_store_id UUID,
+  p_reference_type TEXT,
+  p_reference_id TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_group RECORD;
+BEGIN
+  -- Um grupo por produto: da primeira a ultima movimentacao do registro.
+  FOR v_group IN
+    SELECT m.product_id,
+           (ARRAY_AGG(m.previous_quantity ORDER BY m.created_at, m.id))[1] AS restore_to,
+           (ARRAY_AGG(m.new_quantity ORDER BY m.created_at DESC, m.id DESC))[1] AS expected_current,
+           COUNT(*) AS movements
+    FROM public.stock_movements m
+    WHERE m.store_id = p_store_id
+      -- Case-insensitive de proposito: os pedidos ja gravados no banco
+      -- Uses reference_type 'ORDER' (maiusculo) de uma versao anterior do
+      -- fluxo, enquanto create_order_with_stock grava 'order'. Comparar case
+      -- a sensitive faria o helper nao achar as movimentacoes dos pedidos
+      -- antigos e o estoque ficaria errado em silencio, sem erro visivel.
+      AND UPPER(m.reference_type) = UPPER(p_reference_type)
+      AND m.reference_id = p_reference_id
+      AND m.previous_quantity IS NOT NULL
+      AND m.new_quantity IS NOT NULL
+    GROUP BY m.product_id
+  LOOP
+    IF NOT EXISTS (SELECT 1 FROM public.stock_balances sb
+                   WHERE sb.store_id = p_store_id AND sb.product_id = v_group.product_id) THEN
+      -- Sem linha de saldo nao ha o que reverter.
+      CONTINUE;
+    END IF;
+
+    IF v_group.expected_current IS NULL THEN
+      -- Movimentacao sem saldo registrado (log sem efeito no estoque).
+      CONTINUE;
+    END IF;
+
+    IF NOT EXISTS (
+      SELECT 1 FROM public.stock_balances sb
+      WHERE sb.store_id = p_store_id
+        AND sb.product_id = v_group.product_id
+        AND sb.quantity = v_group.expected_current
+    ) THEN
+      RAISE EXCEPTION
+        'Nao foi possivel remover: o saldo do produto mudou depois deste registro. Estoc % ja foi movimentado.',
+        v_group.product_id;
+    END IF;
+
+    UPDATE public.stock_balances
+    SET quantity = v_group.restore_to,
+        updated_at = NOW()
+    WHERE store_id = p_store_id
+      AND product_id = v_group.product_id;
+
+    -- Um lote que a movimentacao esvaziou volta a ficar ativo.
+    UPDATE public.stock_batches sb
+    SET quantity = sb.quantity + COALESCE((
+          SELECT SUM(m.quantity) FROM public.stock_movements m
+          WHERE m.store_id = p_store_id
+            AND m.product_id = v_group.product_id
+            AND UPPER(m.reference_type) = UPPER(p_reference_type)
+            AND m.reference_id = p_reference_id
+            AND m.movement_type IN ('SALE', 'EXIT', 'LOSS', 'DAMAGE', 'EXPIRATION')
+        ), 0),
+        status = CASE
+          WHEN sb.status = 'DEPLETED'::batch_status_enum
+               AND sb.quantity + COALESCE((
+                 SELECT SUM(m.quantity) FROM public.stock_movements m
+                 WHERE m.store_id = p_store_id
+                   AND m.product_id = v_group.product_id
+                   AND UPPER(m.reference_type) = UPPER(p_reference_type)
+                   AND m.reference_id = p_reference_id
+                   AND m.movement_type IN ('SALE', 'EXIT', 'LOSS', 'DAMAGE', 'EXPIRATION')
+               ), 0) > 0
+          THEN 'ACTIVE'::batch_status_enum
+          ELSE sb.status
+        END,
+        updated_at = NOW()
+    WHERE sb.store_id = p_store_id
+      AND sb.product_id = v_group.product_id
+      AND EXISTS (
+        SELECT 1 FROM public.stock_movements m
+        WHERE m.store_id = p_store_id
+          AND m.product_id = v_group.product_id
+          AND UPPER(m.reference_type) = UPPER(p_reference_type)
+          AND m.reference_id = p_reference_id
+          AND m.movement_type IN ('SALE', 'EXIT', 'LOSS', 'DAMAGE', 'EXPIRATION')
+          AND m.batch_id = sb.id
+      );
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.restore_stock_after_delete(UUID, TEXT, TEXT) FROM PUBLIC;
+
+COMMENT ON FUNCTION public.restore_stock_after_delete(UUID, TEXT, TEXT) IS
+  'Reverte o efeito das movimentacoes de um registro sobre o saldo, so se o saldo atual ainda for o que a movimentacao deixou.';
 
 CREATE OR REPLACE FUNCTION public.global_admin_delete(
   p_entity TEXT,
@@ -45,6 +167,8 @@ BEGIN
   ------------------------------------------------------------------
   -- ORDERS (pedido)
   -- order_items, payments e shipments caem por ON DELETE CASCADE
+  -- O estoque deducted pelo pedido volta, desde que o saldo do produto ainda
+  -- seja exatamente o que a venda deixou (ver restore_stock_after_delete).
   ------------------------------------------------------------------
   IF p_entity = 'orders' THEN
     SELECT row_to_json(o), o.store_id, o.order_number
@@ -58,14 +182,19 @@ BEGIN
 
     SELECT COUNT(*) INTO v_count FROM public.order_items WHERE order_id = p_id;
 
+    -- Reverte o saldo ANTES do DELETE: depois de apagados os movimentos, o
+    -- helper nao teria mais o que ler.
+    PERFORM public.restore_stock_after_delete(v_store_id, 'order', p_id::TEXT);
+
     DELETE FROM public.orders WHERE id = p_id;
 
-    v_detail := format('Pedido %s removido com %s item(ns)', v_label, v_count);
+    v_detail := format('Pedido %s removido com %s item(ns); estoque revertido', v_label, v_count);
 
   ------------------------------------------------------------------
   -- STOCK MOVEMENTS (movimentacao)
-  -- Nao tem dependentes. O saldo NAO e recalculado: a movimentacao era o
-  -- registro do que aconteceu, e o before_data fica preservado no audit.
+  -- O saldo volta ao valor anterior da propria movimentacao, e so se ainda
+  -- estiver como ela deixou. Sem isso, stock_balances ficaria com um
+  -- contador que ninguem mais consegue explicar.
   ------------------------------------------------------------------
   ELSIF p_entity = 'stock_movements' THEN
     SELECT row_to_json(m), m.store_id,
@@ -78,9 +207,24 @@ BEGIN
       RAISE EXCEPTION 'Movimentacao nao encontrada';
     END IF;
 
+    -- O helper reverte o grupo inteiro referenciado por esta movimentacao.
+    -- Uma movimentacao avulsa (sem reference) so pode ser removida se nao
+    -- tiver mexido no saldo.
+    IF v_before ? 'reference_id' AND v_before ->> 'reference_id' IS NOT NULL
+       AND v_before ->> 'reference_type' IS NOT NULL THEN
+      PERFORM public.restore_stock_after_delete(
+        v_store_id,
+        v_before ->> 'reference_type',
+        v_before ->> 'reference_id'
+      );
+    ELSIF v_before ->> 'previous_quantity' IS NOT NULL THEN
+      RAISE EXCEPTION
+        'Nao foi possivel remover: a movimentacao nao esta vinculada a um registro, entao nao da para reconstruir o saldo. Remova o pedido ou a compra que a originou.';
+    END IF;
+
     DELETE FROM public.stock_movements WHERE id = p_id;
 
-    v_detail := format('Movimentacao (%s) removida', v_label);
+    v_detail := format('Movimentacao (%s) removida; saldo restaurado', v_label);
 
   ------------------------------------------------------------------
   -- PRODUCTS (produto)
@@ -104,6 +248,21 @@ BEGIN
     IF v_count > 0 THEN
       RAISE EXCEPTION
         'Produto % tem historico comercial (%s registro(s) em pedidos/compras) e nao pode ser excluido. Desative-o ou arquive-o.',
+        v_label, v_count;
+    END IF;
+
+    -- Movimentacao de estoque tambem e historico: apagar o produto em cascata
+    -- apagaria o historico de saldo sem que o usuario pedisse isso. Lotes com
+    -- quantidade tambem contam como estoque em uso.
+    SELECT
+      (SELECT COUNT(*) FROM public.stock_movements WHERE product_id = p_id)
+      + (SELECT COUNT(*) FROM public.stock_batches
+         WHERE product_id = p_id AND quantity > 0)
+    INTO v_count;
+
+    IF v_count > 0 THEN
+      RAISE EXCEPTION
+        'Produto % tem estoque movimentado (%s registro(s) de movimentacao/lote) e nao pode ser excluido.',
         v_label, v_count;
     END IF;
 
@@ -135,7 +294,8 @@ BEGIN
   -- Bloqueia se houver compras vinculadas
   ------------------------------------------------------------------
   ELSIF p_entity = 'suppliers' THEN
-    SELECT row_to_json(s), s.store_id, s.name
+    SELECT row_to_json(s), s.store_id,
+           COALESCE(NULLIF(s.trade_name, ''), s.corporate_name)
       INTO v_before, v_store_id, v_label
     FROM public.suppliers s
     WHERE s.id = p_id;
@@ -162,6 +322,13 @@ BEGIN
   ------------------------------------------------------------------
   -- PURCHASE ORDERS (compra)
   -- purchase_order_items em cascata
+  --
+  -- Compra ja recebida e bloqueada: receive_purchase_order_stock lancou o
+  -- estoque, criou lotes e sobrescreveu o cost_price do produto. Apagar a
+  -- compra deixaria saldo e lote semlastreado, e a entrada nao e
+  -- reversivel com seguranca (o lote pode ter sido consumido depois).
+  -- Compra nao recebida (DRAFT/ISSUED/CANCELLED) nao tocou estoque e pode
+  -- sair limpa.
   ------------------------------------------------------------------
   ELSIF p_entity = 'purchase_orders' THEN
     SELECT row_to_json(po), po.store_id, po.order_number
@@ -171,6 +338,22 @@ BEGIN
 
     IF v_store_id IS NULL THEN
       RAISE EXCEPTION 'Compra nao encontrada';
+    END IF;
+
+    IF v_before ->> 'status' = 'RECEIVED' THEN
+      RAISE EXCEPTION
+        'Compra % ja foi recebida e o estoque foi lancado. Cancelar o recebimento no estoque antes de excluir, senao o saldo e os lotes ficam sem lastro.',
+        v_label;
+    END IF;
+
+    SELECT COUNT(*) INTO v_count
+    FROM public.stock_movements
+    WHERE UPPER(reference_type) = 'PURCHASE_ORDER' AND reference_id = p_id::TEXT;
+
+    IF v_count > 0 THEN
+      RAISE EXCEPTION
+        'Compra % tem %s lancamento(s) de estoque e nao pode ser excluida.',
+        v_label, v_count;
     END IF;
 
     SELECT COUNT(*) INTO v_count

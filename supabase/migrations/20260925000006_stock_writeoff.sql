@@ -50,12 +50,29 @@ BEGIN
 END;
 $$;
 
--- Novas lojas recebem os centros de custo padrao automaticamente
+-- Novas lojas recebem os centros de custo padrao automaticamente.
+-- EXECUTE FUNCTION nao aceita argumentos, entao a trigger chama um wrapper
+-- que repassa NEW.id para a funcao que faz o trabalho.
+CREATE OR REPLACE FUNCTION public.trg_seed_cost_centers_for_store()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+  PERFORM public.seed_default_cost_centers(NEW.id);
+  RETURN NEW;
+END;
+$$;
+
 DROP TRIGGER IF EXISTS trg_seed_cost_centers ON public.stores;
+-- AFTER INSERT, nao BEFORE: o trigger escreve em cost_centers, que tem FK
+-- para stores(id). Em BEFORE INSERT a linha de stores ainda nao passou pela
+-- verificacao de FK e o insert do trigger falha com violacao de FK.
 CREATE TRIGGER trg_seed_cost_centers
-  BEFORE INSERT ON public.stores
+  AFTER INSERT ON public.stores
   FOR EACH ROW
-  EXECUTE FUNCTION public.seed_default_cost_centers(NEW.id);
+  EXECUTE FUNCTION public.trg_seed_cost_centers_for_store();
 
 ALTER TABLE public.cost_centers ENABLE ROW LEVEL SECURITY;
 

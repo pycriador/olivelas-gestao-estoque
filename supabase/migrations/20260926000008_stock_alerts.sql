@@ -73,6 +73,11 @@ BEGIN
   ------------------------------------------------------------------
   -- Alertas desejados: validades + saldos, com chave estavel por condicao
   ------------------------------------------------------------------
+  -- ON COMMIT DROP so limpa no fim da transacao. Chamadas repetidas dentro
+  -- da MESMA transacao (ou duas sincronizacoes no mesmo request) colidiam
+  -- com "relacao _desired_alerts ja existe", entao o DROP e explicito.
+  DROP TABLE IF EXISTS _desired_alerts;
+
   CREATE TEMP TABLE _desired_alerts ON COMMIT DROP AS
   WITH stock AS (
     -- Saldo disponivel por produto. O LEFT JOIN cobre produtos que nunca

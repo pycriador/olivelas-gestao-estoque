@@ -471,4 +471,17 @@ export const inventoryService = {
     })
     if (error) throw error
   },
+
+  /**
+   * Remove a justificativa vigente do lote (a mais recente). O historico
+   * anterior permanece em `batch_dispositions`; so a linha mostrada na tela
+   * deixa de existir.
+   */
+  async clearBatchDisposition(batchId: string): Promise<boolean> {
+    const { data, error } = await supabase.rpc('clear_batch_disposition', {
+      p_batch_id: batchId,
+    })
+    if (error) throw error
+    return data === true
+  },
 }

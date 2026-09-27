@@ -168,7 +168,7 @@ export const productService = {
         quantity, available_quantity, reserved_quantity,
         products!inner (
           id, store_id, name, sku, barcode, description, unit,
-          selling_price, category_id, is_active,
+          selling_price, cost_price, category_id, is_active,
           categories ( id, name )
         )
       `,

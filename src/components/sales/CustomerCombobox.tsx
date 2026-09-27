@@ -112,11 +112,19 @@ export function CustomerCombobox({
   // Reconcilia com resets externos (ex.: limpar o carrinho zera o cliente
   // no page pai). Feito durante o render em vez de num effect para nao
   // disparar um segundo render.
+  //
+  // Ignora a mudanca que o proprio componente acabou de fazer: handleSelect
+  // chama onChange, o pai propaga o novo value, e sem este guarda a
+  // reconciliacao rodava logo em seguida apagando selected/term -- o nome
+  // escolhido sumia do campo. Id igual ao selecionado = o pai ecoando.
   const [syncedValue, setSyncedValue] = React.useState(value)
   if (value !== syncedValue) {
     setSyncedValue(value)
-    setSelected(null)
-    setTerm('')
+    const pickedByThisInput = selected !== null && selected.id === value
+    if (!pickedByThisInput) {
+      setSelected(null)
+      setTerm('')
+    }
   }
 
   const handleSelect = (customer: Customer) => {

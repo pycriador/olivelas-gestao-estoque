@@ -132,6 +132,13 @@ export function ExpirationPage() {
     setDispositionDraft({ batch, action })
   }
 
+  const clearDispositionMutation = useMutation({
+    mutationFn: (batch: any) => inventoryService.clearBatchDisposition(batch.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['batch-dispositions', storeId] })
+    },
+  })
+
   // Acoes do dropdown "Acao": a linha ja justificada oferece primeiro
   // "Trocar justificativa" e "Remover justificativa".
   const dispositionMenuItems = React.useCallback(
@@ -150,13 +157,16 @@ export function ExpirationPage() {
         ...base,
         {
           key: '__clear',
-          label: 'Remover justificativa',
+          label: clearDispositionMutation.isPending
+            ? 'Removendo...'
+            : 'Remover justificativa',
           variant: 'danger',
-          onSelect: () => openDisposition(batch, 'KEPT'),
+          disabled: clearDispositionMutation.isPending,
+          onSelect: () => clearDispositionMutation.mutate(batch),
         },
       ]
     },
-    [dispositions]
+    [dispositions, clearDispositionMutation]
   )
 
   // Writeoff expired batch mutation
