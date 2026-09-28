@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { useTablePagination } from '@/hooks/useTablePagination'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
+import { applyStoreTheme, getStoreThemeId } from '@/lib/storeThemes'
 import {
   ShoppingBag,
   Search,
@@ -75,6 +75,12 @@ export function CatalogPublicPage() {
     queryFn: () => storeService.getStoreBySlug(slug || ''),
     enabled: Boolean(slug),
   })
+
+  React.useEffect(() => {
+    if (!store) return
+    applyStoreTheme(getStoreThemeId(store.theme_config))
+    return () => applyStoreTheme(null)
+  }, [store])
 
   // Fetch Published Products
   const { data: productsData, isLoading: loadingProducts } = useQuery({
@@ -195,7 +201,6 @@ export function CatalogPublicPage() {
           </div>
 
           <div className="flex items-center gap-3">
-            <ThemeToggle />
             <Button
               onClick={() => setIsCartOpen(true)}
               variant="default"
@@ -310,6 +315,10 @@ export function CatalogPublicPage() {
                   setFilter('maxPrice', '')
                   setFilter('categoryId', '')
                   setSearch('')
+                  // Volta para a primeira pagina: sem isso, limpar os filtros
+                  // estando no fim da listagem pode deixar a grade vazia,
+                  // porque a pagina atual deixa de existir no resultado novo.
+                  setPage(1)
                 }}
                 className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2 transition-colors"
               >

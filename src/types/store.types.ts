@@ -19,6 +19,7 @@ export interface Store {
   address_zipcode: string | null
   is_active: boolean
   theme_config: {
+    appTheme?: string
     primaryColor?: string
     accentColor?: string
     showPrices?: boolean

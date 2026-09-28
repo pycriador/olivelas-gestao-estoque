@@ -9,6 +9,12 @@ import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/PageHeader'
+import { StoreThemeSelector } from '@/components/settings/StoreThemeSelector'
+import {
+  applyStoreTheme,
+  DEFAULT_STORE_THEME,
+  getStoreThemeId,
+} from '@/lib/storeThemes'
 import { Store, Save, CheckCircle2, Globe, ExternalLink, MapPin, Building, Phone } from 'lucide-react'
 
 export function SettingsPage() {
@@ -30,12 +36,44 @@ export function SettingsPage() {
   })
 
   const [savedSuccess, setSavedSuccess] = React.useState(false)
+  const [themeSavedSuccess, setThemeSavedSuccess] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   const { data: store, isLoading } = useQuery({
     queryKey: ['store-settings', storeId],
     queryFn: () => storeService.getStoreById(storeId),
     enabled: Boolean(hasActiveStore),
+  })
+
+  const selectedThemeId = getStoreThemeId(store?.theme_config) || DEFAULT_STORE_THEME
+
+  const themeMutation = useMutation({
+    mutationFn: (appTheme: string) => {
+      const existingConfig = store?.theme_config
+      const themeConfig =
+        existingConfig && typeof existingConfig === 'object' && !Array.isArray(existingConfig)
+          ? { ...existingConfig }
+          : {}
+
+      return storeService.updateStore(storeId, {
+        theme_config: { ...themeConfig, appTheme },
+      })
+    },
+    onMutate: (appTheme) => {
+      setErrorMsg(null)
+      setThemeSavedSuccess(false)
+      applyStoreTheme(appTheme)
+    },
+    onSuccess: (updatedStore) => {
+      queryClient.setQueryData(['store-settings', storeId], updatedStore)
+      queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      setThemeSavedSuccess(true)
+      window.setTimeout(() => setThemeSavedSuccess(false), 3000)
+    },
+    onError: (error) => {
+      applyStoreTheme(selectedThemeId)
+      setErrorMsg(parseApiError(error))
+    },
   })
 
   React.useEffect(() => {
@@ -148,6 +186,26 @@ export function SettingsPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-3 pb-6">
+        <Card id="theme" className="border border-border shadow-xs bg-card">
+          <CardHeader className="py-2.5 px-4 border-b border-border/60">
+            <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
+              <Store className="h-3.5 w-3.5 text-primary" /> Tema visual da loja
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3.5 space-y-3">
+            <StoreThemeSelector
+              value={selectedThemeId}
+              disabled={themeMutation.isPending || isLoading}
+              onChange={(themeId) => themeMutation.mutate(themeId)}
+            />
+            {themeSavedSuccess && (
+              <div className="flex items-center gap-1.5 text-[11px] font-medium text-success">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Tema salvo no perfil da loja.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Identificação e Contato */}
         <Card className="border border-border shadow-xs bg-card">
           <CardHeader className="py-2.5 px-4 border-b border-border/60">

@@ -27,6 +27,7 @@ import {
   FolderTree,
   TrendingUp,
   BarChart3,
+  Palette,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -34,10 +35,10 @@ import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useRealtimeSubscriptions } from '@/hooks/useRealtime'
-import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { GlobalCommandK } from '@/components/common/GlobalCommandK'
 import { Badge } from '@/components/ui/badge'
+import { applyStoreTheme, getStoreThemeId } from '@/lib/storeThemes'
 
 export function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = React.useState(false)
@@ -52,6 +53,16 @@ export function AppLayout() {
 
   // Realtime updates for stock, orders, and notifications
   useRealtimeSubscriptions(storeId)
+
+  const { data: activeStoreProfile } = useQuery({
+    queryKey: ['store-settings', storeId],
+    queryFn: () => storeService.getStoreById(storeId),
+    enabled: Boolean(storeId && storeId !== 'all'),
+  })
+
+  React.useEffect(() => {
+    applyStoreTheme(getStoreThemeId(activeStoreProfile?.theme_config))
+  }, [storeId, activeStoreProfile?.theme_config])
 
   // Fetch all stores for Global Admin switcher
   const { data: allStores = [] } = useQuery({
@@ -405,7 +416,14 @@ export function AppLayout() {
           {/* Right Header Utilities */}
           <div className="flex items-center justify-end gap-1.5 sm:gap-2">
             <LanguageSelector />
-            <ThemeToggle />
+            <Link
+              to="/settings#theme"
+              className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+              title="Escolher tema da loja"
+              aria-label="Escolher tema da loja"
+            >
+              <Palette className="h-4 w-4" />
+            </Link>
             <Link
               to="/notifications"
               className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground relative transition-colors"
