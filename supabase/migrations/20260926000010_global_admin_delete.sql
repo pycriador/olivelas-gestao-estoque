@@ -51,7 +51,7 @@ BEGIN
     FROM public.stock_movements m
     WHERE m.store_id = p_store_id
       -- Case-insensitive de proposito: os pedidos ja gravados no banco
-      -- Uses reference_type 'ORDER' (maiusculo) de uma versao anterior do
+      -- usavam reference_type 'ORDER' (maiusculo) de uma versao anterior do
       -- fluxo, enquanto create_order_with_stock grava 'order'. Comparar case
       -- a sensitive faria o helper nao achar as movimentacoes dos pedidos
       -- antigos e o estoque ficaria errado em silencio, sem erro visivel.

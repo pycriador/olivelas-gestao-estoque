@@ -198,19 +198,90 @@ $$;
 -- -----------------------------------------------------------------------------
 -- 1b. Corta o grant automatico, para nao voltar no proximo deploy
 --
--- Os REVOKE acima so tratam das funcoes que existem hoje. O setup do
--- Supabase traz ALTER DEFAULT PRIVILEGES dando `anon=X` em toda funcao nova
--- criada no schema public, entao a proxima migration que criar uma RPC
--- voltaria a expor para visitante sem sessao.
+-- Os REVOKE acima so tratam das funcoes que existem hoje. O padrao do
+-- Postgres da EXECUTE a PUBLIC em TODA funcao recem-criada, e o setup do
+-- Supabase ainda soma um `anon=X` explicito por default. Sem cortar os dois,
+-- a proxima migration que criar uma RPC volta a expor para visitante sem
+-- sessao, e nem um teste escrito contra a lista fixa de hoje acusaria.
 --
--- Alvo: apenas o tipo 'f' (functions). O default de tabelas ('r') fica
--- intacto de proposito -- e ele que permite o catalogo publico ler products
--- pelo PostgREST com a chave publica.
+-- O ALTER DEFAULT PRIVILEGES resolve o `anon=X` do Supabase, mas NAO resolve
+-- o PUBLIC: o EXECUTE para PUBLIC em funcao e um default implicito do
+-- Postgres, e o `pg_default_acl` gerado pelo REVOKE FROM PUBLIC e
+-- descartado por ser igual ao default. Verificado no PG 17: apos o comando,
+-- `pg_default_acl` fica vazio e a funcao nova continua executavel por anon.
+--
+-- O event trigger e o que fecha de verdade. Ele roda em ddl_command_end e
+-- revoga PUBLIC/anon de cada funcao recem-criada em public, antes que
+-- qualquer requisicao a alcance. Consequencia: toda RPC nova precisa de
+-- GRANT EXECUTE ... TO authenticated na propria migration. E o que 006 a
+-- 011 fazem.
+--
+-- O trigger e restrito a CREATE FUNCTION no schema public: nao mexe em
+-- tabelas, sequences, nem em funcoes de outros schemas (storage, auth).
+-- O catalogo publico continua funcionando porque le a tabela products pelo
+-- PostgREST, sem passar por RPC.
 -- -----------------------------------------------------------------------------
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM anon;
-ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
-  REVOKE EXECUTE ON FUNCTIONS FROM anon;
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon;
+
+-- O Supabase tambem cria default privileges para o role supabase_admin, e
+-- sao eles que dao o `anon=X` automatico. Mas o role postgres NAO e membro de
+-- supabase_admin: a revogacao direta falha com "permission denied to change
+-- default privileges" (verificado no projeto real). Como nao podemos mudar
+-- o default de um role alheio, o event trigger acima e o que garante o
+-- resultado -- ele roda em ddl_command_end, ja com o privilege do owner da
+-- nova funcao, e nao depende de default privilege nenhum.
+--
+-- O bloco abaixo tenta mesmo assim, e ignora a recusa: se rodar em um
+-- Postgres onde o role tem permissao, ajuda; se nao, o trigger cobre.
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'supabase_admin') THEN
+    BEGIN
+      EXECUTE 'ALTER DEFAULT PRIVILEGES FOR ROLE supabase_admin IN SCHEMA public
+               REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon';
+    EXCEPTION WHEN insufficient_privilege THEN
+      RAISE NOTICE
+        'default privileges de supabase_admin mantidos (sem permissao); '
+        'trg_revoke_default_function_exec cobre o schema public.';
+    END;
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.fn_revoke_default_function_exec()
+RETURNS event_trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_cmd RECORD;
+BEGIN
+  FOR v_cmd IN SELECT * FROM pg_event_trigger_ddl_commands() LOOP
+    IF v_cmd.command_tag = 'CREATE FUNCTION'
+       AND v_cmd.object_identity LIKE 'public.%' THEN
+      -- object_identity ja vem qualificado (public.fn), nao repetir o schema.
+      EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon',
+                     v_cmd.object_identity);
+    END IF;
+  END LOOP;
+END;
+$$;
+
+-- IF NOT EXISTS nao existe para CREATE EVENT TRIGGER; o DO abaixo torna a
+-- migration reexecutavel.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_event_trigger WHERE evtname = 'trg_revoke_default_function_exec') THEN
+    CREATE EVENT TRIGGER trg_revoke_default_function_exec
+      ON ddl_command_end
+      WHEN TAG IN ('CREATE FUNCTION')
+      EXECUTE FUNCTION public.fn_revoke_default_function_exec();
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.fn_revoke_default_function_exec() FROM PUBLIC, anon;
 
 -- A legada perde a execucao de todo mundo:
 REVOKE ALL ON FUNCTION public.process_sale_stock_deduction(uuid) FROM PUBLIC, anon, authenticated;

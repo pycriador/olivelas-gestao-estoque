@@ -1,5 +1,7 @@
 # Olivelas — Plataforma SaaS Multi-Loja de Gestão de Estoque & Vendas
 
+Documentação de engenharia (mapa UI, backend, contratos, guias desktop/mobile): **[docs/pt-BR/README.md](docs/pt-BR/README.md)**. Entrada para agentes: **[docs/pt-BR/ai-context.md](docs/pt-BR/ai-context.md)**.
+
 > **Arquitetura Enterprise:** React 19 + TypeScript + Vite + Tailwind CSS + Supabase (PostgreSQL, Auth, Storage, Realtime, RPCs) + GitHub Pages CI/CD.
 
 ---
