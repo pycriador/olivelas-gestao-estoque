@@ -85,15 +85,18 @@ export const inventoryService = {
         available_quantity,
         updated_at,
         products!inner (
+          id,
           name,
           sku,
           min_stock,
-          unit
+          unit,
+          deleted_at
         )
       `,
         { count: 'exact' }
       )
       .eq('store_id', storeId)
+      .is('products.deleted_at', null)
 
     if (search?.trim()) {
       const q = search.trim()
@@ -483,5 +486,137 @@ export const inventoryService = {
     })
     if (error) throw error
     return data === true
+  },
+
+  /**
+   * Remove produto zerado (apenas quando quantity <= 0)
+   */
+  async deleteZeroStockProduct(storeId: string, productId: string): Promise<void> {
+    const { data: balance, error: balErr } = await supabase
+      .from('stock_balances')
+      .select('quantity, available_quantity')
+      .eq('store_id', storeId)
+      .eq('product_id', productId)
+      .maybeSingle()
+
+    if (balErr) throw balErr
+    if (balance && (balance.quantity > 0 || balance.available_quantity > 0)) {
+      throw new Error('Apenas produtos com saldo zerado (0) podem ser removidos do estoque.')
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error: delErr } = await supabase
+      .from('products')
+      .update({
+        is_active: false,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null,
+      })
+      .eq('store_id', storeId)
+      .eq('id', productId)
+
+    if (delErr) throw delErr
+
+    auditService.logAction({
+      storeId,
+      action: 'ZERO_STOCK_PRODUCT_REMOVED',
+      entity: 'products',
+      entityId: productId,
+    })
+  },
+
+  /**
+   * Remove em lote múltiplos produtos com saldo zerado (<= 0)
+   */
+  async deleteZeroStockProductsBulk(storeId: string, productIds?: string[]): Promise<{ count: number }> {
+    let query = supabase
+      .from('stock_balances')
+      .select('product_id, quantity')
+      .eq('store_id', storeId)
+      .lte('quantity', 0)
+
+    if (productIds && productIds.length > 0) {
+      query = query.in('product_id', productIds)
+    }
+
+    const { data: zeroBalances, error } = await query
+    if (error) throw error
+
+    const targetProductIds = (zeroBalances || []).map((b: any) => b.product_id)
+    if (targetProductIds.length === 0) {
+      return { count: 0 }
+    }
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { error: delErr } = await supabase
+      .from('products')
+      .update({
+        is_active: false,
+        deleted_at: new Date().toISOString(),
+        deleted_by: user?.id || null,
+      })
+      .eq('store_id', storeId)
+      .in('id', targetProductIds)
+
+    if (delErr) throw delErr
+
+    auditService.logAction({
+      storeId,
+      action: 'ZERO_STOCK_PRODUCTS_REMOVED',
+      entity: 'products',
+      afterData: { count: targetProductIds.length, productIds: targetProductIds },
+    })
+
+    return { count: targetProductIds.length }
+  },
+
+  /**
+   * Entrada de estoque em lote para múltiplos produtos selecionados
+   */
+  async addBulkStock(
+    storeId: string,
+    items: {
+      productId: string
+      quantity: number
+      unitCost?: number
+      lotNumber?: string
+      expirationDate?: string
+      notes?: string
+    }[]
+  ): Promise<{ successCount: number; errorCount: number; errors: string[] }> {
+    const errors: string[] = []
+    let successCount = 0
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (!item.quantity || item.quantity <= 0) continue
+
+      try {
+        await inventoryService.applyMovement({
+          productId: item.productId,
+          movementType: 'ENTRY',
+          quantity: item.quantity,
+          unitCost: item.unitCost,
+          lotNumber: item.lotNumber,
+          expirationDate: item.expirationDate,
+          notes: item.notes || 'Entrada em lote manual',
+        })
+        successCount++
+      } catch (err: any) {
+        errors.push(`Item ${i + 1}: ${err?.message || 'Falha ao adicionar estoque'}`)
+      }
+    }
+
+    if (successCount > 0) {
+      auditService.logAction({
+        storeId,
+        action: 'STOCK_BULK_ENTRY',
+        entity: 'stock_balances',
+        afterData: { count: successCount, itemsCount: items.length },
+      })
+    }
+
+    return { successCount, errorCount: errors.length, errors }
   },
 }

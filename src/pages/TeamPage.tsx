@@ -63,7 +63,7 @@ const ROLE_LABELS: Record<UserRole, { label: string; variant: 'default' | 'outli
   GLOBAL_ADMIN: {
     label: 'Global Admin',
     variant: 'default',
-    description: 'Acesso irrestrito a todo o SaaS.',
+    description: 'Acesso administrativo irrestrito a todo o sistema.',
   },
 };
 

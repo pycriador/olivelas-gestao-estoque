@@ -12,7 +12,7 @@ export function AuthLayout() {
             O
           </div>
           <span className="font-bold text-base tracking-tight text-foreground">
-            Olivelas SaaS
+            Olivelas Gestão
           </span>
         </Link>
         <div className="flex items-center justify-end gap-2">
@@ -30,7 +30,7 @@ export function AuthLayout() {
 
       {/* Footer */}
       <footer className="text-center text-xs text-muted-foreground py-4 border-t border-border/40 max-w-6xl w-full mx-auto">
-        &copy; {new Date().getFullYear()} Olivelas Gestão de Estoque. Plataforma Multi-Loja Enterprise.
+        &copy; {new Date().getFullYear()} Olivelas Gestão de Estoque & Vendas. Todos os direitos reservados.
       </footer>
     </div>
   )

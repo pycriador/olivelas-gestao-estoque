@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
+import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
@@ -22,6 +23,7 @@ import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
 import { StockImportModal } from '@/components/inventory/StockImportModal'
+import { toast } from 'sonner'
 import {
   Layers,
   Plus,
@@ -153,6 +155,7 @@ export function InventoryPage() {
   const balances = balancesData?.data || []
   const totalBalances = balancesData?.total || 0
   const totalBalancesPages = Math.ceil(totalBalances / pageSize) || 1
+  const zeroStockCount = balances.filter((b) => b.quantity <= 0).length
 
   const movements = movementsData?.data || []
   const totalMovements = movementsData?.total || 0
@@ -177,6 +180,34 @@ export function InventoryPage() {
       setProductId('')
       setQuantity(1)
       setNotes('')
+    },
+    onError: (err) => setErrorMsg(parseApiError(err)),
+  })
+
+  const [deletingZeroStockBalance, setDeletingZeroStockBalance] = React.useState<any | null>(null)
+  const [isBulkDeleteZeroModalOpen, setIsBulkDeleteZeroModalOpen] = React.useState(false)
+
+  const deleteZeroStockMutation = useMutation({
+    mutationFn: (productId: string) =>
+      inventoryService.deleteZeroStockProduct(storeId, productId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      toast.success('Produto zerado removido do estoque com sucesso.')
+      setDeletingZeroStockBalance(null)
+    },
+    onError: (err) => setErrorMsg(parseApiError(err)),
+  })
+
+  const deleteBulkZeroStockMutation = useMutation({
+    mutationFn: () => inventoryService.deleteZeroStockProductsBulk(storeId),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      toast.success(`${res.count} produto(s) zerado(s) removido(s) do estoque com sucesso.`)
+      setIsBulkDeleteZeroModalOpen(false)
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
@@ -309,6 +340,17 @@ export function InventoryPage() {
             <Upload className="h-3.5 w-3.5 mr-1" /> Importar
           </Button>
 
+          {activeTab === 'balances' && isGlobalAdmin && zeroStockCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkDeleteZeroModalOpen(true)}
+              className="h-8 text-xs px-2.5 text-danger border-danger/30 hover:bg-danger/10"
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover Zerados ({zeroStockCount})
+            </Button>
+          )}
+
           {activeTab === 'balances' && (
             <Button variant="outline" size="sm" onClick={handleExportBalances} className="h-8 text-xs px-2.5">
               <Download className="h-3.5 w-3.5 mr-1" /> Exportar
@@ -376,6 +418,7 @@ export function InventoryPage() {
                       />
                       <th className="py-3 px-4 font-semibold text-center">Mínimo</th>
                       <th className="py-3 px-4 font-semibold text-center">Status</th>
+                      <th className="py-3 px-4 font-semibold text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -408,6 +451,23 @@ export function InventoryPage() {
                               </Badge>
                             ) : (
                               <Badge variant="success">Normal</Badge>
+                            )}
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            {isGlobalAdmin && b.quantity <= 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setDeletingZeroStockBalance(b)}
+                                title="Remover produto com estoque zerado"
+                                className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                <span className="hidden sm:inline">Remover</span>
+                              </button>
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {b.quantity <= 0 ? 'Zerado' : '-'}
+                              </span>
                             )}
                           </td>
                         </tr>
@@ -706,6 +766,36 @@ export function InventoryPage() {
       <StockImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+      />
+
+      {/* Confirmação de remoção de produto com saldo zerado */}
+      <ConfirmModal
+        isOpen={Boolean(deletingZeroStockBalance)}
+        onClose={() => setDeletingZeroStockBalance(null)}
+        onConfirm={() => {
+          if (deletingZeroStockBalance) {
+            deleteZeroStockMutation.mutate(deletingZeroStockBalance.product_id)
+          }
+        }}
+        title="Remover Produto Zerado do Estoque"
+        description={`Tem certeza que deseja remover o produto "${deletingZeroStockBalance?.product_name}"? Como ele não possui saldo (0 unidades), o produto será desativado e removido das listagens ativas.`}
+        confirmText="Sim, Remover"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteZeroStockMutation.isPending}
+      />
+
+      {/* Confirmação de remoção em massa de todos os produtos zerados */}
+      <ConfirmModal
+        isOpen={isBulkDeleteZeroModalOpen}
+        onClose={() => setIsBulkDeleteZeroModalOpen(false)}
+        onConfirm={() => deleteBulkZeroStockMutation.mutate()}
+        title="Remover Todos os Produtos Zerados"
+        description={`Tem certeza que deseja remover todos os ${zeroStockCount} produto(s) com saldo zerado (0 unidades) desta loja? Eles serão desativados e removidos da listagem.`}
+        confirmText="Sim, Remover Todos Zerados"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteBulkZeroStockMutation.isPending}
       />
     </div>
   )

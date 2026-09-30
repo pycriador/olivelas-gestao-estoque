@@ -10,10 +10,10 @@ import { exportToCSV } from '@/utils/export'
 import { generateSKU } from '@/utils/barcode'
 import { parseApiError } from '@/utils/errorHandler'
 import {
-  parseCSVContent,
-  parseJSONContent,
+  parseProductsImport,
   downloadTemplateCSV,
   downloadTemplateJSON,
+  type NormalizedProductImportItem,
 } from '@/utils/importParser'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -28,6 +28,7 @@ import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ProductGalleryModal } from '@/components/products/ProductGalleryModal'
+import { BulkStockEntryModal } from '@/components/products/BulkStockEntryModal'
 import {
   Package,
   Plus,
@@ -43,34 +44,10 @@ import {
   Images,
   ImageOff,
   ImagePlus,
+  ArrowDownRight,
+  CheckSquare,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
-
-function getImportValue(item: Record<string, unknown>, ...keys: string[]): string | number | undefined {
-  for (const key of keys) {
-    const value = item[key]
-    if (typeof value === 'number' && Number.isFinite(value)) return value
-    if (typeof value === 'string' && value.trim() !== '') return value
-  }
-  return undefined
-}
-
-function parseImportPrice(value: unknown): number | undefined {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
-  if (value === undefined || value === null || String(value).trim() === '') return undefined
-
-  let normalized = String(value).replace(/[^\d,.-]/g, '')
-  if (normalized.includes(',') && normalized.includes('.')) {
-    normalized = normalized.lastIndexOf(',') > normalized.lastIndexOf('.')
-      ? normalized.replace(/\./g, '').replace(',', '.')
-      : normalized.replace(/,/g, '')
-  } else if (normalized.includes(',')) {
-    normalized = normalized.replace(',', '.')
-  }
-
-  const price = Number(normalized)
-  return Number.isFinite(price) ? price : undefined
-}
 
 export function ProductsPage() {
   const { storeId, hasActiveStore } = useTenant()
@@ -101,16 +78,18 @@ export function ProductsPage() {
   // Modals
   const [isNewModalOpen, setIsNewModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
+  const [isBulkStockModalOpen, setIsBulkStockModalOpen] = React.useState(false)
   const [editingProduct, setEditingProduct] = React.useState<Product | null>(null)
   const [deletingProduct, setDeletingProduct] = React.useState<Product | null>(null)
   const [galleryProduct, setGalleryProduct] = React.useState<Product | null>(null)
+  const [selectedProductIds, setSelectedProductIds] = React.useState<string[]>([])
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   // Bulk Import state
   const [importMode, setImportMode] = React.useState<'file' | 'paste'>('file')
   const [pastedText, setPastedText] = React.useState('')
   const [fileName, setFileName] = React.useState<string | null>(null)
-  const [parsedItems, setParsedItems] = React.useState<any[]>([])
+  const [parsedItems, setParsedItems] = React.useState<NormalizedProductImportItem[]>([])
   const [importError, setImportError] = React.useState<string | null>(null)
   const [importResult, setImportResult] = React.useState<{
     successCount: number
@@ -327,13 +306,8 @@ export function ProductsPage() {
         return
       }
 
-      if (isJsonHint || trimmed.startsWith('[') || trimmed.startsWith('{')) {
-        const items = parseJSONContent(trimmed)
-        setParsedItems(items)
-      } else {
-        const items = parseCSVContent(trimmed)
-        setParsedItems(items)
-      }
+      const items = parseProductsImport(trimmed, isJsonHint)
+      setParsedItems(items)
     } catch (err: any) {
       setImportError(err.message || 'Formato inválido. Verifique o conteúdo CSV ou JSON.')
       setParsedItems([])
@@ -369,10 +343,32 @@ export function ProductsPage() {
 
       {/* Page Toolbar (Count, Filters & Actions) */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
             {totalItems} {totalItems === 1 ? 'item' : 'itens'}
           </Badge>
+
+          {selectedProductIds.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 rounded-lg animate-in fade-in">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                {selectedProductIds.length} selecionado(s)
+              </span>
+              <Button
+                size="sm"
+                onClick={() => setIsBulkStockModalOpen(true)}
+                className="h-7 text-xs px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-xs"
+              >
+                <ArrowDownRight className="h-3.5 w-3.5 mr-1" /> Entrada no Estoque
+              </Button>
+              <button
+                type="button"
+                onClick={() => setSelectedProductIds([])}
+                className="text-[11px] text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
+              >
+                Limpar
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
@@ -425,6 +421,21 @@ export function ProductsPage() {
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
+                    <th className="py-3 px-3 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        checked={products.length > 0 && selectedProductIds.length === products.length}
+                        onChange={() => {
+                          if (selectedProductIds.length === products.length) {
+                            setSelectedProductIds([])
+                          } else {
+                            setSelectedProductIds(products.map((p) => p.id))
+                          }
+                        }}
+                        aria-label="Selecionar todos os produtos da página"
+                        className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                      />
+                    </th>
                     <SortableHeader
                       column="name"
                       label="Produto"
@@ -467,8 +478,23 @@ export function ProductsPage() {
                     const primaryImage =
                       (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
                     const imageCount = (p.images || []).length
+                    const isSelected = selectedProductIds.includes(p.id)
+
                     return (
-                      <tr key={p.id} className="hover:bg-muted/30 transition-colors">
+                      <tr key={p.id} className={`hover:bg-muted/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+                        <td className="py-2.5 px-3 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() =>
+                              setSelectedProductIds((prev) =>
+                                prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                              )
+                            }
+                            aria-label={`Selecionar produto ${p.name}`}
+                            className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                          />
+                        </td>
                         <td className="py-2.5 px-4">
                           <div className="flex items-center gap-3">
                             <button
@@ -588,9 +614,23 @@ export function ProductsPage() {
                   (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
                 const imageCount = (p.images || []).length
 
+                const isSelected = selectedProductIds.includes(p.id)
+
                 return (
-                  <article key={p.id} className="px-3 py-3">
+                  <article key={p.id} className={`px-3 py-3 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
                     <div className="flex min-w-0 items-center gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() =>
+                          setSelectedProductIds((prev) =>
+                            prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
+                          )
+                        }
+                        aria-label={`Selecionar produto ${p.name}`}
+                        className="rounded border-input text-primary focus:ring-primary h-4 w-4 shrink-0 cursor-pointer"
+                      />
+
                       <button
                         type="button"
                         onClick={() => setGalleryProduct(p)}
@@ -877,53 +917,25 @@ export function ProductsPage() {
                   <div className="col-span-2 text-right">Preço Venda</div>
                   <div className="col-span-2 text-center">Estoque Inicial</div>
                 </div>
-                {parsedItems.slice(0, 5).map((item, idx) => {
-                  const name = getImportValue(item, 'name', 'Nome', 'nome', 'produto', 'Produto')
-                  const sku = getImportValue(item, 'sku', 'SKU', 'codigo', 'Codigo', 'Código')
-                  const category = getImportValue(item, 'category_name', 'category', 'categoria', 'Categoria')
-                  const price = parseImportPrice(
-                    getImportValue(
-                      item,
-                      'selling_price',
-                      'sellingPrice',
-                      'preco_venda',
-                      'Preço de Venda',
-                      'Preço Venda',
-                      'preco',
-                      'price'
-                    )
-                  )
-                  const initialStock = getImportValue(
-                    item,
-                    'initial_stock',
-                    'initialStock',
-                    'stock_quantity',
-                    'estoque',
-                    'Estoque',
-                    'quantidade',
-                    'qtd'
-                  )
-
-                  return (
-                    <div key={idx} className="grid grid-cols-12 gap-2 p-2.5 items-center font-mono text-xs">
-                      <div className="col-span-4 font-sans font-semibold text-foreground truncate">
-                        {name || <span className="text-danger">Sem nome</span>}
-                      </div>
-                      <div className="col-span-2 text-muted-foreground truncate">
-                        {sku || <span className="text-primary italic">Automático</span>}
-                      </div>
-                      <div className="col-span-2 font-sans text-muted-foreground truncate">
-                        {category || '-'}
-                      </div>
-                      <div className="col-span-2 text-right font-bold text-foreground">
-                        {formatCurrency(price ?? 0)}
-                      </div>
-                      <div className="col-span-2 text-center text-primary font-bold">
-                        {initialStock ?? 0}
-                      </div>
+                {parsedItems.slice(0, 5).map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 p-2.5 items-center font-mono text-xs">
+                    <div className="col-span-4 font-sans font-semibold text-foreground truncate">
+                      {item.name || <span className="text-danger">Sem nome</span>}
                     </div>
-                  )
-                })}
+                    <div className="col-span-2 text-muted-foreground truncate">
+                      {item.sku || <span className="text-primary italic">Automático</span>}
+                    </div>
+                    <div className="col-span-2 font-sans text-muted-foreground truncate">
+                      {item.category_name || '-'}
+                    </div>
+                    <div className="col-span-2 text-right font-bold text-foreground">
+                      {formatCurrency(item.selling_price)}
+                    </div>
+                    <div className="col-span-2 text-center text-primary font-bold">
+                      {item.initial_stock}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -1164,6 +1176,13 @@ export function ProductsPage() {
         isOpen={Boolean(galleryProduct)}
         onClose={() => setGalleryProduct(null)}
         product={galleryProduct}
+      />
+
+      <BulkStockEntryModal
+        isOpen={isBulkStockModalOpen}
+        onClose={() => setIsBulkStockModalOpen(false)}
+        products={products.filter((p) => selectedProductIds.includes(p.id))}
+        onSuccess={() => setSelectedProductIds([])}
       />
 
       {/* Confirm Deactivation Modal */}

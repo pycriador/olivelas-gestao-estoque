@@ -1,7 +1,7 @@
 export const ptBR = {
   common: {
     appName: 'Olivelas Gestão de Estoque',
-    tagline: 'Plataforma Multi-Loja Enterprise de Gestão de Estoque e Vendas',
+    tagline: 'Sistema Completo de Gestão de Estoque e Vendas',
     save: 'Salvar',
     cancel: 'Cancelar',
     delete: 'Excluir',

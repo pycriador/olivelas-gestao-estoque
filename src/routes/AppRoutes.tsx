@@ -59,7 +59,7 @@ export function AppRoutes() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
       </Route>
 
-      {/* 4. Protected Multi-Tenant App Management Routes */}
+      {/* 4. Protected Management Routes */}
       <Route
         element={
           <ProtectedRoute>

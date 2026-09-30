@@ -21,7 +21,7 @@ export function PublicLayout() {
             </div>
             <div>
               <span className="font-bold text-base tracking-tight text-foreground block">
-                Olivelas SaaS
+                Olivelas Gestão
               </span>
             </div>
           </Link>
@@ -128,35 +128,35 @@ export function PublicLayout() {
               <span className="font-bold text-sm">Olivelas Gestão</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Plataforma Multi-Loja Enterprise para controle rigoroso de estoques, pedidos omnicanal, compras e catálogo público com integração WhatsApp.
+              Sistema completo para controle de estoque, frente de caixa (PDV), compras e catálogo online com pedidos no WhatsApp.
             </p>
           </div>
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">Produto</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">Módulos</h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
-              <li><Link to="/features" className="hover:text-foreground">Gestão de Estoque</Link></li>
+              <li><Link to="/features" className="hover:text-foreground">Controle de Estoque</Link></li>
               <li><Link to="/features" className="hover:text-foreground">PDV & Vendas</Link></li>
               <li><Link to="/features" className="hover:text-foreground">Lotes & Validades</Link></li>
-              <li><Link to="/features" className="hover:text-foreground">Catálogo Digital</Link></li>
+              <li><Link to="/features" className="hover:text-foreground">Catálogo no WhatsApp</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">Empresa</h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li><Link to="/pricing" className="hover:text-foreground">Planos</Link></li>
-              <li><Link to="/contact" className="hover:text-foreground">Suporte Técnico</Link></li>
-              <li><a href="#faq" className="hover:text-foreground">Perguntas Frequentes</a></li>
+              <li><Link to="/contact" className="hover:text-foreground">Fale Conosco</Link></li>
+              <li><a href="#faq" className="hover:text-foreground">Dúvidas Frequentes</a></li>
             </ul>
           </div>
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">Segurança</h4>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Isolamento multi-tenant garantido em nível de banco de dados (RLS), criptografia de ponta a ponta e auditoria completa de ações.
+              Seus dados protegidos por criptografia de ponta a ponta, isolamento total por loja e histórico detalhado de auditoria.
             </p>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 pt-8 mt-8 border-t border-border/40 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} Olivelas Gestão de Estoque. Todos os direitos reservados.
+          &copy; {new Date().getFullYear()} Olivelas Gestão de Estoque & Vendas. Todos os direitos reservados.
         </div>
       </footer>
     </div>

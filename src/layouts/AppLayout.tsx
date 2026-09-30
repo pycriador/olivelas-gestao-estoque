@@ -175,10 +175,10 @@ export function AppLayout() {
             </div>
             <div>
               <h1 className="font-bold text-sm tracking-tight text-sidebar-foreground">
-                Olivelas SaaS
+                Olivelas Gestão
               </h1>
               <span className="text-[10px] text-muted-foreground block font-mono">
-                MULTI-LOJA ENTERPRISE
+                ESTOQUE & VENDAS
               </span>
             </div>
           </Link>

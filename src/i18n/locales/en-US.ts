@@ -1,7 +1,7 @@
 export const enUS = {
   common: {
     appName: 'Olivelas Inventory Management',
-    tagline: 'Enterprise Multi-Store Inventory & Sales Platform',
+    tagline: 'Complete Multi-Store Inventory & Sales Platform',
     save: 'Save',
     cancel: 'Cancel',
     delete: 'Delete',

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
 import { categoryService } from '@/services/categoryService'
+import { normalizeProductRow, type NormalizedProductImportItem } from '@/utils/importParser'
 import type { Product, Category } from '@/types/product.types'
 
 export interface ProductFilters {
@@ -453,7 +454,7 @@ export const productService = {
 
   async importProductsBulk(
     storeId: string,
-    rawItems: any[]
+    rawItems: (Partial<NormalizedProductImportItem> | Record<string, any>)[]
   ): Promise<{ successCount: number; errorCount: number; errors: string[] }> {
     if (!rawItems || rawItems.length === 0) {
       return { successCount: 0, errorCount: 0, errors: ['Nenhum item válido para importação.'] }
@@ -468,53 +469,32 @@ export const productService = {
     let errorCount = 0
     const errors: string[] = []
 
-    // Helper for number parsing (handles "12,50", "R$ 12.50", etc.)
-    const parseNum = (val: any, fallback = 0): number => {
-      if (typeof val === 'number') return isNaN(val) ? fallback : val
-      if (!val) return fallback
-      const clean = String(val).replace(/[^\d.,-]/g, '').replace(',', '.')
-      const parsed = parseFloat(clean)
-      return isNaN(parsed) ? fallback : parsed
-    }
-
     for (let i = 0; i < rawItems.length; i++) {
-      const item = rawItems[i]
+      const rawItem = rawItems[i]
       const rowNum = i + 1
+      const item: NormalizedProductImportItem = normalizeProductRow(rawItem)
 
       try {
-        const name = (item.name || item.Nome || item.nome || item.produto || item.Produto || '').trim()
-        if (!name) {
+        if (!item.name) {
           errors.push(`Linha ${rowNum}: Nome do produto é obrigatório.`)
           errorCount++
           continue
         }
 
-        let sku = (item.sku || item.SKU || item.codigo || item.Codigo || item['Código'] || '').trim()
+        let sku = item.sku
         if (!sku) {
           sku = `PRD-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 5).toUpperCase()}`
         }
 
-        const barcode = (item.barcode || item.Barcode || item.ean || item.EAN || item.codigo_barras || item['Código de Barras'] || '').trim() || null
-        const description = (item.description || item.Description || item.descricao || item['Descrição'] || '').trim() || null
-        const unit = (item.unit || item.Unit || item.unidade || item.Unidade || 'UN').trim().toUpperCase()
-        const costPrice = parseNum(item.cost_price ?? item.costPrice ?? item.preco_custo ?? item['Preço de Custo'] ?? item['Preço Custo'], 0)
-        const sellingPrice = parseNum(item.selling_price ?? item.sellingPrice ?? item.preco_venda ?? item['Preço de Venda'] ?? item['Preço Venda'] ?? item.preco ?? item.price, 0)
-        const minStock = parseNum(item.min_stock ?? item.minStock ?? item.estoque_minimo ?? item['Estoque Mínimo'], 5)
-        const initialStock = parseNum(item.initial_stock ?? item.initialStock ?? item.stock_quantity ?? item.estoque ?? item.Estoque ?? item.quantidade ?? item.qtd, 0)
-        const controlsBatch = Boolean(item.controls_batch ?? item.controlsBatch ?? item.controla_lote)
-        const controlsExpiration = Boolean(item.controls_expiration ?? item.controlsExpiration ?? item.controla_validade)
-        const isPublished = item.is_published !== undefined ? Boolean(item.is_published) : true
-
         // Category resolution
         let categoryId: string | null = null
-        const categoryName = (item.category_name || item.category || item.categoria || item.Categoria || '').trim()
-        if (categoryName) {
-          const lowerCat = categoryName.toLowerCase()
+        if (item.category_name) {
+          const lowerCat = item.category_name.toLowerCase()
           if (categoryMap.has(lowerCat)) {
             categoryId = categoryMap.get(lowerCat)!
           } else {
             try {
-              const newCat = await this.createCategory(storeId, categoryName)
+              const newCat = await this.createCategory(storeId, item.category_name)
               if (newCat) {
                 categoryId = newCat.id
                 categoryMap.set(lowerCat, newCat.id)
@@ -530,25 +510,25 @@ export const productService = {
           .from('products')
           .insert({
             store_id: storeId,
-            name,
+            name: item.name,
             sku,
-            barcode,
-            description,
+            barcode: item.barcode || null,
+            description: item.description || null,
             category_id: categoryId,
-            cost_price: costPrice,
-            selling_price: sellingPrice,
-            unit,
-            min_stock: minStock,
-            controls_batch: controlsBatch,
-            controls_expiration: controlsExpiration,
+            cost_price: item.cost_price,
+            selling_price: item.selling_price,
+            unit: item.unit,
+            min_stock: item.min_stock,
+            controls_batch: item.controls_batch,
+            controls_expiration: item.controls_expiration,
             is_active: true,
-            is_published_catalog: isPublished,
+            is_published_catalog: item.is_published,
           })
           .select('id')
           .single()
 
         if (prodErr) {
-          errors.push(`Linha ${rowNum} (${name}): ${prodErr.message}`)
+          errors.push(`Linha ${rowNum} (${item.name}): ${prodErr.message}`)
           errorCount++
           continue
         }
@@ -560,7 +540,7 @@ export const productService = {
           await supabase.from('stock_balances').insert({
             store_id: storeId,
             product_id: insertedProduct.id,
-            quantity: initialStock,
+            quantity: item.initial_stock,
             reserved_quantity: 0,
           })
         }

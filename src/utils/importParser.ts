@@ -101,6 +101,327 @@ export function parseJSONContent(jsonText: string): Record<string, any>[] {
   throw new Error('O JSON deve ser um array, ou conter a chave "products" / "stock_movements" / "data" com um array.')
 }
 
+// ==========================================================================
+// Importação de Produtos
+// ==========================================================================
+
+export interface NormalizedProductImportItem {
+  name: string
+  sku: string
+  barcode?: string
+  category_name?: string
+  selling_price: number
+  cost_price: number
+  unit: string
+  min_stock: number
+  initial_stock: number
+  description?: string
+  controls_batch: boolean
+  controls_expiration: boolean
+  is_published: boolean
+  raw?: Record<string, any>
+}
+
+/** Limpa e normaliza strings de chaves (sem acentos, lowercase, sem pontuação extra) */
+function cleanKey(rawKey: string): string {
+  return rawKey
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+}
+
+/** Conversão robusta de valores para número (suporta "12,50", "R$ 1.250,00", etc.) */
+export function parseImportNumber(value: unknown, fallback = 0): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : fallback
+  if (value === undefined || value === null || String(value).trim() === '') return fallback
+
+  const str = String(value).trim()
+  let clean = str.replace(/[^\d,.-]/g, '').trim()
+  if (!clean) return fallback
+
+  if (clean.includes(',') && clean.includes('.')) {
+    if (clean.lastIndexOf(',') > clean.lastIndexOf('.')) {
+      // Ex: 1.234,56 -> 1234.56
+      clean = clean.replace(/\./g, '').replace(',', '.')
+    } else {
+      // Ex: 1,234.56 -> 1234.56
+      clean = clean.replace(/,/g, '')
+    }
+  } else if (clean.includes(',')) {
+    // Ex: 1234,56 -> 1234.56
+    clean = clean.replace(',', '.')
+  }
+
+  const num = parseFloat(clean)
+  return Number.isFinite(num) ? num : fallback
+}
+
+/** Conversão robusta de valores para booleano */
+export function parseImportBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === 'boolean') return value
+  if (value === undefined || value === null || String(value).trim() === '') return fallback
+  const str = String(value).trim().toLowerCase()
+  if (['true', '1', 'sim', 's', 'yes', 'y', 'ativo', 'v'].includes(str)) return true
+  if (['false', '0', 'nao', 'não', 'n', 'no', 'inativo', 'f'].includes(str)) return false
+  return fallback
+}
+
+/** Alias de colunas aceitas no import de produtos → chave canônica. */
+export const PRODUCT_COLUMN_ALIASES: Record<string, string> = {
+  // Name
+  name: 'name',
+  nome: 'name',
+  produto: 'name',
+  'nome do produto': 'name',
+  'nome produto': 'name',
+  'descricao do item': 'name',
+  'descricao do produto': 'name',
+  item: 'name',
+  titulo: 'name',
+
+  // SKU
+  sku: 'sku',
+  codigo: 'sku',
+  'codigo interno': 'sku',
+  'codigo do produto': 'sku',
+  'codigo produto': 'sku',
+  'codigo item': 'sku',
+  cod: 'sku',
+  'cod.': 'sku',
+  ref: 'sku',
+  'ref.': 'sku',
+  referencia: 'sku',
+
+  // Barcode
+  barcode: 'barcode',
+  ean: 'barcode',
+  'ean 13': 'barcode',
+  ean13: 'barcode',
+  'codigo de barras': 'barcode',
+  'cod de barras': 'barcode',
+  'cod barras': 'barcode',
+  gtin: 'barcode',
+
+  // Category
+  category_name: 'category_name',
+  category: 'category_name',
+  categoria: 'category_name',
+  departamento: 'category_name',
+  secao: 'category_name',
+  grupo: 'category_name',
+  'grupo de produtos': 'category_name',
+  'categoria do produto': 'category_name',
+
+  // Selling price
+  selling_price: 'selling_price',
+  sellingprice: 'selling_price',
+  preco_venda: 'selling_price',
+  'preco de venda': 'selling_price',
+  'preco venda': 'selling_price',
+  preco: 'selling_price',
+  price: 'selling_price',
+  valor: 'selling_price',
+  'valor de venda': 'selling_price',
+  'valor venda': 'selling_price',
+  'preco unitario': 'selling_price',
+  'preco unit': 'selling_price',
+  'valor unitario': 'selling_price',
+  'valor unit': 'selling_price',
+  venda: 'selling_price',
+  pv: 'selling_price',
+
+  // Cost price
+  cost_price: 'cost_price',
+  costprice: 'cost_price',
+  preco_custo: 'cost_price',
+  'preco de custo': 'cost_price',
+  'preco custo': 'cost_price',
+  custo: 'cost_price',
+  'valor de custo': 'cost_price',
+  'valor custo': 'cost_price',
+  pc: 'cost_price',
+
+  // Unit
+  unit: 'unit',
+  unidade: 'unit',
+  und: 'unit',
+  un: 'unit',
+  medida: 'unit',
+  'unidade de medida': 'unit',
+  'un.': 'unit',
+
+  // Min Stock
+  min_stock: 'min_stock',
+  minstock: 'min_stock',
+  estoque_minimo: 'min_stock',
+  'estoque minimo': 'min_stock',
+  'est minimo': 'min_stock',
+  minimo: 'min_stock',
+
+  // Initial Stock
+  initial_stock: 'initial_stock',
+  initialstock: 'initial_stock',
+  stock_quantity: 'initial_stock',
+  estoque_inicial: 'initial_stock',
+  'estoque inicial': 'initial_stock',
+  estoque: 'initial_stock',
+  quantidade: 'initial_stock',
+  qtd: 'initial_stock',
+  quant: 'initial_stock',
+  'qtd.': 'initial_stock',
+  saldo: 'initial_stock',
+  'saldo inicial': 'initial_stock',
+  'saldo atual': 'initial_stock',
+
+  // Description
+  description: 'description',
+  descricao: 'description',
+  detalhes: 'description',
+  observacao: 'description',
+  observacoes: 'description',
+  obs: 'description',
+
+  // Controls
+  controls_batch: 'controls_batch',
+  controlsbatch: 'controls_batch',
+  controla_lote: 'controls_batch',
+  'controla lote': 'controls_batch',
+  lote: 'controls_batch',
+
+  controls_expiration: 'controls_expiration',
+  controlsexpiration: 'controls_expiration',
+  controla_validade: 'controls_expiration',
+  'controla validade': 'controls_expiration',
+  validade: 'controls_expiration',
+
+  is_published: 'is_published',
+  ispublished: 'is_published',
+  publicado: 'is_published',
+  'publicar catalogo': 'is_published',
+  'publicado catalogo': 'is_published',
+  catalogo: 'is_published',
+}
+
+/** Normaliza um objeto qualquer de linha de produto para o tipo canônico */
+export function normalizeProductRow(row: Record<string, any>): NormalizedProductImportItem {
+  if (!row || typeof row !== 'object') {
+    return {
+      name: '',
+      sku: '',
+      selling_price: 0,
+      cost_price: 0,
+      unit: 'UN',
+      min_stock: 5,
+      initial_stock: 0,
+      controls_batch: false,
+      controls_expiration: false,
+      is_published: true,
+      raw: row,
+    }
+  }
+
+  const canonicalMap: Record<string, any> = {}
+
+  for (const [key, val] of Object.entries(row)) {
+    if (val === undefined || val === null) continue
+    const cleaned = cleanKey(key)
+    const canonical = PRODUCT_COLUMN_ALIASES[cleaned]
+    if (canonical) {
+      if (canonicalMap[canonical] === undefined || canonicalMap[canonical] === '') {
+        canonicalMap[canonical] = val
+      }
+    }
+  }
+
+  // Fallbacks heurísticos caso o nome da coluna contenha palavras-chave
+  if (canonicalMap.selling_price === undefined) {
+    for (const [key, val] of Object.entries(row)) {
+      const cleaned = cleanKey(key)
+      if (
+        (cleaned.includes('preco') || cleaned.includes('valor') || cleaned.includes('price')) &&
+        !cleaned.includes('custo') &&
+        !cleaned.includes('cost')
+      ) {
+        canonicalMap.selling_price = val
+        break
+      }
+    }
+  }
+
+  if (canonicalMap.cost_price === undefined) {
+    for (const [key, val] of Object.entries(row)) {
+      const cleaned = cleanKey(key)
+      if (cleaned.includes('custo') || cleaned.includes('cost')) {
+        canonicalMap.cost_price = val
+        break
+      }
+    }
+  }
+
+  if (canonicalMap.name === undefined) {
+    for (const [key, val] of Object.entries(row)) {
+      const cleaned = cleanKey(key)
+      if (
+        cleaned.includes('nome') ||
+        cleaned.includes('produto') ||
+        cleaned.includes('item') ||
+        cleaned.includes('name')
+      ) {
+        canonicalMap.name = val
+        break
+      }
+    }
+  }
+
+  const name = String(canonicalMap.name ?? '').trim()
+  const sku = String(canonicalMap.sku ?? '').trim()
+  const barcode = canonicalMap.barcode ? String(canonicalMap.barcode).trim() : undefined
+  const category_name = canonicalMap.category_name ? String(canonicalMap.category_name).trim() : undefined
+  const selling_price = parseImportNumber(canonicalMap.selling_price, 0)
+  const cost_price = parseImportNumber(canonicalMap.cost_price, 0)
+  const unit = (canonicalMap.unit ? String(canonicalMap.unit).trim().toUpperCase() : 'UN') || 'UN'
+  const min_stock = parseImportNumber(canonicalMap.min_stock, 5)
+  const initial_stock = parseImportNumber(canonicalMap.initial_stock, 0)
+  const description = canonicalMap.description ? String(canonicalMap.description).trim() : undefined
+  const controls_batch = parseImportBoolean(canonicalMap.controls_batch, false)
+  const controls_expiration = parseImportBoolean(canonicalMap.controls_expiration, false)
+  const is_published = parseImportBoolean(canonicalMap.is_published, true)
+
+  return {
+    name,
+    sku,
+    barcode,
+    category_name,
+    selling_price,
+    cost_price,
+    unit,
+    min_stock,
+    initial_stock,
+    description,
+    controls_batch,
+    controls_expiration,
+    is_published,
+    raw: row,
+  }
+}
+
+/** Faz o parse de texto CSV/JSON e devolve um array de produtos totalmente normalizados */
+export function parseProductsImport(content: string, isJsonHint = false): NormalizedProductImportItem[] {
+  const trimmed = content.trim()
+  if (!trimmed) return []
+
+  let rawRows: Record<string, any>[] = []
+  if (isJsonHint || trimmed.startsWith('[') || trimmed.startsWith('{')) {
+    rawRows = parseJSONContent(trimmed)
+  } else {
+    rawRows = parseCSVContent(trimmed)
+  }
+
+  return rawRows.map(normalizeProductRow)
+}
+
 export function downloadTemplateCSV(): void {
   const headers = [
     'name',

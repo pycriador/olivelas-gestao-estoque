@@ -36,8 +36,8 @@ export function FeaturesPage() {
     },
     {
       icon: Store,
-      title: 'Arquitetura Multi-Loja Real',
-      desc: 'Tenants independentes, visualização centralizada para o Administrador Global e troca rápida entre filiais.',
+      title: 'Gestão de Múltiplas Lojas & Filiais',
+      desc: 'Unidades independentes, visualização centralizada para o Administrador e troca rápida entre filiais.',
     },
     {
       icon: Truck,
@@ -60,10 +60,10 @@ export function FeaturesPage() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 space-y-16">
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-          Recursos Enterprise para o seu Negócio
+          Recursos Completos para o seu Negócio
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-          Desenvolvido com padrão corporativo para garantir precisão máxima no controle de estoque e agilidade no atendimento de vendas.
+          Desenvolvido para garantir precisão máxima no controle de estoque, compras organizadas e agilidade no atendimento de vendas.
         </p>
       </div>
 

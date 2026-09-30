@@ -1,7 +1,7 @@
 export const esES = {
   common: {
     appName: 'Olivelas Gestión de Inventario',
-    tagline: 'Plataforma Multi-Tienda Enterprise de Gestión de Stock y Ventas',
+    tagline: 'Sistema Completo de Gestión de Stock y Ventas',
     save: 'Guardar',
     cancel: 'Cancelar',
     delete: 'Eliminar',

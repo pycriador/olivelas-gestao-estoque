@@ -38,7 +38,7 @@ export function PricingPage() {
       popular: true,
     },
     {
-      name: 'Enterprise',
+      name: 'Redes & Franquias',
       price: 'Sob Consulta',
       period: '',
       description: 'Para redes de lojas, franquias e operações que demandam suporte prioritário.',

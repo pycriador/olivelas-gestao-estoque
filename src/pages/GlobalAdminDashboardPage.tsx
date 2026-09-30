@@ -831,7 +831,7 @@ export function GlobalAdminDashboardPage() {
                         </td>
                         <td className="py-2.5 px-4 text-center">
                           {u.isGlobalAdmin ? (
-                            <Badge variant="default" className="text-[10px] px-2 py-0.5 gap-1 bg-primary">
+                            <Badge className="text-[10px] px-2 py-0.5 gap-1 bg-primary text-primary-foreground font-semibold shadow-xs">
                               <Shield className="h-2.5 w-2.5" /> Global Admin
                             </Badge>
                           ) : (
@@ -921,11 +921,11 @@ export function GlobalAdminDashboardPage() {
           setIsStoreModalOpen(false)
           resetStoreForm()
         }}
-        title={editingStore ? 'Editar Loja (Tenant)' : 'Cadastrar Nova Loja (Tenant)'}
+        title={editingStore ? 'Editar Loja' : 'Cadastrar Nova Loja'}
         description={
           editingStore
             ? `Atualize as configurações e parâmetros da loja ${editingStore.name}`
-            : 'Criação de nova loja independente no ecossistema multi-tenant'
+            : 'Criação de nova loja independente no sistema'
         }
         maxWidth="lg"
       >
@@ -1120,7 +1120,7 @@ export function GlobalAdminDashboardPage() {
                 className="rounded border-input text-primary focus:ring-primary h-4 w-4"
               />
               <div>
-                <div>Acesso Global Admin (Superusuário SaaS)</div>
+                <div>Acesso Global Admin (Superusuário do Sistema)</div>
                 <div className="text-[10px] text-muted-foreground font-normal">
                   Permite gerenciar todas as lojas, usuários e faturamento do sistema.
                 </div>
