@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase/client'
+
 export interface ApiScope {
   id: string
   name: string
@@ -52,13 +54,29 @@ export interface ApiToken {
 
 const STORAGE_KEY = 'olivelas_api_tokens_v1'
 
+function mapRowToToken(row: any): ApiToken {
+  return {
+    id: row.id,
+    name: row.name,
+    token: row.token,
+    keyPrefix: row.key_prefix,
+    storeId: row.store_id || 'all',
+    storeName: row.store_name || 'Acesso Global',
+    scopes: Array.isArray(row.scopes) ? row.scopes : [],
+    expiresAt: row.expires_at,
+    isActive: row.is_active,
+    createdAt: row.created_at,
+    lastUsedAt: row.last_used_at,
+  }
+}
+
 export const apiKeyService = {
   getStoredTokens(): ApiToken[] {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) return JSON.parse(raw)
     } catch (e) {
-      console.warn('Erro ao carregar tokens de API:', e)
+      console.warn('Erro ao carregar tokens de API locais:', e)
     }
     return []
   },
@@ -67,13 +85,34 @@ export const apiKeyService = {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens))
   },
 
-  createToken(params: {
+  async listTokens(): Promise<ApiToken[]> {
+    try {
+      const { data, error } = await supabase
+        .from('api_tokens')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (!error && data) {
+        const mapped = data.map(mapRowToToken)
+        this.saveTokens(mapped)
+        return mapped
+      }
+      if (error) {
+        console.warn('Consulta ao Supabase api_tokens falhou, usando cache local:', error.message)
+      }
+    } catch (e) {
+      console.warn('Erro de rede ao buscar tokens do Supabase:', e)
+    }
+    return this.getStoredTokens()
+  },
+
+  async createToken(params: {
     name: string
     storeId: string
     storeName: string
     scopes: string[]
     expiresInDays: number | null // null = nunca expira
-  }): ApiToken {
+  }): Promise<ApiToken> {
     const randomHex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
       .map((b) => b.toString(16).padStart(2, '0'))
       .join('')
@@ -86,7 +125,39 @@ export const apiKeyService = {
         ? new Date(Date.now() + params.expiresInDays * 86400000).toISOString()
         : null
 
-    const newToken: ApiToken = {
+    const dbPayload = {
+      name: params.name,
+      token: fullToken,
+      key_prefix: keyPrefix,
+      store_id: params.storeId === 'all' ? null : params.storeId,
+      store_name: params.storeName,
+      scopes: params.scopes,
+      expires_at: expiresAt,
+      is_active: true,
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('api_tokens')
+        .insert([dbPayload])
+        .select()
+        .single()
+
+      if (!error && data) {
+        const created = mapRowToToken(data)
+        const current = this.getStoredTokens()
+        this.saveTokens([created, ...current.filter((t) => t.id !== created.id)])
+        return created
+      }
+      if (error) {
+        console.warn('Erro ao inserir token no Supabase:', error.message)
+      }
+    } catch (e) {
+      console.warn('Erro de rede ao salvar token:', e)
+    }
+
+    // Fallback local se a tabela Supabase ainda estiver sendo migrada
+    const localToken: ApiToken = {
       id: `tok-${Date.now()}`,
       name: params.name,
       token: fullToken,
@@ -101,18 +172,31 @@ export const apiKeyService = {
     }
 
     const current = this.getStoredTokens()
-    this.saveTokens([newToken, ...current])
-    return newToken
+    this.saveTokens([localToken, ...current])
+    return localToken
   },
 
-  toggleTokenStatus(id: string): ApiToken[] {
+  async toggleTokenStatus(id: string, nextStatus: boolean): Promise<ApiToken[]> {
+    try {
+      const { error } = await supabase
+        .from('api_tokens')
+        .update({ is_active: nextStatus })
+        .eq('id', id)
+
+      if (!error) {
+        return this.listTokens()
+      }
+    } catch (e) {
+      console.warn('Erro ao atualizar status do token no Supabase:', e)
+    }
+
     const current = this.getStoredTokens()
-    const updated = current.map((t) => (t.id === id ? { ...t, isActive: !t.isActive } : t))
+    const updated = current.map((t) => (t.id === id ? { ...t, isActive: nextStatus } : t))
     this.saveTokens(updated)
     return updated
   },
 
-  updateToken(
+  async updateToken(
     id: string,
     updates: {
       name?: string
@@ -121,31 +205,65 @@ export const apiKeyService = {
       scopes?: string[]
       expiresInDays?: number | null
     }
-  ): ApiToken[] {
+  ): Promise<ApiToken[]> {
+    let expiresAt: string | null | undefined = undefined
+    if (updates.expiresInDays !== undefined) {
+      expiresAt =
+        updates.expiresInDays && updates.expiresInDays > 0
+          ? new Date(Date.now() + updates.expiresInDays * 86400000).toISOString()
+          : null
+    }
+
+    const dbUpdates: Record<string, any> = {}
+    if (updates.name !== undefined) dbUpdates.name = updates.name
+    if (updates.storeId !== undefined) dbUpdates.store_id = updates.storeId === 'all' ? null : updates.storeId
+    if (updates.storeName !== undefined) dbUpdates.store_name = updates.storeName
+    if (updates.scopes !== undefined) dbUpdates.scopes = updates.scopes
+    if (expiresAt !== undefined) dbUpdates.expires_at = expiresAt
+
+    try {
+      const { error } = await supabase
+        .from('api_tokens')
+        .update(dbUpdates)
+        .eq('id', id)
+
+      if (!error) {
+        return this.listTokens()
+      }
+    } catch (e) {
+      console.warn('Erro ao atualizar token no Supabase:', e)
+    }
+
     const current = this.getStoredTokens()
     const updated = current.map((t) => {
       if (t.id !== id) return t
-      let expiresAt = t.expiresAt
-      if (updates.expiresInDays !== undefined) {
-        expiresAt =
-          updates.expiresInDays && updates.expiresInDays > 0
-            ? new Date(Date.now() + updates.expiresInDays * 86400000).toISOString()
-            : null
-      }
       return {
         ...t,
         name: updates.name ?? t.name,
         storeId: updates.storeId ?? t.storeId,
         storeName: updates.storeName ?? t.storeName,
         scopes: updates.scopes ?? t.scopes,
-        expiresAt,
+        expiresAt: expiresAt !== undefined ? expiresAt : t.expiresAt,
       }
     })
     this.saveTokens(updated)
     return updated
   },
 
-  deleteToken(id: string): ApiToken[] {
+  async deleteToken(id: string): Promise<ApiToken[]> {
+    try {
+      const { error } = await supabase
+        .from('api_tokens')
+        .delete()
+        .eq('id', id)
+
+      if (!error) {
+        return this.listTokens()
+      }
+    } catch (e) {
+      console.warn('Erro ao excluir token no Supabase:', e)
+    }
+
     const current = this.getStoredTokens()
     const updated = current.filter((t) => t.id !== id)
     this.saveTokens(updated)

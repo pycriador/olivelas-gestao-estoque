@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   apiKeyService,
@@ -12,6 +13,7 @@ import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
 import { EmptyState } from '@/components/common/EmptyState'
+import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import {
   KeyRound,
@@ -236,9 +238,17 @@ interface GlobalApiKeyHbacPanelProps {
 }
 
 export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
-  const [tokens, setTokens] = React.useState<ApiToken[]>(() => apiKeyService.getStoredTokens())
+  const queryClient = useQueryClient()
+  const { data: dbTokens = [], isLoading: loadingTokens } = useQuery({
+    queryKey: ['api-tokens-list'],
+    queryFn: () => apiKeyService.listTokens(),
+  })
+
+  const tokens = dbTokens.length > 0 ? dbTokens : apiKeyService.getStoredTokens()
+
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [editingToken, setEditingToken] = React.useState<ApiToken | null>(null)
   const [newTokenResult, setNewTokenResult] = React.useState<ApiToken | null>(null)
   const [revokingToken, setRevokingToken] = React.useState<ApiToken | null>(null)
@@ -294,7 +304,7 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
     }
   }
 
-  const handleCreateToken = (e: React.FormEvent) => {
+  const handleCreateToken = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!tokenName.trim()) return
 
@@ -303,18 +313,26 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
 
     const days = expirationOption === 'never' ? null : parseInt(expirationOption, 10)
 
-    const created = apiKeyService.createToken({
-      name: tokenName.trim(),
-      storeId: selectedStoreId,
-      storeName,
-      scopes: selectedScopes,
-      expiresInDays: days,
-    })
+    setIsSubmitting(true)
+    try {
+      const created = await apiKeyService.createToken({
+        name: tokenName.trim(),
+        storeId: selectedStoreId,
+        storeName,
+        scopes: selectedScopes,
+        expiresInDays: days,
+      })
 
-    setTokens(apiKeyService.getStoredTokens())
-    setIsCreateModalOpen(false)
-    setNewTokenResult(created)
-    setTokenName('')
+      queryClient.invalidateQueries({ queryKey: ['api-tokens-list'] })
+      setIsCreateModalOpen(false)
+      setNewTokenResult(created)
+      setTokenName('')
+      toast.success('Chave de API gravada no banco de dados!')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao gravar token no banco de dados.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleOpenEditToken = (token: ApiToken) => {
@@ -326,7 +344,7 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
     setIsEditModalOpen(true)
   }
 
-  const handleSaveEditToken = (e: React.FormEvent) => {
+  const handleSaveEditToken = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingToken || !editTokenName.trim()) return
 
@@ -340,32 +358,47 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
       expiresInDays = parseInt(editExpirationOption, 10)
     }
 
-    const updated = apiKeyService.updateToken(editingToken.id, {
-      name: editTokenName.trim(),
-      storeId: editStoreId,
-      storeName,
-      scopes: editScopes,
-      expiresInDays,
-    })
+    setIsSubmitting(true)
+    try {
+      await apiKeyService.updateToken(editingToken.id, {
+        name: editTokenName.trim(),
+        storeId: editStoreId,
+        storeName,
+        scopes: editScopes,
+        expiresInDays,
+      })
 
-    setTokens(updated)
-    setIsEditModalOpen(false)
-    setEditingToken(null)
-    toast.success('Permissões e dados do token atualizados com sucesso!')
+      queryClient.invalidateQueries({ queryKey: ['api-tokens-list'] })
+      setIsEditModalOpen(false)
+      setEditingToken(null)
+      toast.success('Permissões e dados do token atualizados no banco de dados!')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao atualizar token no banco.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
-  const handleToggleStatus = (id: string) => {
-    const updated = apiKeyService.toggleTokenStatus(id)
-    setTokens(updated)
-    toast.success('Status do token atualizado!')
+  const handleToggleStatus = async (token: ApiToken) => {
+    try {
+      await apiKeyService.toggleTokenStatus(token.id, !token.isActive)
+      queryClient.invalidateQueries({ queryKey: ['api-tokens-list'] })
+      toast.success(`Token ${token.isActive ? 'desativado' : 'ativado'} com sucesso!`)
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao alterar status do token.')
+    }
   }
 
-  const handleRevokeToken = () => {
+  const handleRevokeToken = async () => {
     if (!revokingToken) return
-    const updated = apiKeyService.deleteToken(revokingToken.id)
-    setTokens(updated)
-    setRevokingToken(null)
-    toast.success('Token de API revogado com sucesso!')
+    try {
+      await apiKeyService.deleteToken(revokingToken.id)
+      queryClient.invalidateQueries({ queryKey: ['api-tokens-list'] })
+      setRevokingToken(null)
+      toast.success('Token de API revogado do banco de dados com sucesso!')
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao revogar token.')
+    }
   }
 
   const activeDoc = SCOPE_ENDPOINT_DOCS[activeScopeId] || SCOPE_ENDPOINT_DOCS['products:read']
@@ -496,7 +529,11 @@ console.log('Status:', response.status, data)`
       {/* Tokens List Card */}
       <Card className="border border-border shadow-xs bg-card overflow-hidden">
         <CardContent className="p-0">
-          {tokens.length === 0 ? (
+          {loadingTokens && tokens.length === 0 ? (
+            <div className="p-6">
+              <LoadingSkeleton count={3} />
+            </div>
+          ) : tokens.length === 0 ? (
             <div className="p-8 text-center">
               <EmptyState
                 icon={<KeyRound className="h-10 w-10 text-muted-foreground" />}
@@ -584,7 +621,7 @@ console.log('Status:', response.status, data)`
                             key: 'toggle',
                             label: t.isActive ? 'Desativar Token' : 'Ativar Token',
                             icon: <Power className="h-3.5 w-3.5" />,
-                            onSelect: () => handleToggleStatus(t.id),
+                            onSelect: () => handleToggleStatus(t),
                           },
                           {
                             key: 'revoke',
@@ -845,7 +882,12 @@ console.log('Status:', response.status, data)`
             <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" size="sm" disabled={selectedScopes.length === 0 || !tokenName.trim()}>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={isSubmitting}
+              disabled={selectedScopes.length === 0 || !tokenName.trim()}
+            >
               Gerar Chave de API
             </Button>
           </div>
@@ -989,7 +1031,12 @@ console.log('Status:', response.status, data)`
             >
               Cancelar
             </Button>
-            <Button type="submit" size="sm" disabled={editScopes.length === 0 || !editTokenName.trim()}>
+            <Button
+              type="submit"
+              size="sm"
+              isLoading={isSubmitting}
+              disabled={editScopes.length === 0 || !editTokenName.trim()}
+            >
               Salvar Alterações
             </Button>
           </div>
