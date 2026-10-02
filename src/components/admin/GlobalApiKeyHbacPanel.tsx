@@ -369,7 +369,7 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
   }
 
   const activeDoc = SCOPE_ENDPOINT_DOCS[activeScopeId] || SCOPE_ENDPOINT_DOCS['products:read']
-  const activeToken = tokens.find((t) => t.isActive)?.token || 'olv_live_9b4e72a8c13f6e5d0a24b78c9d1e3f5a'
+  const activeToken = tokens.find((t) => t.isActive)?.token || 'SEU_TOKEN_API_AQUI'
   const targetStoreId = selectedStoreId !== 'all' ? selectedStoreId : (stores[0]?.id || 'loja_id')
 
   const queryStr = activeDoc.queryParams(targetStoreId)

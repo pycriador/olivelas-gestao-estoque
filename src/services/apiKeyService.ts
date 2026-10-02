@@ -60,34 +60,7 @@ export const apiKeyService = {
     } catch (e) {
       console.warn('Erro ao carregar tokens de API:', e)
     }
-    return [
-      {
-        id: 'tok-1',
-        name: 'Integração PDV Caixa 01',
-        token: 'olv_live_9b4e72a8c13f6e5d0a24b78c9d1e3f5a',
-        keyPrefix: 'olv_live_9b4e...',
-        storeId: 'all',
-        storeName: 'Acesso Global / Loja Principal',
-        scopes: ['orders:read', 'orders:write', 'products:read', 'inventory:read', 'customers:read', 'customers:write'],
-        expiresAt: null, // Nunca expira
-        isActive: true,
-        createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
-        lastUsedAt: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: 'tok-2',
-        name: 'E-commerce & Catálogo WhatsApp',
-        token: 'olv_live_3f8a1c9e2d4b6a8f0c2e4d6a8b0c2e4d',
-        keyPrefix: 'olv_live_3f8a...',
-        storeId: 'all',
-        storeName: 'Todas as Lojas (Somente Leitura)',
-        scopes: ['products:read', 'inventory:read'],
-        expiresAt: new Date(Date.now() + 60 * 86400000).toISOString(),
-        isActive: true,
-        createdAt: new Date(Date.now() - 15 * 86400000).toISOString(),
-        lastUsedAt: new Date(Date.now() - 7200000).toISOString(),
-      },
-    ]
+    return []
   },
 
   saveTokens(tokens: ApiToken[]) {
