@@ -376,18 +376,22 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
   const fullEndpointUrl = `${supabaseUrl}/rest/v1/${activeDoc.table}${queryStr ? `?${queryStr}` : ''}`
   const reqBody = activeDoc.body ? activeDoc.body(targetStoreId) : undefined
 
-  // Code Snippets Generation
+  // Code Snippets Generation (Supabase PostgREST Auth Spec)
+  const effectiveSupabaseKey = supabaseKey && supabaseKey !== 'placeholder_key' ? supabaseKey : 'SUA_SUPABASE_ANON_KEY'
+
   const curlSnippet = (() => {
     if (activeDoc.method === 'GET') {
       return `curl -X GET "${fullEndpointUrl}" \\
-  -H "apikey: ${supabaseKey}" \\
-  -H "Authorization: Bearer ${activeToken}" \\
+  -H "apikey: ${effectiveSupabaseKey}" \\
+  -H "Authorization: Bearer ${effectiveSupabaseKey}" \\
+  -H "X-HBAC-Token: ${activeToken}" \\
   -H "X-Store-ID: ${targetStoreId}" \\
   -H "Content-Type: application/json"`
     }
     return `curl -X ${activeDoc.method} "${fullEndpointUrl}" \\
-  -H "apikey: ${supabaseKey}" \\
-  -H "Authorization: Bearer ${activeToken}" \\
+  -H "apikey: ${effectiveSupabaseKey}" \\
+  -H "Authorization: Bearer ${effectiveSupabaseKey}" \\
+  -H "X-HBAC-Token: ${activeToken}" \\
   -H "X-Store-ID: ${targetStoreId}" \\
   -H "Content-Type: application/json" \\
   -H "Prefer: return=representation" \\
@@ -400,22 +404,27 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
 
 url = "${fullEndpointUrl}"
 headers = {
-    "apikey": "${supabaseKey}",
-    "Authorization": "Bearer ${activeToken}",
+    "apikey": "${effectiveSupabaseKey}",
+    "Authorization": "Bearer ${effectiveSupabaseKey}",
+    "X-HBAC-Token": "${activeToken}",
     "X-Store-ID": "${targetStoreId}",
     "Content-Type": "application/json"
 }
 
 response = requests.get(url, headers=headers)
-print("Status:", response.status_code)
-print("Dados:", response.json())`
+print("Status Code:", response.status_code)
+if response.status_code == 200:
+    print("Dados:", response.json())
+else:
+    print("Erro:", response.text)`
     }
     return `import requests
 
 url = "${fullEndpointUrl}"
 headers = {
-    "apikey": "${supabaseKey}",
-    "Authorization": "Bearer ${activeToken}",
+    "apikey": "${effectiveSupabaseKey}",
+    "Authorization": "Bearer ${effectiveSupabaseKey}",
+    "X-HBAC-Token": "${activeToken}",
     "X-Store-ID": "${targetStoreId}",
     "Content-Type": "application/json",
     "Prefer": "return=representation"
@@ -423,8 +432,11 @@ headers = {
 payload = ${JSON.stringify(reqBody, null, 4)}
 
 response = requests.${activeDoc.method.toLowerCase()}(url, headers=headers, json=payload)
-print("Status:", response.status_code)
-print("Resultado:", response.json())`
+print("Status Code:", response.status_code)
+if response.status_code in [200, 201]:
+    print("Resultado:", response.json())
+else:
+    print("Erro:", response.text)`
   })()
 
   const jsSnippet = (() => {
@@ -432,21 +444,23 @@ print("Resultado:", response.json())`
       return `const response = await fetch('${fullEndpointUrl}', {
   method: 'GET',
   headers: {
-    'apikey': '${supabaseKey}',
-    'Authorization': 'Bearer ${activeToken}',
+    'apikey': '${effectiveSupabaseKey}',
+    'Authorization': 'Bearer ${effectiveSupabaseKey}',
+    'X-HBAC-Token': '${activeToken}',
     'X-Store-ID': '${targetStoreId}',
     'Content-Type': 'application/json'
   }
 })
 
 const data = await response.json()
-console.log('Dados:', data)`
+console.log('Status:', response.status, data)`
     }
     return `const response = await fetch('${fullEndpointUrl}', {
   method: '${activeDoc.method}',
   headers: {
-    'apikey': '${supabaseKey}',
-    'Authorization': 'Bearer ${activeToken}',
+    'apikey': '${effectiveSupabaseKey}',
+    'Authorization': 'Bearer ${effectiveSupabaseKey}',
+    'X-HBAC-Token': '${activeToken}',
     'X-Store-ID': '${targetStoreId}',
     'Content-Type': 'application/json',
     'Prefer': 'return=representation'
@@ -455,7 +469,7 @@ console.log('Dados:', data)`
 })
 
 const data = await response.json()
-console.log('Resultado:', data)`
+console.log('Status:', response.status, data)`
   })()
 
   const currentSnippet = codeLang === 'curl' ? curlSnippet : codeLang === 'python' ? pythonSnippet : jsSnippet
