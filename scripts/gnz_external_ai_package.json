@@ -1,0 +1,1850 @@
+{
+  "metadata": {
+    "generatedAt": "2026-10-02T03:16:35.192Z",
+    "apiBaseUrl": "https://mffrafqyjbjitlhjnlai.supabase.co/rest/v1",
+    "authType": "Bearer <TOKEN> + apikey header",
+    "store": {
+      "id": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "name": "GNZ Hortifruti",
+      "slug": "gnz-hortifruti"
+    }
+  },
+  "hbacTokens": [
+    {
+      "id": "tok_cria8g36",
+      "name": "Token GNZ - Acesso Completo (Admin & IA Master)",
+      "token": "olv_live_eb4a5756696f7ad4e87dd9aa9eb80998",
+      "keyPrefix": "olv_live_eb4...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Full Admin",
+      "scopes": [
+        "*"
+      ],
+      "description": "Acesso total de leitura e escrita em todos os recursos da loja GNZ",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.146Z"
+    },
+    {
+      "id": "tok_t2b6qnr4",
+      "name": "Token GNZ - Produtos & Catálogo",
+      "token": "olv_live_f6dee7630cabd951b576edd5ce7a3861",
+      "keyPrefix": "olv_live_f6d...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Products",
+      "scopes": [
+        "products:read",
+        "products:write",
+        "products:delete"
+      ],
+      "description": "Consulta, criação e atualização do catálogo mestre de produtos e categorias",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    },
+    {
+      "id": "tok_ac3r8hsp",
+      "name": "Token GNZ - Estoque & Inventário",
+      "token": "olv_live_f5b5188b4e8fccdc9d6ea5e5e5f872a1",
+      "keyPrefix": "olv_live_f5b...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Inventory",
+      "scopes": [
+        "inventory:read",
+        "inventory:write",
+        "inventory:adjust"
+      ],
+      "description": "Saldos em tempo real, lotes de fornecedores, validades e baixas operacionais",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    },
+    {
+      "id": "tok_udy07qh5",
+      "name": "Token GNZ - Vendas & PDV",
+      "token": "olv_live_ea5a8716da4e82c8d51465a52421f5fe",
+      "keyPrefix": "olv_live_ea5...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Orders",
+      "scopes": [
+        "orders:read",
+        "orders:write",
+        "orders:cancel"
+      ],
+      "description": "Histórico de faturamento, pedidos emitidos, itens vendidos e clientes",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    },
+    {
+      "id": "tok_8cc4975y",
+      "name": "Token GNZ - Compras & Fornecedores",
+      "token": "olv_live_41229e08624071ca699fedf27dab6765",
+      "keyPrefix": "olv_live_412...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Purchases",
+      "scopes": [
+        "purchases:read",
+        "purchases:write"
+      ],
+      "description": "Ordens de compra, custos unitários reais de entrada e fornecedores homologados",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    },
+    {
+      "id": "tok_h409w8pd",
+      "name": "Token GNZ - Clientes & CRM",
+      "token": "olv_live_762189394df26345820e41e7cbd38cb9",
+      "keyPrefix": "olv_live_762...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Customers",
+      "scopes": [
+        "customers:read",
+        "customers:write"
+      ],
+      "description": "Base de clientes, contatos, dados cadastrais e histórico",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    },
+    {
+      "id": "tok_vjs14cqb",
+      "name": "Token GNZ - Relatórios & IA Externa",
+      "token": "olv_live_ae924f2427190b655afaf2a380cab1cb",
+      "keyPrefix": "olv_live_ae9...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Reports & Analytics",
+      "scopes": [
+        "reports:read",
+        "reports:export"
+      ],
+      "description": "Acesso a todos os relatórios analíticos, Curva ABC, Ruptura e KPIs executivos",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    },
+    {
+      "id": "tok_rnx9uflv",
+      "name": "Token GNZ - Auditoria & Logs",
+      "token": "olv_live_e72261d40c919512f53e79deb28ac45f",
+      "keyPrefix": "olv_live_e72...",
+      "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "storeName": "GNZ Hortifruti",
+      "category": "Audit",
+      "scopes": [
+        "audit:read"
+      ],
+      "description": "Rastreabilidade de alterações e movimentações por usuário",
+      "expiresAt": null,
+      "isActive": true,
+      "createdAt": "2026-10-02T03:16:31.148Z"
+    }
+  ],
+  "reportsIndex": [
+    {
+      "id": "retail_summary_kpis",
+      "title": "Métricas Executivas Consolidadas (KPIs)",
+      "endpoint": "GET /rest/v1/stock_balances & /rest/v1/orders",
+      "description": "Visão executiva com totalização de estoque em custo vs venda, margem bruta média, faturamento e contagem de rupturas.",
+      "data": {
+        "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+        "storeName": "GNZ Hortifruti",
+        "totalActiveProducts": 50,
+        "totalPhysicalUnits": 36,
+        "totalCostValuation": 3599.82,
+        "totalSellingValuation": 706.5,
+        "potentialProfit": -2893.32,
+        "marginPercent": -409.53,
+        "stockoutsCount": 47,
+        "lowStockCount": 0,
+        "monthSalesTotal": 50.7,
+        "lossesTotalValue": 350
+      }
+    },
+    {
+      "id": "stock_valuation",
+      "title": "Relatório de Valorização & Lucratividade",
+      "endpoint": "GET /rest/v1/products?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,name,sku,unit,cost_price,selling_price,min_stock",
+      "description": "Valoração física a custo e venda com margem % e lucro estimado por produto.",
+      "totalProducts": 50,
+      "items": [
+        {
+          "productId": "7540b9b7-10f8-45ab-9362-650af0d3a85b",
+          "name": "Morango Foundi",
+          "sku": "PRD-MUHQNWER-2PW",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 18.5,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "002684f7-b248-4bbe-a105-c4ec47c661a4",
+          "name": "Morango Premium",
+          "sku": "PRD-MUHQNX9V-L6L",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 16.5,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "790add4a-e37b-4fe6-a70a-4d7bbb6978ed",
+          "name": "Morango Gold",
+          "sku": "PRD-MUHQNXP4-NWT",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 10.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "fc3a35d2-be4f-4b84-89ca-5e10b0feba3f",
+          "name": "Melão Amarelo",
+          "sku": "PRD-MUHQNXYB-SLT",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 11.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "c445d3a4-7b9b-49ef-8726-8e507e770ac8",
+          "name": "Melancia (1/4 unidade)",
+          "sku": "PRD-MUHQNY7F-MIN",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 13.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "82cf8833-ec1d-418d-847e-129b98a41ca7",
+          "name": "Banana Nanica",
+          "sku": "PRD-MUHQNYFS-66H",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 8.4,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "0896d05a-d19d-40d7-889d-9a91eab963bb",
+          "name": "Banana Prata",
+          "sku": "PRD-MUHQNYOO-WX5",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 9.33,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "f1838500-7e6d-4649-8a80-d1e4f2c6b50c",
+          "name": "Kiwi Gold",
+          "sku": "PRD-MUHQNYX4-VR4",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 18.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "af8ec7f9-d0eb-4325-9440-7f136c6e5c3e",
+          "name": "Manga Palmer",
+          "sku": "PRD-MUHQNZ5J-9YA",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 10.4,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "1d6d435e-6965-4c81-9618-afb76e1c1741",
+          "name": "Abacaxi",
+          "sku": "PRD-MUHQNZFJ-P2J",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 9.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "c3818930-2b84-4481-b16a-352a0c531d32",
+          "name": "Abacaxi Descascado",
+          "sku": "PRD-MUHQNZOI-0MI",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 12.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "a9403af3-a28f-4b29-a119-ce7701affbe2",
+          "name": "Mexerica Murcote",
+          "sku": "PRD-MUHQNZX5-J23",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 8.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "41b7eac3-ecfe-4f55-a380-2341fc0d5d9d",
+          "name": "Mexerica Carioca",
+          "sku": "PRD-MUHQO05S-Y4Z",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 8.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "d797ca90-213d-4c11-a56c-1ac4747fa69d",
+          "name": "Laranja Pera Rio",
+          "sku": "PRD-MUHQO0LV-6QL",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 4.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "9ca178d0-048c-4112-beb0-e030edc98d97",
+          "name": "Limão Taiti",
+          "sku": "PRD-MUHQO0UQ-THQ",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 12.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "c9bf67e9-7d0f-48a2-ba18-c5e5222327ba",
+          "name": "Uva Premium P",
+          "sku": "PRD-MUHQO13B-9N0",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 14.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "f510aeab-fadd-4e64-8785-d93d9890e819",
+          "name": "Uva Vitória",
+          "sku": "PRD-MUHQO1BS-XYW",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 13.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "61c690b6-f647-4eba-a0e9-1af1e08401dc",
+          "name": "Caju",
+          "sku": "PRD-MUHQO1KL-ZJA",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 12.4,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "7b1ca71c-4f20-408e-b0c5-578a6ad3942b",
+          "name": "Mamão Papaia",
+          "sku": "PRD-MUHQO1T0-L3Y",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 10.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "dbcddc42-ba0e-4312-b697-24d1cdfab000",
+          "name": "Pera Willians",
+          "sku": "PRD-MUHQO27Z-GSV",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 19.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "21b835f2-c55b-4e6a-8efe-54d7d0e2a9d7",
+          "name": "Pêssego",
+          "sku": "PRD-MUHQO2GR-HC5",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 7.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "ed6253e7-7fd3-4e31-ab5b-6a9da3ac910a",
+          "name": "Jabuticaba",
+          "sku": "PRD-MUHQO2PI-25I",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 31.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "a58d6bc2-f685-49f0-b647-26ad444546b0",
+          "name": "Maracujá",
+          "sku": "PRD-MUHQO2Y0-OZM",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 14.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "8b70f715-cef7-4c0c-bf0e-8758b99f59e3",
+          "name": "Maçã Fuji",
+          "sku": "PRD-MUHQO36O-LD4",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 13.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "ac7bf53e-aff0-4682-9ad2-d4fbee45fa6f",
+          "name": "Pinha",
+          "sku": "PRD-MUHQO3FH-OTQ",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 28.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "2a080d81-f87d-4bed-8f03-bda3f8f42294",
+          "name": "Atemoia",
+          "sku": "PRD-MUHQO3O5-WJO",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 28.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "6d793851-e89a-4526-acd2-465e87222c30",
+          "name": "Avocado",
+          "sku": "PRD-MUHQO3WI-HGI",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 5.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "d27026f0-a76c-48dd-86de-3e17ac9b124b",
+          "name": "Ameixa Importada",
+          "sku": "PRD-MUHQO44V-O8C",
+          "category": "Frutas",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 11.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "284ad247-b3c5-4f4e-9017-b7a1069eb811",
+          "name": "Pimentão Amarelo",
+          "sku": "PRD-MUHQO4DL-2TA",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 15.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "a142676a-3f64-47d2-b9c6-267b6f5bcbde",
+          "name": "Pimentão Vermelho",
+          "sku": "PRD-MUHQO4QU-BE1",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 15.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "561db1eb-a581-405f-9841-65a924409197",
+          "name": "Pimentão Verde",
+          "sku": "PRD-MUHQO4ZG-KN8",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 8.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "e7963ee0-f393-4ba7-aada-cf6ec3bee031",
+          "name": "Cebola Nacional",
+          "sku": "PRD-MUHQO580-FUL",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 8.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "71d989d9-001a-49c7-99df-ab4e96413e7b",
+          "name": "Tomate Cereja",
+          "sku": "PRD-MUHQO5OT-Y04",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "BANDEJA",
+          "costPrice": 0,
+          "sellingPrice": 6.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "14fbef2b-082c-4d93-988b-69335658dbae",
+          "name": "Batata Lavada",
+          "sku": "PRD-MUHQO5YK-V42",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 9.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "3ddf5a89-86eb-46d7-ab2d-cc77fd9cf7b7",
+          "name": "Cenoura",
+          "sku": "PRD-MUHQO6FH-OBM",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 7.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "8be5beff-6f16-4dc8-b14c-fd2f8d1ada0b",
+          "name": "Abobrinha Italiana",
+          "sku": "PRD-MUHQO6NY-JLJ",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 0,
+          "sellingPrice": 11.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "5c97d9b2-2c69-42ff-acff-aebc2491ba93",
+          "name": "Alho Descascado (Pacote 250g)",
+          "sku": "PRD-MUHQO6WR-7L7",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "PCT",
+          "costPrice": 0,
+          "sellingPrice": 15.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "ef1b8e66-f221-4056-a705-74f805f12a58",
+          "name": "Alface Crespa",
+          "sku": "PRD-MUHQO75I-1NF",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 7,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "b8df168a-ffc4-4e8b-8b6f-36c85cf3d204",
+          "name": "Alface Americana",
+          "sku": "PRD-MUHQO7E7-75R",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 7,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "12674331-780b-4969-8b56-2566038aae42",
+          "name": "Manjericão",
+          "sku": "PRD-MUHQO7MU-1RI",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 5.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "19c3770b-144a-4d0e-8aa4-1b7747615085",
+          "name": "Rúcula",
+          "sku": "PRD-MUHQO7VR-R1Y",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 7,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "56326fcc-e99c-4e1d-8867-867f9b334b55",
+          "name": "Brócolis Ninja",
+          "sku": "PRD-MUHQO83Z-MCJ",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 11.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "9ca17322-94ac-488d-89a2-b132344f8793",
+          "name": "Brócolis Rama",
+          "sku": "PRD-MUHQO8D6-FDU",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 20.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "b886c24c-1f68-4bb7-a0be-3983f363c417",
+          "name": "Couve Manteiga",
+          "sku": "PRD-MUHQO8M8-RCM",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 6.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "3ff111ab-a56b-4880-ba8c-2debc8e53d16",
+          "name": "Shimeji",
+          "sku": "PRD-MUHQO8V4-4JG",
+          "category": "Cogumelos",
+          "quantity": 0,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 12.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "8097b5ce-dedb-4020-8536-0b9e4b292e32",
+          "name": "Shiitake",
+          "sku": "PRD-MUHQO97V-J8J",
+          "category": "Cogumelos",
+          "quantity": 9,
+          "unit": "UN",
+          "costPrice": 0,
+          "sellingPrice": 15.9,
+          "totalCostValue": 0,
+          "totalSellingValue": 143.1,
+          "estimatedProfit": 143.1,
+          "marginPercent": 100
+        },
+        {
+          "productId": "2b874693-ab98-411c-8261-5b8fd1d1efc6",
+          "name": "Tomate Carmem",
+          "sku": "PRD-MUHQO5GF-QWV",
+          "category": "Verduras e Legumes",
+          "quantity": 18,
+          "unit": "KG",
+          "costPrice": 199.99,
+          "sellingPrice": 13.9,
+          "totalCostValue": 3599.82,
+          "totalSellingValue": 250.2,
+          "estimatedProfit": -3349.62,
+          "marginPercent": -1338.78
+        },
+        {
+          "productId": "e3c6de9e-b0b1-4b15-94c7-feee247f1d4f",
+          "name": "Ovo Extra Branco (Cartela 30 un)",
+          "sku": "PRD-MUHQO9GS-6BO",
+          "category": "Ovos",
+          "quantity": 0,
+          "unit": "CX",
+          "costPrice": 0,
+          "sellingPrice": 28.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        },
+        {
+          "productId": "b1372a6f-5cf1-460d-81ec-905aa6a66393",
+          "name": "Ovo Jumbo Branco (Cartela 30 un)",
+          "sku": "PRD-MUHQO9TS-D0D",
+          "category": "Ovos",
+          "quantity": 9,
+          "unit": "CX",
+          "costPrice": 0,
+          "sellingPrice": 34.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 313.2,
+          "estimatedProfit": 313.2,
+          "marginPercent": 100
+        },
+        {
+          "productId": "2b7df891-cfa8-4ee3-9436-6bba6ea57828",
+          "name": "Batata Doce Roxa",
+          "sku": "PRD-MUHQO66O-P2P",
+          "category": "Verduras e Legumes",
+          "quantity": 0,
+          "unit": "KG",
+          "costPrice": 3.5,
+          "sellingPrice": 6.8,
+          "totalCostValue": 0,
+          "totalSellingValue": 0,
+          "estimatedProfit": 0,
+          "marginPercent": 0
+        }
+      ]
+    },
+    {
+      "id": "abc_curve_pareto",
+      "title": "Curva ABC & Mix de Produtos (Pareto 80/15/5)",
+      "endpoint": "Calculado sobre /products e /stock_balances",
+      "description": "Classificação de relevância em Classes A (80% da receita potencial), B (15%) e C (5%).",
+      "items": [
+        {
+          "name": "Ovo Jumbo Branco (Cartela 30 un)",
+          "sku": "PRD-MUHQO9TS-D0D",
+          "category": "Ovos",
+          "totalSellingValue": 313.2,
+          "sharePercent": 44.33,
+          "cumulativePercent": 44.33,
+          "abcClass": "A"
+        },
+        {
+          "name": "Tomate Carmem",
+          "sku": "PRD-MUHQO5GF-QWV",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 250.2,
+          "sharePercent": 35.41,
+          "cumulativePercent": 79.75,
+          "abcClass": "A"
+        },
+        {
+          "name": "Shiitake",
+          "sku": "PRD-MUHQO97V-J8J",
+          "category": "Cogumelos",
+          "totalSellingValue": 143.1,
+          "sharePercent": 20.25,
+          "cumulativePercent": 100,
+          "abcClass": "A"
+        },
+        {
+          "name": "Morango Foundi",
+          "sku": "PRD-MUHQNWER-2PW",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Morango Premium",
+          "sku": "PRD-MUHQNX9V-L6L",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Morango Gold",
+          "sku": "PRD-MUHQNXP4-NWT",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Melão Amarelo",
+          "sku": "PRD-MUHQNXYB-SLT",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Melancia (1/4 unidade)",
+          "sku": "PRD-MUHQNY7F-MIN",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Banana Nanica",
+          "sku": "PRD-MUHQNYFS-66H",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Banana Prata",
+          "sku": "PRD-MUHQNYOO-WX5",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Kiwi Gold",
+          "sku": "PRD-MUHQNYX4-VR4",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Manga Palmer",
+          "sku": "PRD-MUHQNZ5J-9YA",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Abacaxi",
+          "sku": "PRD-MUHQNZFJ-P2J",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Abacaxi Descascado",
+          "sku": "PRD-MUHQNZOI-0MI",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Mexerica Murcote",
+          "sku": "PRD-MUHQNZX5-J23",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Mexerica Carioca",
+          "sku": "PRD-MUHQO05S-Y4Z",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Laranja Pera Rio",
+          "sku": "PRD-MUHQO0LV-6QL",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Limão Taiti",
+          "sku": "PRD-MUHQO0UQ-THQ",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Uva Premium P",
+          "sku": "PRD-MUHQO13B-9N0",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Uva Vitória",
+          "sku": "PRD-MUHQO1BS-XYW",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Caju",
+          "sku": "PRD-MUHQO1KL-ZJA",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Mamão Papaia",
+          "sku": "PRD-MUHQO1T0-L3Y",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Pera Willians",
+          "sku": "PRD-MUHQO27Z-GSV",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Pêssego",
+          "sku": "PRD-MUHQO2GR-HC5",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Jabuticaba",
+          "sku": "PRD-MUHQO2PI-25I",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Maracujá",
+          "sku": "PRD-MUHQO2Y0-OZM",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Maçã Fuji",
+          "sku": "PRD-MUHQO36O-LD4",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Pinha",
+          "sku": "PRD-MUHQO3FH-OTQ",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Atemoia",
+          "sku": "PRD-MUHQO3O5-WJO",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Avocado",
+          "sku": "PRD-MUHQO3WI-HGI",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Ameixa Importada",
+          "sku": "PRD-MUHQO44V-O8C",
+          "category": "Frutas",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Pimentão Amarelo",
+          "sku": "PRD-MUHQO4DL-2TA",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Pimentão Vermelho",
+          "sku": "PRD-MUHQO4QU-BE1",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Pimentão Verde",
+          "sku": "PRD-MUHQO4ZG-KN8",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Cebola Nacional",
+          "sku": "PRD-MUHQO580-FUL",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Tomate Cereja",
+          "sku": "PRD-MUHQO5OT-Y04",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Batata Lavada",
+          "sku": "PRD-MUHQO5YK-V42",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Cenoura",
+          "sku": "PRD-MUHQO6FH-OBM",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Abobrinha Italiana",
+          "sku": "PRD-MUHQO6NY-JLJ",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Alho Descascado (Pacote 250g)",
+          "sku": "PRD-MUHQO6WR-7L7",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Alface Crespa",
+          "sku": "PRD-MUHQO75I-1NF",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Alface Americana",
+          "sku": "PRD-MUHQO7E7-75R",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Manjericão",
+          "sku": "PRD-MUHQO7MU-1RI",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Rúcula",
+          "sku": "PRD-MUHQO7VR-R1Y",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Brócolis Ninja",
+          "sku": "PRD-MUHQO83Z-MCJ",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Brócolis Rama",
+          "sku": "PRD-MUHQO8D6-FDU",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Couve Manteiga",
+          "sku": "PRD-MUHQO8M8-RCM",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Shimeji",
+          "sku": "PRD-MUHQO8V4-4JG",
+          "category": "Cogumelos",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Ovo Extra Branco (Cartela 30 un)",
+          "sku": "PRD-MUHQO9GS-6BO",
+          "category": "Ovos",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        },
+        {
+          "name": "Batata Doce Roxa",
+          "sku": "PRD-MUHQO66O-P2P",
+          "category": "Verduras e Legumes",
+          "totalSellingValue": 0,
+          "sharePercent": 0,
+          "cumulativePercent": 100,
+          "abcClass": "C"
+        }
+      ]
+    },
+    {
+      "id": "stockout_replenishment",
+      "title": "Ruptura & Necessidade de Reposição",
+      "endpoint": "Filtro por saldo <= 0 e saldo <= min_stock",
+      "description": "Monitoramento de SKUs zerados ou críticos, indicando déficit de compra e custo de reposição.",
+      "criticalCount": 47,
+      "items": [
+        {
+          "name": "Morango Foundi",
+          "sku": "PRD-MUHQNWER-2PW",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Morango Premium",
+          "sku": "PRD-MUHQNX9V-L6L",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Morango Gold",
+          "sku": "PRD-MUHQNXP4-NWT",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Melão Amarelo",
+          "sku": "PRD-MUHQNXYB-SLT",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Melancia (1/4 unidade)",
+          "sku": "PRD-MUHQNY7F-MIN",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Banana Nanica",
+          "sku": "PRD-MUHQNYFS-66H",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Banana Prata",
+          "sku": "PRD-MUHQNYOO-WX5",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Kiwi Gold",
+          "sku": "PRD-MUHQNYX4-VR4",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Manga Palmer",
+          "sku": "PRD-MUHQNZ5J-9YA",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Abacaxi",
+          "sku": "PRD-MUHQNZFJ-P2J",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Abacaxi Descascado",
+          "sku": "PRD-MUHQNZOI-0MI",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Mexerica Murcote",
+          "sku": "PRD-MUHQNZX5-J23",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Mexerica Carioca",
+          "sku": "PRD-MUHQO05S-Y4Z",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Laranja Pera Rio",
+          "sku": "PRD-MUHQO0LV-6QL",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Limão Taiti",
+          "sku": "PRD-MUHQO0UQ-THQ",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Uva Premium P",
+          "sku": "PRD-MUHQO13B-9N0",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Uva Vitória",
+          "sku": "PRD-MUHQO1BS-XYW",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Caju",
+          "sku": "PRD-MUHQO1KL-ZJA",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Mamão Papaia",
+          "sku": "PRD-MUHQO1T0-L3Y",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Pera Willians",
+          "sku": "PRD-MUHQO27Z-GSV",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Pêssego",
+          "sku": "PRD-MUHQO2GR-HC5",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Jabuticaba",
+          "sku": "PRD-MUHQO2PI-25I",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Maracujá",
+          "sku": "PRD-MUHQO2Y0-OZM",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Maçã Fuji",
+          "sku": "PRD-MUHQO36O-LD4",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Pinha",
+          "sku": "PRD-MUHQO3FH-OTQ",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Atemoia",
+          "sku": "PRD-MUHQO3O5-WJO",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Avocado",
+          "sku": "PRD-MUHQO3WI-HGI",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Ameixa Importada",
+          "sku": "PRD-MUHQO44V-O8C",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Pimentão Amarelo",
+          "sku": "PRD-MUHQO4DL-2TA",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Pimentão Vermelho",
+          "sku": "PRD-MUHQO4QU-BE1",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Pimentão Verde",
+          "sku": "PRD-MUHQO4ZG-KN8",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Cebola Nacional",
+          "sku": "PRD-MUHQO580-FUL",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Tomate Cereja",
+          "sku": "PRD-MUHQO5OT-Y04",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Batata Lavada",
+          "sku": "PRD-MUHQO5YK-V42",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Cenoura",
+          "sku": "PRD-MUHQO6FH-OBM",
+          "quantity": 0,
+          "minStock": 10,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 10,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Abobrinha Italiana",
+          "sku": "PRD-MUHQO6NY-JLJ",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Alho Descascado (Pacote 250g)",
+          "sku": "PRD-MUHQO6WR-7L7",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Alface Crespa",
+          "sku": "PRD-MUHQO75I-1NF",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Alface Americana",
+          "sku": "PRD-MUHQO7E7-75R",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Manjericão",
+          "sku": "PRD-MUHQO7MU-1RI",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Rúcula",
+          "sku": "PRD-MUHQO7VR-R1Y",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Brócolis Ninja",
+          "sku": "PRD-MUHQO83Z-MCJ",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Brócolis Rama",
+          "sku": "PRD-MUHQO8D6-FDU",
+          "quantity": 0,
+          "minStock": 3,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 3,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Couve Manteiga",
+          "sku": "PRD-MUHQO8M8-RCM",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Shimeji",
+          "sku": "PRD-MUHQO8V4-4JG",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Ovo Extra Branco (Cartela 30 un)",
+          "sku": "PRD-MUHQO9GS-6BO",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 0
+        },
+        {
+          "name": "Batata Doce Roxa",
+          "sku": "PRD-MUHQO66O-P2P",
+          "quantity": 0,
+          "minStock": 5,
+          "status": "RUPTURA_TOTAL",
+          "shortageUnits": 5,
+          "replenishmentCost": 17.5
+        }
+      ]
+    },
+    {
+      "id": "purchasing_history",
+      "title": "Histórico de Compras & Fornecedores",
+      "endpoint": "GET /rest/v1/purchase_orders?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "description": "Ordens de compra emitidas, fornecedores e valores negociados.",
+      "ordersCount": 2,
+      "orders": [
+        {
+          "orderNumber": "OC-285631",
+          "supplier": "Davo ",
+          "status": "RECEIVED",
+          "totalAmount": 350,
+          "itemsCount": 1,
+          "issuedAt": "2026-09-26T03:11:25.631+00:00",
+          "receivedAt": "2026-09-26T03:11:33.178551+00:00"
+        },
+        {
+          "orderNumber": "OC-362099",
+          "supplier": "Davo ",
+          "status": "RECEIVED",
+          "totalAmount": 3599.82,
+          "itemsCount": 1,
+          "issuedAt": "2026-10-02T01:09:22.099+00:00",
+          "receivedAt": "2026-10-02T01:15:47.654582+00:00"
+        }
+      ]
+    },
+    {
+      "id": "operational_losses",
+      "title": "Perdas & Baixas Operacionais",
+      "endpoint": "GET /rest/v1/stock_movements?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&movement_type=in.(LOSS,DAMAGE,EXPIRATION)",
+      "description": "Registro de quebras operacionais, avarias e vencimentos com impacto financeiro.",
+      "lossesCount": 2,
+      "losses": [
+        {
+          "id": "58c58c3d-5fd9-434b-a707-9e9d7dd0c3cb",
+          "productName": "Batata Doce Roxa",
+          "sku": "PRD-MUHQO66O-P2P",
+          "movementType": "EXPIRATION",
+          "quantity": 1,
+          "unitCost": 3.5,
+          "totalLoss": 3.5,
+          "createdAt": "2026-09-27T22:28:28.788177+00:00"
+        },
+        {
+          "id": "cb254750-ef95-4333-ba5f-ed2089014cfb",
+          "productName": "Batata Doce Roxa",
+          "sku": "PRD-MUHQO66O-P2P",
+          "movementType": "LOSS",
+          "quantity": 99,
+          "unitCost": 3.5,
+          "totalLoss": 346.5,
+          "createdAt": "2026-09-27T22:29:22.601409+00:00"
+        }
+      ]
+    },
+    {
+      "id": "sales_performance",
+      "title": "Desempenho de Vendas & Faturamento",
+      "endpoint": "GET /rest/v1/orders?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+      "description": "Consolidação de pedidos de venda, faturamento bruto e ticket médio.",
+      "summary": {
+        "totalOrdersCount": 1,
+        "totalRevenue": 50.7,
+        "averageTicket": 50.7,
+        "orders": [
+          {
+            "id": "8af1c873-9b90-4a29-a513-23e2e8dda60a",
+            "order_number": "PED-967570",
+            "status": "PENDING",
+            "subtotal": 50.7,
+            "discount_amount": 0,
+            "total_amount": 50.7,
+            "created_at": "2026-10-02T01:02:46.37799+00:00"
+          }
+        ]
+      }
+    }
+  ]
+}

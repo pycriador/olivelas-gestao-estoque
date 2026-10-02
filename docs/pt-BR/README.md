@@ -46,6 +46,7 @@ Contexto (overview, ai-context)
 | [operations.md](operations.md) | Operation | Dev local, CI/CD, migrations |
 | [knowledge-gaps.md](knowledge-gaps.md) | Evidence | O que o repositório **não** documenta ou não implementa |
 | [changelog.md](changelog.md) | Reference | Histórico desta árvore de docs |
+| [api-ai-integration.md](api-ai-integration.md) | Reference | Endpoints REST, tokens HBAC e relatórios para IA externa |
 | [guides/ui-desktop.md](guides/ui-desktop.md) | Reference | Como replicar a lógica de interface **desktop** |
 | [guides/ui-mobile.md](guides/ui-mobile.md) | Reference | Como replicar a lógica de interface **mobile** |
 
