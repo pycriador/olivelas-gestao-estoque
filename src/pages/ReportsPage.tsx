@@ -27,6 +27,7 @@ import {
   PieChart,
   BarChart3,
   ShieldAlert,
+  Filter,
 } from 'lucide-react'
 import type {
   ValuationReportItem,
@@ -445,6 +446,67 @@ export function ReportsPage() {
     printFormattedDocument(`Relatório Executivo - ${storeName}`, html)
   }
 
+  const reportTabs = [
+    {
+      id: 'valuation' as const,
+      label: 'Valorização & Lucro',
+      shortLabel: 'Valorização',
+      icon: Layers,
+      color: 'text-blue-500',
+      description: 'Valoração física a custo e venda, cálculo de markup e margem estimada por SKU.',
+      badge: summaryKPIs?.totalPhysicalUnits ? `${summaryKPIs.totalPhysicalUnits} un.` : undefined,
+    },
+    {
+      id: 'abc' as const,
+      label: 'Curva ABC & Mix',
+      shortLabel: 'Curva ABC',
+      icon: PieChart,
+      color: 'text-violet-500',
+      description: 'Classificação de Pareto (80/15/5) para identificar produtos de maior impacto financeiro.',
+      badge: '80/15/5',
+    },
+    {
+      id: 'purchasing' as const,
+      label: 'Compras & Fornecedores',
+      shortLabel: 'Compras',
+      icon: ShoppingCart,
+      color: 'text-emerald-500',
+      description: 'Histórico de aquisições com custo unitário real por fornecedor e lote de entrada.',
+      badge: purchasingData.length > 0 ? `${purchasingData.length}` : undefined,
+    },
+    {
+      id: 'losses' as const,
+      label: 'Perdas & Baixas',
+      shortLabel: 'Perdas',
+      icon: ShieldAlert,
+      color: 'text-rose-500',
+      description: 'Registro detalhado de quebras, avarias e desvios com impacto no resultado.',
+      badge: summaryKPIs?.totalLossValueMonth && summaryKPIs.totalLossValueMonth > 0 ? 'Atenção' : undefined,
+      badgeVariant: 'destructive' as const,
+    },
+    {
+      id: 'stockouts' as const,
+      label: 'Ruptura & Reposição',
+      shortLabel: 'Ruptura',
+      icon: AlertTriangle,
+      color: 'text-amber-500',
+      description: 'Monitoramento de produtos esgotados ou operando abaixo do estoque mínimo.',
+      badge: summaryKPIs?.stockoutCount && summaryKPIs.stockoutCount > 0 ? `${summaryKPIs.stockoutCount} zerado(s)` : undefined,
+      badgeVariant: 'destructive' as const,
+    },
+    {
+      id: 'sales' as const,
+      label: 'Vendas & Desempenho',
+      shortLabel: 'Vendas',
+      icon: TrendingUp,
+      color: 'text-teal-500',
+      description: 'Consolidação de faturamento, volume de vendas, descontos e ticket por produto.',
+      badge: summaryKPIs?.salesMonthTotal && summaryKPIs.salesMonthTotal > 0 ? 'Ativo' : undefined,
+    },
+  ]
+
+  const currentTabMeta = reportTabs.find((t) => t.id === activeTab) || reportTabs[0]
+
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Global Actions */}
@@ -539,141 +601,154 @@ export function ReportsPage() {
         </Card>
       </div>
 
-      {/* Reports Navigation Tabs & Toolbar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 flex-shrink-0">
-        {/* Horizontal Tab Switcher */}
-        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 bg-muted/50 p-1 rounded-xl border border-border">
-          <button
-            type="button"
-            onClick={() => handleTabChange('valuation')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'valuation'
-                ? 'bg-card text-primary shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Layers className="h-3.5 w-3.5" />
-            Valorização & Lucro
-          </button>
+      {/* Reports Navigation Tabs & Action Bar */}
+      <div className="space-y-2 flex-shrink-0">
+        {/* Modern Segmented Navigation Bar */}
+        <div className="bg-card border border-border rounded-xl p-1 shadow-xs">
+          <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5">
+            {reportTabs.map((tab) => {
+              const Icon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer flex-1 sm:flex-initial justify-center sm:justify-start ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground shadow-xs font-bold'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
+                  }`}
+                >
+                  <Icon className={`h-3.5 w-3.5 ${isActive ? 'text-primary-foreground' : tab.color}`} />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.shortLabel}</span>
 
-          <button
-            type="button"
-            onClick={() => handleTabChange('abc')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'abc'
-                ? 'bg-card text-primary shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <PieChart className="h-3.5 w-3.5" />
-            Curva ABC
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('purchasing')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'purchasing'
-                ? 'bg-card text-primary shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <ShoppingCart className="h-3.5 w-3.5" />
-            Compras
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('losses')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'losses'
-                ? 'bg-card text-primary shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <ShieldAlert className="h-3.5 w-3.5" />
-            Perdas & Baixas
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('stockouts')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'stockouts'
-                ? 'bg-card text-primary shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <AlertTriangle className="h-3.5 w-3.5" />
-            Ruptura & Reposição
-          </button>
-
-          <button
-            type="button"
-            onClick={() => handleTabChange('sales')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
-              activeTab === 'sales'
-                ? 'bg-card text-primary shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <TrendingUp className="h-3.5 w-3.5" />
-            Vendas
-          </button>
+                  {tab.badge && (
+                    <span
+                      className={`ml-1 text-[10px] px-1.5 py-0.2 rounded-full font-mono font-medium ${
+                        isActive
+                          ? 'bg-primary-foreground/20 text-primary-foreground'
+                          : tab.badgeVariant === 'destructive'
+                          ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
 
-        {/* Toolbar Filters & Action Buttons */}
-        <div className="flex items-center gap-2 flex-wrap ml-auto">
-          {activeTab === 'valuation' && categories.length > 0 && (
-            <select
-              value={categoryFilter}
-              onChange={(e) => handleCategoryChange(e.target.value)}
-              aria-label="Filtrar por categoria"
-              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todas Categorias</option>
-              {categories.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
-          )}
+        {/* Dynamic Contextual Toolbar: Report Info + Filters + Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-muted/40 border border-border/80 rounded-xl px-3 py-2">
+          {/* Active Report Description & Info */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="p-1.5 rounded-lg bg-card border border-border flex-shrink-0 shadow-2xs">
+              {React.createElement(currentTabMeta.icon, {
+                className: `h-4 w-4 ${currentTabMeta.color}`,
+              })}
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-foreground">
+                  {currentTabMeta.label}
+                </span>
+                <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 font-mono font-normal">
+                  {totalFiltered} {totalFiltered === 1 ? 'registro' : 'registros'}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-muted-foreground truncate hidden md:block">
+                {currentTabMeta.description}
+              </p>
+            </div>
+          </div>
 
-          {activeTab === 'abc' && (
-            <select
-              value={statusFilter}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              aria-label="Filtrar por classe ABC"
-              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todas as Classes</option>
-              <option value="A">Classe A (80% Valor)</option>
-              <option value="B">Classe B (15% Valor)</option>
-              <option value="C">Classe C (5% Valor)</option>
-            </select>
-          )}
+          {/* Filters & Export Actions Group */}
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end flex-shrink-0">
+            {/* Dynamic Filter: Categories (Valuation) */}
+            {activeTab === 'valuation' && categories.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
+                <Filter className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  aria-label="Filtrar por categoria"
+                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">Todas Categorias</option>
+                  {categories.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-          {activeTab === 'stockouts' && (
-            <select
-              value={statusFilter}
-              onChange={(e) => handleStatusChange(e.target.value)}
-              aria-label="Filtrar por gravidade"
-              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todas as Gravidades</option>
-              <option value="CRITICAL">Ruptura Total (Saldo 0)</option>
-              <option value="WARNING">Estoque Crítico (Abaixo Mín.)</option>
-            </select>
-          )}
+            {/* Dynamic Filter: ABC Class */}
+            {activeTab === 'abc' && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
+                <Filter className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  aria-label="Filtrar por classe ABC"
+                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">Todas as Classes</option>
+                  <option value="A">Classe A (80% Faturamento)</option>
+                  <option value="B">Classe B (15% Faturamento)</option>
+                  <option value="C">Classe C (5% Faturamento)</option>
+                </select>
+              </div>
+            )}
 
-          <Button variant="outline" size="sm" onClick={handleExportCSV} className="h-8 text-xs px-2.5">
-            <Download className="h-3.5 w-3.5 mr-1" /> Exportar CSV
-          </Button>
+            {/* Dynamic Filter: Stockout Severity */}
+            {activeTab === 'stockouts' && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
+                <AlertTriangle className="h-3 w-3 text-amber-500 flex-shrink-0" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  aria-label="Filtrar por gravidade"
+                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">Todas as Gravidades</option>
+                  <option value="CRITICAL">Ruptura Total (Saldo 0)</option>
+                  <option value="WARNING">Estoque Crítico (Abaixo Mín.)</option>
+                </select>
+              </div>
+            )}
 
-          <Button variant="outline" size="sm" onClick={handlePrintSummary} className="h-8 text-xs px-2.5">
-            <Printer className="h-3.5 w-3.5 mr-1" /> Imprimir
-          </Button>
+            {/* Action Buttons */}
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                className="h-8 text-xs px-2.5 bg-background hover:bg-muted/80 shadow-2xs cursor-pointer"
+                title="Exportar dados do relatório atual para planilha CSV"
+              >
+                <Download className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                <span>Exportar CSV</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrintSummary}
+                className="h-8 text-xs px-2.5 bg-background hover:bg-muted/80 shadow-2xs cursor-pointer"
+                title="Imprimir demonstrativo executivo consolidado"
+              >
+                <Printer className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+                <span>Imprimir</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 

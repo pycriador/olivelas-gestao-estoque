@@ -12,6 +12,13 @@ classification: Confirmed
 
 # Changelog da documentação
 
+## 2026-10-02
+
+- Redesenho e modernização do menu de relatórios em `/reports` (`ReportsPage.tsx`):
+  - **Menu Segmentado de Relatórios**: Barra de navegação moderna com abas em pílula, ícones dedicados por tipo de análise, títulos responsivos e badges dinâmicos de contagem/alerta (ex: total de unidades, status da Curva ABC 80/15/5, alertas de ruptura e perdas).
+  - **Barra de Contexto e Filtros Integrada**: Header contextual com ícone temático, descrição explicativa da análise ativa, contador instantâneo de registros filtrados, seletores de categoria/classe ABC/gravidade com ícones integrados e botões de ação rápida para exportação CSV e impressão de demonstrativo executivo.
+  - **Experiência Responsiva e Touch**: Container com rolagem horizontal suave para dispositivos móveis sem quebra de layout ou estouro de viewport.
+
 ## 2026-10-01
 
 - Painel Global Admin (`/global-admin`, `GlobalAdminDashboardPage.tsx`):
