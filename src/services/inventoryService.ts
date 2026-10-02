@@ -89,6 +89,8 @@ export const inventoryService = {
           name,
           sku,
           min_stock,
+          cost_price,
+          selling_price,
           unit,
           deleted_at
         )
@@ -116,22 +118,90 @@ export const inventoryService = {
 
     if (error) throw error
 
-    const list = (data || []).map((item: any) => ({
-      id: item.id,
-      store_id: item.store_id,
-      product_id: item.product_id,
-      quantity: Number(item.quantity),
-      reserved_quantity: Number(item.reserved_quantity),
-      available_quantity: Number(item.available_quantity),
-      updated_at: item.updated_at,
-      product_name: item.products?.name || 'Produto',
-      product_sku: item.products?.sku || '',
-      min_stock: item.products?.min_stock || 0,
-    }))
+    const list = (data || []).map((item: any) => {
+      const prod = Array.isArray(item.products) ? item.products[0] : item.products
+      const qty = Number(item.quantity)
+      const costPrice = Number(prod?.cost_price) || 0
+      const sellingPrice = Number(prod?.selling_price) || 0
+      const totalCost = qty * costPrice
+      const totalSelling = qty * sellingPrice
+
+      return {
+        id: item.id,
+        store_id: item.store_id,
+        product_id: item.product_id,
+        quantity: qty,
+        reserved_quantity: Number(item.reserved_quantity),
+        available_quantity: Number(item.available_quantity),
+        updated_at: item.updated_at,
+        product_name: prod?.name || 'Produto',
+        product_sku: prod?.sku || '',
+        min_stock: prod?.min_stock || 0,
+        unit: prod?.unit || 'UN',
+        cost_price: costPrice,
+        selling_price: sellingPrice,
+        total_cost_value: totalCost,
+        total_selling_value: totalSelling,
+        potential_profit: totalSelling - totalCost,
+      }
+    })
 
     return {
       data: list,
       total: count || list.length,
+    }
+  },
+
+  /**
+   * Resumo consolidado de avaliação do estoque da loja (Custo Total, Venda Total e Margem)
+   */
+  async getStockValuationSummary(storeId: string): Promise<{
+    totalItems: number
+    totalPhysicalUnits: number
+    totalCostValue: number
+    totalSellingValue: number
+    potentialProfit: number
+    marginPercent: number
+  }> {
+    const { data, error } = await supabase
+      .from('stock_balances')
+      .select(`
+        quantity,
+        products!inner (
+          cost_price,
+          selling_price,
+          deleted_at
+        )
+      `)
+      .eq('store_id', storeId)
+      .is('products.deleted_at', null)
+
+    if (error) throw error
+
+    let totalPhysicalUnits = 0
+    let totalCostValue = 0
+    let totalSellingValue = 0
+
+    for (const row of (data || []) as any[]) {
+      const product = Array.isArray(row.products) ? row.products[0] : row.products
+      const qty = Math.max(0, Number(row.quantity) || 0)
+      const cost = Number(product?.cost_price) || 0
+      const selling = Number(product?.selling_price) || 0
+      totalPhysicalUnits += qty
+      totalCostValue += qty * cost
+      totalSellingValue += qty * selling
+    }
+
+    const potentialProfit = totalSellingValue - totalCostValue
+    const marginPercent = totalSellingValue > 0 ? (potentialProfit / totalSellingValue) * 100 : 0
+
+    return {
+      totalItems: data?.length || 0,
+      totalPhysicalUnits,
+      totalCostValue,
+      totalSellingValue,
+      potentialProfit,
+      marginPercent,
     }
   },
 
@@ -614,6 +684,73 @@ export const inventoryService = {
         action: 'STOCK_BULK_ENTRY',
         entity: 'stock_balances',
         afterData: { count: successCount, itemsCount: items.length },
+      })
+    }
+
+    return { successCount, errorCount: errors.length, errors }
+  },
+
+  /**
+   * Baixa de estoque em lote para múltiplos produtos selecionados
+   */
+  async writeoffBulkStock(
+    storeId: string,
+    items: {
+      productId: string
+      quantity: number
+      batchId?: string | null
+      lotNumber?: string | null
+      expirationDate?: string | null
+      unitCost?: number | null
+    }[],
+    common: {
+      movementType: StockMovementType
+      reasonCode: string
+      reasonDetail?: string | null
+      costCenterId: string
+      approvedBy?: string | null
+      notes?: string | null
+    }
+  ): Promise<{ successCount: number; errorCount: number; errors: string[] }> {
+    const errors: string[] = []
+    let successCount = 0
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (!item.quantity || item.quantity <= 0) continue
+
+      try {
+        await inventoryService.applyMovement({
+          productId: item.productId,
+          movementType: common.movementType,
+          quantity: item.quantity,
+          batchId: item.batchId || null,
+          lotNumber: item.lotNumber || null,
+          expirationDate: item.expirationDate || null,
+          unitCost: item.unitCost ?? null,
+          reasonCode: common.reasonCode,
+          reasonDetail: common.reasonDetail || null,
+          costCenterId: common.costCenterId,
+          notes: common.notes || null,
+          approvedBy: common.approvedBy || null,
+        })
+        successCount++
+      } catch (err: any) {
+        errors.push(`Item ${i + 1}: ${err?.message || 'Falha ao processar baixa de estoque'}`)
+      }
+    }
+
+    if (successCount > 0) {
+      auditService.logAction({
+        storeId,
+        action: 'STOCK_BULK_WRITEOFF',
+        entity: 'stock_balances',
+        afterData: {
+          count: successCount,
+          itemsCount: items.length,
+          movementType: common.movementType,
+          reasonCode: common.reasonCode,
+        },
       })
     }
 

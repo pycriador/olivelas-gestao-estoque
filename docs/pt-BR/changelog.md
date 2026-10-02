@@ -12,6 +12,13 @@ classification: Confirmed
 
 # Changelog da documentação
 
+## 2026-10-01
+
+- Implementação de avaliação financeira e valores de produtos em `/inventory`: exibição de Valor de Compra (Custo unitário e total), Valor de Venda (tabela unitário e total), Lucro Estimado e Margem média consolidada nos cards de KPI e colunas da tabela de saldos (`InventoryPage.tsx`, `inventoryService.ts`, `inventory.types.ts`).
+- Exportação avançada de saldos em CSV incluindo valores de compra, venda, totalização e margem estimada.
+- Implementação de seleção múltipla e baixa de estoque em lote na aba de saldos de `/inventory` (`BulkStockWriteoffModal.tsx`, `inventoryService.writeoffBulkStock`, `InventoryPage.tsx`), com suporte a motivo, centro de custo, aprovador e preenchimento rápido de saldo total.
+- Ação em lote para remoção de produtos zerados selecionados para Global Admin.
+
 ## 2026-09-30
 
 - Correção de contraste e legibilidade da badge "Global Admin" na listagem de usuários de `/global-admin` (`GlobalAdminDashboardPage.tsx`).

@@ -11,6 +11,12 @@ export interface StockBalance {
   product_name?: string
   product_sku?: string
   min_stock?: number
+  unit?: string
+  cost_price?: number
+  selling_price?: number
+  total_cost_value?: number
+  total_selling_value?: number
+  potential_profit?: number
 }
 
 export interface StockMovement {

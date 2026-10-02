@@ -10,6 +10,7 @@ import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatDate, formatDateTime } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
 import { exportToCSV } from '@/utils/export'
+import { formatCurrency } from '@/utils/currency'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
+import { BulkStockWriteoffModal } from '@/components/inventory/BulkStockWriteoffModal'
 import { StockImportModal } from '@/components/inventory/StockImportModal'
 import { toast } from 'sonner'
 import {
@@ -36,6 +38,9 @@ import {
   ShieldAlert,
   Upload,
   Trash2,
+  Wallet,
+  CircleDollarSign,
+  TrendingUp,
 } from 'lucide-react'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -90,7 +95,9 @@ export function InventoryPage() {
 
   const [isMovementModalOpen, setIsMovementModalOpen] = React.useState(false)
   const [isWriteoffModalOpen, setIsWriteoffModalOpen] = React.useState(false)
+  const [isBulkWriteoffModalOpen, setIsBulkWriteoffModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
+  const [selectedBalanceIds, setSelectedBalanceIds] = React.useState<string[]>([])
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   // Form states
@@ -110,6 +117,13 @@ export function InventoryPage() {
         sortBy,
         sortOrder,
       }),
+    enabled: Boolean(hasActiveStore && activeTab === 'balances'),
+  })
+
+  // Query Store Valuation
+  const { data: valuation } = useQuery({
+    queryKey: ['stock-valuation', storeId],
+    queryFn: () => inventoryService.getStockValuationSummary(storeId),
     enabled: Boolean(hasActiveStore && activeTab === 'balances'),
   })
 
@@ -157,6 +171,10 @@ export function InventoryPage() {
   const totalBalancesPages = Math.ceil(totalBalances / pageSize) || 1
   const zeroStockCount = balances.filter((b) => b.quantity <= 0).length
 
+  // Derived selected balances
+  const selectedBalances = balances.filter((b) => selectedBalanceIds.includes(b.id))
+  const selectedZeroBalances = selectedBalances.filter((b) => b.quantity <= 0)
+
   const movements = movementsData?.data || []
   const totalMovements = movementsData?.total || 0
   const totalMovementsPages = Math.ceil(totalMovements / pageSize) || 1
@@ -174,6 +192,7 @@ export function InventoryPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-movements', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-batches', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-valuation', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
       setIsMovementModalOpen(false)
@@ -186,12 +205,14 @@ export function InventoryPage() {
 
   const [deletingZeroStockBalance, setDeletingZeroStockBalance] = React.useState<any | null>(null)
   const [isBulkDeleteZeroModalOpen, setIsBulkDeleteZeroModalOpen] = React.useState(false)
+  const [isBulkDeleteSelectedZeroModalOpen, setIsBulkDeleteSelectedZeroModalOpen] = React.useState(false)
 
   const deleteZeroStockMutation = useMutation({
     mutationFn: (productId: string) =>
       inventoryService.deleteZeroStockProduct(storeId, productId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-valuation', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
       toast.success('Produto zerado removido do estoque com sucesso.')
@@ -204,32 +225,72 @@ export function InventoryPage() {
     mutationFn: () => inventoryService.deleteZeroStockProductsBulk(storeId),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-valuation', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
       toast.success(`${res.count} produto(s) zerado(s) removido(s) do estoque com sucesso.`)
       setIsBulkDeleteZeroModalOpen(false)
+      setSelectedBalanceIds([])
+    },
+    onError: (err) => setErrorMsg(parseApiError(err)),
+  })
+
+  const deleteSelectedZeroMutation = useMutation({
+    mutationFn: () =>
+      inventoryService.deleteZeroStockProductsBulk(
+        storeId,
+        selectedZeroBalances.map((b) => b.product_id)
+      ),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-valuation', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      toast.success(`${res.count} produto(s) zerado(s) selecionado(s) removido(s) do estoque com sucesso.`)
+      setIsBulkDeleteSelectedZeroModalOpen(false)
+      setSelectedBalanceIds((prev) =>
+        prev.filter((id) => !selectedZeroBalances.some((zb) => zb.id === id))
+      )
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
 
   const handleExportBalances = async () => {
     try {
-      const allBalances = await inventoryService.getStockBalances(storeId, { pageSize: 1000 })
-      if (!allBalances.data || allBalances.data.length === 0) return
+      const allBalances = await inventoryService.getStockBalances(storeId, { pageSize: 2000 })
+      if (!allBalances.data || allBalances.data.length === 0) {
+        toast.info('Nenhum registro para exportar.')
+        return
+      }
       exportToCSV(
-        'saldos_estoque',
+        'saldos_estoque_valores',
         allBalances.data,
         [
           { header: 'Produto', key: (r) => r.product_name || '-' },
           { header: 'SKU', key: (r) => r.product_sku || '-' },
+          { header: 'Unidade', key: (r) => r.unit || 'UN' },
           { header: 'Saldo Físico', key: 'quantity' },
           { header: 'Reservado', key: 'reserved_quantity' },
           { header: 'Disponível', key: 'available_quantity' },
+          { header: 'Preço de Compra / Custo Unit. (R$)', key: (r) => Number(r.cost_price || 0).toFixed(2) },
+          { header: 'Valor Total em Compra / Custo (R$)', key: (r) => Number(r.total_cost_value || 0).toFixed(2) },
+          { header: 'Preço de Venda Unit. (R$)', key: (r) => Number(r.selling_price || 0).toFixed(2) },
+          { header: 'Valor Total em Venda (R$)', key: (r) => Number(r.total_selling_value || 0).toFixed(2) },
+          { header: 'Lucro Estimado (R$)', key: (r) => Number(r.potential_profit || 0).toFixed(2) },
+          {
+            header: 'Margem Est. (%)',
+            key: (r) =>
+              r.total_selling_value && r.total_selling_value > 0
+                ? ((Number(r.potential_profit || 0) / r.total_selling_value) * 100).toFixed(1) + '%'
+                : '0.0%',
+          },
           { header: 'Estoque Mínimo', key: (r) => r.min_stock ?? 0 },
         ]
       )
+      toast.success('Relatório de saldos e valores exportado com sucesso!')
     } catch (e) {
       console.error('Export error:', e)
+      toast.error('Falha ao exportar saldos.')
     }
   }
 
@@ -281,6 +342,40 @@ export function InventoryPage() {
             <History className="h-3.5 w-3.5 inline mr-1" /> Movimentos ({totalMovements})
           </button>
         </div>
+
+        {/* Selected Balances Action Bar */}
+        {activeTab === 'balances' && selectedBalanceIds.length > 0 && (
+          <div className="flex items-center gap-1.5 bg-destructive/10 border border-destructive/30 px-2.5 py-0.5 rounded-lg animate-in fade-in">
+            <span className="text-xs font-bold text-destructive">
+              {selectedBalanceIds.length} selecionado(s)
+            </span>
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setIsBulkWriteoffModalOpen(true)}
+              className="h-7 text-xs px-2.5 font-semibold shadow-xs"
+            >
+              <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Dar Baixa ({selectedBalanceIds.length})
+            </Button>
+            {isGlobalAdmin && selectedZeroBalances.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsBulkDeleteSelectedZeroModalOpen(true)}
+                className="h-7 text-xs px-2.5 text-danger border-danger/30 hover:bg-danger/10 font-semibold"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover Zerados ({selectedZeroBalances.length})
+              </Button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSelectedBalanceIds([])}
+              className="text-[11px] text-muted-foreground hover:text-foreground underline ml-1 cursor-pointer"
+            >
+              Limpar
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
           {activeTab === 'movements' && (
@@ -360,7 +455,13 @@ export function InventoryPage() {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => setIsWriteoffModalOpen(true)}
+            onClick={() => {
+              if (selectedBalanceIds.length > 0) {
+                setIsBulkWriteoffModalOpen(true)
+              } else {
+                setIsWriteoffModalOpen(true)
+              }
+            }}
             className="h-8 text-xs px-2.5 shadow-xs font-semibold"
           >
             <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Baixa
@@ -371,6 +472,63 @@ export function InventoryPage() {
           </Button>
         </div>
       </div>
+
+      {/* Stock Valuation KPI Summary */}
+      {activeTab === 'balances' && valuation && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+          <Card className="p-2.5 bg-card border border-border shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground">Valor em Compra (Custo)</span>
+              <Wallet className="h-3.5 w-3.5 text-amber-500" />
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-foreground mt-0.5">
+              {formatCurrency(valuation.totalCostValue)}
+            </div>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {valuation.totalPhysicalUnits} un totais
+            </span>
+          </Card>
+
+          <Card className="p-2.5 bg-card border border-border shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground">Valor em Venda (Tabela)</span>
+              <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-primary mt-0.5">
+              {formatCurrency(valuation.totalSellingValue)}
+            </div>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              Potencial de faturamento
+            </span>
+          </Card>
+
+          <Card className="p-2.5 bg-card border border-border shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground">Lucro Bruto Estimado</span>
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+              {formatCurrency(valuation.potentialProfit)}
+            </div>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
+              Margem média {valuation.marginPercent.toFixed(1)}%
+            </span>
+          </Card>
+
+          <Card className="p-2.5 bg-card border border-border shadow-xs">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-semibold text-muted-foreground">Itens Cadastrados</span>
+              <Layers className="h-3.5 w-3.5 text-blue-500" />
+            </div>
+            <div className="text-sm sm:text-base font-bold font-mono text-foreground mt-0.5">
+              {valuation.totalItems} produtos
+            </div>
+            <span className="text-[10px] text-muted-foreground font-mono">
+              {zeroStockCount > 0 ? `${zeroStockCount} com saldo zerado` : 'Todos com saldo ativo'}
+            </span>
+          </Card>
+        </div>
+      )}
 
       {/* Balances View */}
       {activeTab === 'balances' && (
@@ -390,70 +548,124 @@ export function InventoryPage() {
                 <ResponsiveTable className="w-full text-left text-xs border-collapse">
                   <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                     <tr>
-                      <th className="py-3 px-4 font-semibold">Produto</th>
-                      <th className="py-3 px-4 font-semibold">SKU</th>
+                      <th className="py-2.5 px-3 w-10 text-center">
+                        <input
+                          type="checkbox"
+                          checked={balances.length > 0 && selectedBalanceIds.length === balances.length}
+                          onChange={() => {
+                            if (selectedBalanceIds.length === balances.length) {
+                              setSelectedBalanceIds([])
+                            } else {
+                              setSelectedBalanceIds(balances.map((b) => b.id))
+                            }
+                          }}
+                          aria-label="Selecionar todos os saldos da página"
+                          className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                        />
+                      </th>
+                      <th className="py-2.5 px-4 font-semibold">Produto</th>
+                      <th className="py-2.5 px-3 font-semibold">SKU</th>
                       <SortableHeader
                         column="quantity"
-                        label="Físico"
+                        label="Saldo"
                         currentSortBy={sortBy}
                         currentSortOrder={sortOrder}
                         onSort={toggleSort}
                         align="center"
                       />
-                      <SortableHeader
-                        column="reserved_quantity"
-                        label="Reservado"
-                        currentSortBy={sortBy}
-                        currentSortOrder={sortOrder}
-                        onSort={toggleSort}
-                        align="center"
-                      />
-                      <SortableHeader
-                        column="available_quantity"
-                        label="Disponível"
-                        currentSortBy={sortBy}
-                        currentSortOrder={sortOrder}
-                        onSort={toggleSort}
-                        align="center"
-                      />
-                      <th className="py-3 px-4 font-semibold text-center">Mínimo</th>
-                      <th className="py-3 px-4 font-semibold text-center">Status</th>
-                      <th className="py-3 px-4 font-semibold text-right">Ações</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Compra (Custo)</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Venda (Tabela)</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Lucro Est.</th>
+                      <th className="py-2.5 px-3 font-semibold text-center">Status</th>
+                      <th className="py-2.5 px-3 font-semibold text-right">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {balances.map((b) => {
                       const isLow = b.quantity <= (b.min_stock || 0)
+                      const isSelected = selectedBalanceIds.includes(b.id)
                       return (
-                        <tr key={b.id} className="hover:bg-muted/30 transition-colors">
-                          <td className="py-3 px-4 font-semibold text-foreground">
-                            {b.product_name}
+                        <tr
+                          key={b.id}
+                          className={`hover:bg-muted/30 transition-colors ${
+                            isSelected ? 'bg-primary/5' : ''
+                          }`}
+                        >
+                          <td className="py-2.5 px-3 w-10 text-center" onClick={(e) => e.stopPropagation()}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => {
+                                setSelectedBalanceIds((prev) =>
+                                  prev.includes(b.id)
+                                    ? prev.filter((id) => id !== b.id)
+                                    : [...prev, b.id]
+                                )
+                              }}
+                              aria-label={`Selecionar ${b.product_name}`}
+                              className="rounded border-input text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                            />
                           </td>
-                          <td className="py-3 px-4 font-mono text-[11px] text-muted-foreground">
+                          <td className="py-2.5 px-4 font-semibold text-foreground">
+                            <div className="font-semibold text-foreground truncate max-w-[14rem]" title={b.product_name}>
+                              {b.product_name}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                             {b.product_sku || '-'}
                           </td>
-                          <td className="py-3 px-4 text-center font-bold font-mono">
-                            {b.quantity}
+                          <td className="py-2.5 px-3 text-center font-mono">
+                            <div className="font-bold text-foreground text-xs">
+                              {b.quantity} {b.unit || 'un'}
+                            </div>
+                            <div className="text-[10px] text-primary">
+                              disp: {b.available_quantity}
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-center font-mono text-muted-foreground">
-                            {b.reserved_quantity}
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            <div className="font-semibold text-foreground text-xs">
+                              {formatCurrency(b.total_cost_value)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              unit. {formatCurrency(b.cost_price)}
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-center font-bold font-mono text-primary">
-                            {b.available_quantity}
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            <div className="font-bold text-primary text-xs">
+                              {formatCurrency(b.total_selling_value)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              unit. {formatCurrency(b.selling_price)}
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-center font-mono text-muted-foreground">
-                            {b.min_stock || 0}
+                          <td className="py-2.5 px-3 text-right font-mono">
+                            <div
+                              className={`font-semibold text-xs ${
+                                (b.potential_profit || 0) >= 0
+                                  ? 'text-emerald-600 dark:text-emerald-400'
+                                  : 'text-danger'
+                              }`}
+                            >
+                              {formatCurrency(b.potential_profit)}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {b.total_selling_value && b.total_selling_value > 0
+                                ? `${(((b.potential_profit || 0) / b.total_selling_value) * 100).toFixed(0)}% margem`
+                                : '-'}
+                            </div>
                           </td>
-                          <td className="py-3 px-4 text-center">
+                          <td className="py-2.5 px-3 text-center">
                             {isLow ? (
-                              <Badge variant="warning" className="gap-1">
+                              <Badge variant="warning" className="gap-1 text-[10px] px-1.5 py-0.5">
                                 <AlertTriangle className="h-3 w-3" /> Reposição
                               </Badge>
                             ) : (
-                              <Badge variant="success">Normal</Badge>
+                              <Badge variant="success" className="text-[10px] px-1.5 py-0.5">
+                                Normal
+                              </Badge>
                             )}
                           </td>
-                          <td className="py-3 px-4 text-right">
+                          <td className="py-2.5 px-3 text-right">
                             {isGlobalAdmin && b.quantity <= 0 ? (
                               <button
                                 type="button"
@@ -762,6 +974,14 @@ export function InventoryPage() {
         onClose={() => setIsWriteoffModalOpen(false)}
       />
 
+      {/* Baixa de Estoque em Lote para múltiplos itens selecionados */}
+      <BulkStockWriteoffModal
+        isOpen={isBulkWriteoffModalOpen}
+        onClose={() => setIsBulkWriteoffModalOpen(false)}
+        selectedBalances={selectedBalances}
+        onSuccess={() => setSelectedBalanceIds([])}
+      />
+
       {/* Importação em lote de movimentações */}
       <StockImportModal
         isOpen={isImportModalOpen}
@@ -783,6 +1003,19 @@ export function InventoryPage() {
         cancelText="Cancelar"
         variant="danger"
         isLoading={deleteZeroStockMutation.isPending}
+      />
+
+      {/* Confirmação de remoção dos produtos zerados selecionados */}
+      <ConfirmModal
+        isOpen={isBulkDeleteSelectedZeroModalOpen}
+        onClose={() => setIsBulkDeleteSelectedZeroModalOpen(false)}
+        onConfirm={() => deleteSelectedZeroMutation.mutate()}
+        title="Remover Produtos Zerados Selecionados"
+        description={`Tem certeza que deseja remover os ${selectedZeroBalances.length} produto(s) selecionado(s) com saldo zerado (0 unidades)? Eles serão desativados e removidos da listagem.`}
+        confirmText="Sim, Remover Zerados Selecionados"
+        cancelText="Cancelar"
+        variant="danger"
+        isLoading={deleteSelectedZeroMutation.isPending}
       />
 
       {/* Confirmação de remoção em massa de todos os produtos zerados */}
