@@ -7,6 +7,9 @@ import type {
   LossesReportItem,
   StockoutReportItem,
   SalesReportItem,
+  ConsumptionDemandReportItem,
+  CustomerTicketReportItem,
+  CapitalInvestmentReportItem,
 } from '@/types/report.types'
 
 export const reportService = {
@@ -562,6 +565,223 @@ export const reportService = {
   },
 
   /**
+   * 7. Relatório de Compra Baseada no Consumo & Giro de Estoque
+   */
+  async getConsumptionDemandReport(storeId: string): Promise<ConsumptionDemandReportItem[]> {
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+
+    // 1. Produtos e saldos atuais
+    const valuation = await this.getValuationReport(storeId)
+
+    // 2. Vendas dos últimos 30 dias para calcular o consumo médio
+    const { data: salesMovements } = await supabase
+      .from('stock_movements')
+      .select('product_id, quantity')
+      .eq('store_id', storeId)
+      .gte('created_at', thirtyDaysAgo)
+      .in('movement_type', ['SALE', 'EXIT', 'OUT'])
+
+    const consumptionMap = new Map<string, number>()
+    for (const mov of (salesMovements || []) as any[]) {
+      const q = Math.abs(Number(mov.quantity) || 0)
+      consumptionMap.set(mov.product_id, (consumptionMap.get(mov.product_id) || 0) + q)
+    }
+
+    return valuation.map((item) => {
+      const monthlySalesQty = consumptionMap.get(item.productId) || 0
+      // Consumo diário (base 30 dias)
+      const dailyConsumption = Number((monthlySalesQty / 30).toFixed(2))
+
+      // Dias de cobertura restante
+      let stockCoverageDays = 999
+      if (dailyConsumption > 0) {
+        stockCoverageDays = Math.floor(item.quantity / dailyConsumption)
+      } else if (item.quantity <= 0) {
+        stockCoverageDays = 0
+      }
+
+      // Sugestão de reposição para cobertura de 30 dias
+      const targetStock30d = Math.max(item.minStock, Math.ceil(dailyConsumption * 30))
+      const suggestedPurchaseQty = Math.max(0, targetStock30d - item.quantity)
+      const suggestedInvestment = Number((suggestedPurchaseQty * item.costPrice).toFixed(2))
+
+      let urgency: ConsumptionDemandReportItem['urgency'] = 'NORMAL'
+      if (item.quantity <= 0 || stockCoverageDays <= 7) {
+        urgency = 'URGENT'
+      } else if (stockCoverageDays <= 15 || item.quantity <= item.minStock) {
+        urgency = 'ATTENTION'
+      } else if (stockCoverageDays > 60 && item.quantity > targetStock30d * 2) {
+        urgency = 'OVERSTOCK'
+      }
+
+      return {
+        productId: item.productId,
+        productName: item.productName,
+        productSku: item.productSku,
+        categoryName: item.categoryName,
+        unit: item.unit,
+        currentStock: item.quantity,
+        minStock: item.minStock,
+        dailyConsumption,
+        monthlySalesQty,
+        stockCoverageDays,
+        suggestedPurchaseQty,
+        unitCost: item.costPrice,
+        suggestedInvestment,
+        urgency,
+      }
+    }).sort((a, b) => {
+      if (a.urgency === 'URGENT' && b.urgency !== 'URGENT') return -1
+      if (b.urgency === 'URGENT' && a.urgency !== 'URGENT') return 1
+      return b.suggestedInvestment - a.suggestedInvestment
+    })
+  },
+
+  /**
+   * 8. Relatório de Ticket Médio por Cliente & Comportamento (LTV)
+   */
+  async getCustomerTicketReport(storeId: string): Promise<CustomerTicketReportItem[]> {
+    // 1. Clientes
+    const { data: customers, error: custErr } = await supabase
+      .from('customers')
+      .select('id, name, document, phone, email, status')
+      .eq('store_id', storeId)
+
+    if (custErr) throw custErr
+
+    // 2. Pedidos válidos
+    const { data: orders, error: ordErr } = await supabase
+      .from('orders')
+      .select('id, customer_id, total_amount, channel, created_at, status')
+      .eq('store_id', storeId)
+      .neq('status', 'CANCELLED')
+      .order('created_at', { ascending: false })
+
+    if (ordErr) throw ordErr
+
+    const ordersByCustomer = new Map<string, any[]>()
+    for (const o of (orders || []) as any[]) {
+      if (!o.customer_id) continue
+      const list = ordersByCustomer.get(o.customer_id) || []
+      list.push(o)
+      ordersByCustomer.set(o.customer_id, list)
+    }
+
+    const now = Date.now()
+
+    return (customers || []).map((c: any) => {
+      const custOrders = ordersByCustomer.get(c.id) || []
+      const totalOrders = custOrders.length
+      const totalSpent = custOrders.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0)
+      const averageTicket = totalOrders > 0 ? Number((totalSpent / totalOrders).toFixed(2)) : 0
+
+      const lastOrder = custOrders[0]
+      const lastOrderDate = lastOrder ? lastOrder.created_at : null
+      const daysSinceLastOrder = lastOrderDate
+        ? Math.floor((now - new Date(lastOrderDate).getTime()) / 86400000)
+        : 999
+
+      // Canal favorito
+      const channelCounts: Record<string, number> = {}
+      custOrders.forEach((o) => {
+        const ch = o.channel || 'IN_STORE'
+        channelCounts[ch] = (channelCounts[ch] || 0) + 1
+      })
+      let topChannel = 'Sem compras'
+      let maxChCount = 0
+      Object.entries(channelCounts).forEach(([ch, count]) => {
+        if (count > maxChCount) {
+          maxChCount = count
+          topChannel = ch
+        }
+      })
+
+      // Segmentação
+      let customerSegment: CustomerTicketReportItem['customerSegment'] = 'OCCASIONAL'
+      if (totalOrders >= 5 || totalSpent >= 500) {
+        customerSegment = 'VIP'
+      } else if (totalOrders >= 2 && daysSinceLastOrder <= 45) {
+        customerSegment = 'FREQUENT'
+      } else if (totalOrders === 0 || daysSinceLastOrder > 60) {
+        customerSegment = 'INACTIVE'
+      }
+
+      return {
+        customerId: c.id,
+        customerName: c.name,
+        document: c.document,
+        phone: c.phone,
+        email: c.email,
+        status: c.status,
+        totalOrders,
+        totalSpent: Number(totalSpent.toFixed(2)),
+        averageTicket,
+        lastOrderDate,
+        daysSinceLastOrder,
+        topChannel,
+        customerSegment,
+      }
+    }).sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders)
+  },
+
+  /**
+   * 9. Relatório de Levantamento & Investimento de Estoque por Categoria (Capital de Giro)
+   */
+  async getCapitalInvestmentReport(storeId: string): Promise<CapitalInvestmentReportItem[]> {
+    const valuation = await this.getValuationReport(storeId)
+
+    const totalStoreInvestment = valuation.reduce((acc, i) => acc + i.totalCostValue, 0)
+
+    const categoryMap = new Map<string, {
+      categoryName: string
+      productsCount: number
+      totalPhysicalUnits: number
+      totalInvestedCost: number
+      totalSellingPotential: number
+      potentialProfit: number
+    }>()
+
+    for (const item of valuation) {
+      const cat = item.categoryName || 'Outros / Sem Categoria'
+      const curr = categoryMap.get(cat) || {
+        categoryName: cat,
+        productsCount: 0,
+        totalPhysicalUnits: 0,
+        totalInvestedCost: 0,
+        totalSellingPotential: 0,
+        potentialProfit: 0,
+      }
+
+      curr.productsCount += 1
+      curr.totalPhysicalUnits += item.quantity
+      curr.totalInvestedCost += item.totalCostValue
+      curr.totalSellingPotential += item.totalSellingValue
+      curr.potentialProfit += item.potentialProfit
+
+      categoryMap.set(cat, curr)
+    }
+
+    return Array.from(categoryMap.entries()).map(([catId, data]) => {
+      const share = totalStoreInvestment > 0 ? (data.totalInvestedCost / totalStoreInvestment) * 100 : 0
+      const margin = data.totalSellingPotential > 0 ? (data.potentialProfit / data.totalSellingPotential) * 100 : 0
+      const gmroi = data.totalInvestedCost > 0 ? Number((data.potentialProfit / data.totalInvestedCost).toFixed(2)) : 0
+
+      return {
+        categoryId: catId,
+        categoryName: data.categoryName,
+        productsCount: data.productsCount,
+        totalPhysicalUnits: data.totalPhysicalUnits,
+        totalInvestedCost: Number(data.totalInvestedCost.toFixed(2)),
+        totalSellingPotential: Number(data.totalSellingPotential.toFixed(2)),
+        potentialProfit: Number(data.potentialProfit.toFixed(2)),
+        marginPercent: Number(margin.toFixed(2)),
+        shareOfTotalInvestment: Number(share.toFixed(2)),
+        gmroi,
+      }
+    }).sort((a, b) => b.totalInvestedCost - a.totalInvestedCost)
+  },
+
+  /**
    * Métricas do Painel Global de Administração
    */
   async getGlobalAdminMetrics() {
@@ -578,3 +798,4 @@ export const reportService = {
     }
   },
 }
+

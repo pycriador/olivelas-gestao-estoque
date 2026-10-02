@@ -86,7 +86,7 @@ Todos os endpoints utilizam a convenção PostgREST. Para filtrar por loja, incl
 
 ## 5. Catálogo de Relatórios Disponíveis via API para IA Externa
 
-Abaixo estão os 7 relatórios processados e consolidados, prontos para consumo por modelos de IA:
+Abaixo estão os relatórios processados e consolidados pelo sistema, prontos para consumo por modelos de IA:
 
 ### 1. `retail_summary_kpis` (Métricas Executivas Consolidadas)
 - **Descrição:** Indicadores macro de saúde financeira do estoque e vendas.
@@ -94,27 +94,39 @@ Abaixo estão os 7 relatórios processados e consolidados, prontos para consumo 
 
 ### 2. `stock_valuation` (Valorização & Lucratividade do Estoque)
 - **Descrição:** Tabela consolidada com cálculo de Custo Total, Venda Total, Lucro Estimado e Margem % por produto.
-- **Campos por Item:** `productId`, `name`, `sku`, `category`, `quantity`, `unit`, `costPrice`, `sellingPrice`, `totalCostValue`, `totalSellingValue`, `estimatedProfit`, `marginPercent`.
+- **Campos por Item:** `productId`, `productName`, `productSku`, `categoryName`, `quantity`, `unit`, `costPrice`, `sellingPrice`, `totalCostValue`, `totalSellingValue`, `potentialProfit`, `marginPercent`, `status`.
 
-### 3. `abc_curve_pareto` (Curva ABC de Faturamento)
-- **Descrição:** Classificação de Pareto 80/15/5 baseada no potencial de faturamento do mix.
-- **Campos por Item:** `name`, `sku`, `category`, `totalSellingValue`, `sharePercent`, `cumulativePercent`, `abcClass` (`A`, `B`, `C`).
+### 3. `abc_curve_pareto` (Curva ABC & Mix de Faturamento)
+- **Descrição:** Classificação de Pareto 80/15/5 baseada no potencial de faturamento e giro do mix.
+- **Campos por Item:** `productId`, `productName`, `productSku`, `categoryName`, `quantity`, `unit`, `unitCost`, `unitSelling`, `totalValue`, `percentOfTotal`, `cumulativePercent`, `classification` (`A`, `B`, `C`), `strategy`.
 
-### 4. `stockout_replenishment` (Ruptura & Necessidade de Compra)
-- **Descrição:** SKUs zerados (`RUPTURA_TOTAL`) ou abaixo do estoque mínimo (`ESTOQUE_BAIXO`), com cálculo de unidades em falta e custo de reposição.
-- **Campos por Item:** `name`, `sku`, `quantity`, `minStock`, `status`, `shortageUnits`, `replenishmentCost`.
+### 4. `demand_purchasing` (Compra Baseada no Consumo & Giro de Estoque)
+- **Descrição:** Cálculo do consumo médio diário (base 30 dias), dias de cobertura (runout), sugestão de compra para meta de cobertura e investimento projetado.
+- **Campos por Item:** `productId`, `productName`, `productSku`, `categoryName`, `unit`, `currentStock`, `minStock`, `dailyConsumption`, `monthlySalesQty`, `stockCoverageDays`, `suggestedPurchaseQty`, `unitCost`, `suggestedInvestment`, `urgency` (`URGENT`, `ATTENTION`, `NORMAL`, `OVERSTOCK`).
 
-### 5. `purchasing_history` (Histórico de Compras & Fornecedores)
-- **Descrição:** Volume financeiro de compras, pedidos recebidos e custo médio praticado.
-- **Campos por Item:** `orderNumber`, `supplier`, `status`, `totalAmount`, `itemsCount`, `issuedAt`, `receivedAt`.
+### 5. `customer_ticket_ltv` (Ticket Médio & Comportamento de Clientes / LTV)
+- **Descrição:** Análise de valor da vida útil (LTV), total de pedidos, ticket médio por compra, recência em dias, canal de compra preferido e segmentação de clientes.
+- **Campos por Item:** `customerId`, `customerName`, `document`, `phone`, `email`, `status`, `totalOrders`, `totalSpent`, `averageTicket`, `lastOrderDate`, `daysSinceLastOrder`, `topChannel`, `customerSegment` (`VIP`, `FREQUENT`, `OCCASIONAL`, `INACTIVE`).
 
-### 6. `operational_losses` (Perdas & Baixas Operacionais)
-- **Descrição:** Quebras, avarias, vencimentos e desvios operacionais com totalização financeira.
-- **Campos por Item:** `id`, `productName`, `sku`, `movementType`, `quantity`, `unitCost`, `totalLoss`, `createdAt`.
+### 6. `capital_investment` (Levantamento & Investimento de Capital de Giro por Categoria)
+- **Descrição:** Consolidação do capital investido (a custo) por categoria de mercadoria, potencial na gôndola, lucro projetado, percentual de alocação no estoque e GMROI.
+- **Campos por Item:** `categoryId`, `categoryName`, `productsCount`, `totalPhysicalUnits`, `totalInvestedCost`, `totalSellingPotential`, `potentialProfit`, `marginPercent`, `shareOfTotalInvestment`, `gmroi`.
 
-### 7. `sales_performance` (Desempenho de Vendas)
-- **Descrição:** Faturamento consolidado, volume de vendas e ticket médio.
-- **Campos:** `totalOrdersCount`, `totalRevenue`, `averageTicket`, `orders`.
+### 7. `stockout_replenishment` (Ruptura & Necessidade de Compra)
+- **Descrição:** SKUs zerados (`CRITICAL`) ou operando abaixo do estoque mínimo (`WARNING`), com déficit e custo de reposição.
+- **Campos por Item:** `productId`, `productName`, `productSku`, `categoryName`, `unit`, `quantity`, `minStock`, `deficit`, `costPrice`, `sellingPrice`, `replenishmentCost`, `urgency`.
+
+### 8. `purchasing_history` (Histórico de Compras & Fornecedores)
+- **Descrição:** Volume financeiro de compras, pedidos recebidos e margem prevista por lote de entrada.
+- **Campos por Item:** `id`, `orderNumber`, `supplierName`, `itemsCount`, `totalCost`, `totalSellingValue`, `potentialProfit`, `marginPercent`, `status`, `issuedAt`, `receivedAt`.
+
+### 9. `operational_losses` (Perdas, Avarias & Baixas Operacionais)
+- **Descrição:** Quebras, avarias, vencimentos e desvios com totalização financeira e centro de custo.
+- **Campos por Item:** `id`, `movementType`, `createdAt`, `productName`, `productSku`, `quantity`, `unitCost`, `totalLossValue`, `reasonCode`, `reasonLabel`, `costCenterCode`, `operatorName`, `notes`.
+
+### 10. `sales_performance` (Desempenho de Vendas & PDV)
+- **Descrição:** Faturamento consolidado, canais de venda, descontos concedidos e itens por transação.
+- **Campos por Item:** `id`, `orderNumber`, `customerName`, `channel`, `itemsCount`, `subtotal`, `discountAmount`, `totalAmount`, `status`, `createdAt`.
 
 ---
 

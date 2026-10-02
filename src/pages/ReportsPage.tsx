@@ -29,6 +29,9 @@ import {
   BarChart3,
   ShieldAlert,
   Filter,
+  Users,
+  Activity,
+  Wallet,
 } from 'lucide-react'
 import type {
   ValuationReportItem,
@@ -37,9 +40,21 @@ import type {
   LossesReportItem,
   StockoutReportItem,
   SalesReportItem,
+  ConsumptionDemandReportItem,
+  CustomerTicketReportItem,
+  CapitalInvestmentReportItem,
 } from '@/types/report.types'
 
-type ReportTab = 'valuation' | 'abc' | 'purchasing' | 'losses' | 'stockouts' | 'sales'
+type ReportTab =
+  | 'valuation'
+  | 'abc'
+  | 'demand'
+  | 'customers'
+  | 'investment'
+  | 'purchasing'
+  | 'losses'
+  | 'stockouts'
+  | 'sales'
 
 export function ReportsPage() {
   const { storeId, storeName, hasActiveStore } = useTenant()
@@ -143,6 +158,27 @@ export function ReportsPage() {
     enabled: Boolean(hasActiveStore) && activeTab === 'sales',
   })
 
+  // 8. Demand & Consumption Query
+  const { data: demandData = [], isLoading: isDemandLoading } = useQuery({
+    queryKey: ['report-demand', storeId],
+    queryFn: () => reportService.getConsumptionDemandReport(storeId),
+    enabled: Boolean(hasActiveStore) && activeTab === 'demand',
+  })
+
+  // 9. Customers & LTV Query
+  const { data: customersData = [], isLoading: isCustomersLoading } = useQuery({
+    queryKey: ['report-customers', storeId],
+    queryFn: () => reportService.getCustomerTicketReport(storeId),
+    enabled: Boolean(hasActiveStore) && activeTab === 'customers',
+  })
+
+  // 10. Capital Investment Query
+  const { data: investmentData = [], isLoading: isInvestmentLoading } = useQuery({
+    queryKey: ['report-investment', storeId],
+    queryFn: () => reportService.getCapitalInvestmentReport(storeId),
+    enabled: Boolean(hasActiveStore) && activeTab === 'investment',
+  })
+
   // Unique categories for filters
   const categories = React.useMemo(() => {
     const set = new Set<string>()
@@ -189,6 +225,54 @@ export function ReportsPage() {
             i.productSku.toLowerCase().includes(q) ||
             i.categoryName.toLowerCase().includes(q)
         )
+      }
+      const total = filtered.length
+      const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+      return { currentItems: paged, totalFiltered: total }
+    }
+
+    if (activeTab === 'demand') {
+      let filtered = demandData
+      if (statusFilter !== 'ALL') {
+        filtered = filtered.filter((i) => i.urgency === statusFilter)
+      }
+      if (q) {
+        filtered = filtered.filter(
+          (i) =>
+            i.productName.toLowerCase().includes(q) ||
+            i.productSku.toLowerCase().includes(q) ||
+            i.categoryName.toLowerCase().includes(q)
+        )
+      }
+      const total = filtered.length
+      const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+      return { currentItems: paged, totalFiltered: total }
+    }
+
+    if (activeTab === 'customers') {
+      let filtered = customersData
+      if (statusFilter !== 'ALL') {
+        filtered = filtered.filter((i) => i.customerSegment === statusFilter)
+      }
+      if (q) {
+        filtered = filtered.filter(
+          (i) =>
+            i.customerName.toLowerCase().includes(q) ||
+            (i.document && i.document.toLowerCase().includes(q)) ||
+            (i.phone && i.phone.toLowerCase().includes(q)) ||
+            (i.email && i.email.toLowerCase().includes(q)) ||
+            i.topChannel.toLowerCase().includes(q)
+        )
+      }
+      const total = filtered.length
+      const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
+      return { currentItems: paged, totalFiltered: total }
+    }
+
+    if (activeTab === 'investment') {
+      let filtered = investmentData
+      if (q) {
+        filtered = filtered.filter((i) => i.categoryName.toLowerCase().includes(q))
       }
       const total = filtered.length
       const paged = filtered.slice((page - 1) * pageSize, page * pageSize)
@@ -275,6 +359,9 @@ export function ReportsPage() {
     pageSize,
     valuationData,
     abcData,
+    demandData,
+    customersData,
+    investmentData,
     purchasingData,
     lossesData,
     stockoutsData,
@@ -287,6 +374,12 @@ export function ReportsPage() {
       ? isValuationLoading
       : activeTab === 'abc'
       ? isAbcLoading
+      : activeTab === 'demand'
+      ? isDemandLoading
+      : activeTab === 'customers'
+      ? isCustomersLoading
+      : activeTab === 'investment'
+      ? isInvestmentLoading
       : activeTab === 'purchasing'
       ? isPurchasingLoading
       : activeTab === 'losses'
@@ -334,6 +427,59 @@ export function ReportsPage() {
           { header: '% do Mix', key: (r) => r.percentOfTotal.toFixed(2) },
           { header: '% Acumulado', key: (r) => r.cumulativePercent.toFixed(2) },
           { header: 'Diretriz Estratégica', key: 'strategy' },
+        ]
+      )
+    } else if (activeTab === 'demand') {
+      exportToCSV(
+        filenamePrefix,
+        demandData,
+        [
+          { header: 'Urgência', key: 'urgency' },
+          { header: 'Produto', key: 'productName' },
+          { header: 'SKU', key: 'productSku' },
+          { header: 'Categoria', key: 'categoryName' },
+          { header: 'Saldo Atual', key: 'currentStock' },
+          { header: 'Estoque Mínimo', key: 'minStock' },
+          { header: 'Consumo Médio Diário', key: 'dailyConsumption' },
+          { header: 'Vendas 30d (Qtd)', key: 'monthlySalesQty' },
+          { header: 'Dias de Cobertura', key: (r) => (r.stockCoverageDays >= 999 ? 'Sem vendas' : r.stockCoverageDays) },
+          { header: 'Sugestão Compra (Qtd)', key: 'suggestedPurchaseQty' },
+          { header: 'Custo Unitário (R$)', key: 'unitCost' },
+          { header: 'Investimento Sugerido (R$)', key: 'suggestedInvestment' },
+        ]
+      )
+    } else if (activeTab === 'customers') {
+      exportToCSV(
+        filenamePrefix,
+        customersData,
+        [
+          { header: 'Segmento', key: 'customerSegment' },
+          { header: 'Cliente', key: 'customerName' },
+          { header: 'Documento', key: (r) => r.document || '-' },
+          { header: 'Telefone', key: (r) => r.phone || '-' },
+          { header: 'E-mail', key: (r) => r.email || '-' },
+          { header: 'Total de Pedidos', key: 'totalOrders' },
+          { header: 'Gasto Acumulado (R$)', key: 'totalSpent' },
+          { header: 'Ticket Médio (R$)', key: 'averageTicket' },
+          { header: 'Última Compra', key: (r) => (r.lastOrderDate ? formatDate(r.lastOrderDate) : 'Nunca comprou') },
+          { header: 'Dias sem Comprar', key: (r) => (r.daysSinceLastOrder >= 999 ? '-' : r.daysSinceLastOrder) },
+          { header: 'Canal Mais Utilizado', key: 'topChannel' },
+        ]
+      )
+    } else if (activeTab === 'investment') {
+      exportToCSV(
+        filenamePrefix,
+        investmentData,
+        [
+          { header: 'Categoria', key: 'categoryName' },
+          { header: 'Qtd de SKUs', key: 'productsCount' },
+          { header: 'Unidades Físicas', key: 'totalPhysicalUnits' },
+          { header: 'Capital Investido (Custo R$)', key: 'totalInvestedCost' },
+          { header: 'Potencial de Venda (R$)', key: 'totalSellingPotential' },
+          { header: 'Lucro Projetado (R$)', key: 'potentialProfit' },
+          { header: 'Margem %', key: (r) => r.marginPercent.toFixed(2) },
+          { header: '% do Capital da Loja', key: (r) => r.shareOfTotalInvestment.toFixed(2) },
+          { header: 'GMROI (Retorno s/ Estoque)', key: (r) => r.gmroi.toFixed(2) },
         ]
       )
     } else if (activeTab === 'purchasing') {
@@ -483,11 +629,39 @@ export function ReportsPage() {
       badge: '80/15/5',
     },
     {
+      id: 'demand' as const,
+      label: 'Giro & Compra por Consumo',
+      shortLabel: 'Giro & Consumo',
+      icon: Activity,
+      color: 'text-indigo-500',
+      description: 'Consumo médio diário, dias de cobertura restante e sugestão inteligente de reposição.',
+      badge: demandData.filter((i) => i.urgency === 'URGENT').length > 0 ? `${demandData.filter((i) => i.urgency === 'URGENT').length} urgentes` : undefined,
+      badgeVariant: 'destructive' as const,
+    },
+    {
+      id: 'customers' as const,
+      label: 'Ticket Médio & Clientes (LTV)',
+      shortLabel: 'Ticket Médio',
+      icon: Users,
+      color: 'text-sky-500',
+      description: 'Análise de ticket médio por compra, recência, canal preferido e segmentação de clientes.',
+      badge: customersData.length > 0 ? `${customersData.length} clientes` : undefined,
+    },
+    {
+      id: 'investment' as const,
+      label: 'Investimento de Capital',
+      shortLabel: 'Investimento',
+      icon: Wallet,
+      color: 'text-emerald-500',
+      description: 'Levantamento de capital de giro investido por categoria de produto, margem e GMROI.',
+      badge: investmentData.length > 0 ? `${investmentData.length} categorias` : undefined,
+    },
+    {
       id: 'purchasing' as const,
       label: 'Compras & Fornecedores',
       shortLabel: 'Compras',
       icon: ShoppingCart,
-      color: 'text-emerald-500',
+      color: 'text-teal-500',
       description: 'Histórico de aquisições com custo unitário real por fornecedor e lote de entrada.',
       badge: purchasingData.length > 0 ? `${purchasingData.length}` : undefined,
     },
@@ -720,6 +894,44 @@ export function ReportsPage() {
                   <option value="A">Classe A (80% Faturamento)</option>
                   <option value="B">Classe B (15% Faturamento)</option>
                   <option value="C">Classe C (5% Faturamento)</option>
+                </select>
+              </div>
+            )}
+
+            {/* Dynamic Filter: Demand Urgency */}
+            {activeTab === 'demand' && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
+                <Activity className="h-3 w-3 text-indigo-500 flex-shrink-0" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  aria-label="Filtrar por urgência de compra"
+                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">Todas as Urgências</option>
+                  <option value="URGENT">Urgente (Ruptura / ≤ 7 dias)</option>
+                  <option value="ATTENTION">Atenção (≤ 15 dias)</option>
+                  <option value="NORMAL">Normal / Equilibrado</option>
+                  <option value="OVERSTOCK">Sobra / Excesso (&gt; 60 dias)</option>
+                </select>
+              </div>
+            )}
+
+            {/* Dynamic Filter: Customer Segment */}
+            {activeTab === 'customers' && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
+                <Users className="h-3 w-3 text-sky-500 flex-shrink-0" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  aria-label="Filtrar por segmento de cliente"
+                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="ALL">Todos os Segmentos</option>
+                  <option value="VIP">Clientes VIP (Alto LTV)</option>
+                  <option value="FREQUENT">Clientes Frequentes</option>
+                  <option value="OCCASIONAL">Clientes Ocasionais</option>
+                  <option value="INACTIVE">Inativos (&gt; 60 dias)</option>
                 </select>
               </div>
             )}
@@ -1003,7 +1215,368 @@ export function ReportsPage() {
                 </>
               )}
 
-              {/* TAB 3: PURCHASING REPORT */}
+              {/* TAB: DEMAND & CONSUMPTION-BASED PURCHASING */}
+              {activeTab === 'demand' && (
+                <>
+                  <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
+                        <tr>
+                          <th className="py-3 px-4 font-semibold text-center">Urgência</th>
+                          <th className="py-3 px-4 font-semibold">Produto</th>
+                          <th className="py-3 px-4 font-semibold">SKU / Categoria</th>
+                          <th className="py-3 px-4 font-semibold text-center">Saldo Atual</th>
+                          <th className="py-3 px-4 font-semibold text-center">Consumo / Dia</th>
+                          <th className="py-3 px-4 font-semibold text-center">Vendas 30d</th>
+                          <th className="py-3 px-4 font-semibold text-center">Cobertura</th>
+                          <th className="py-3 px-4 font-semibold text-center">Sugestão Compra (30d)</th>
+                          <th className="py-3 px-4 font-semibold text-right">Investimento Previsto</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(currentItems as ConsumptionDemandReportItem[]).map((row) => (
+                          <tr key={row.productId} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-2.5 px-4 text-center">
+                              <Badge
+                                variant={
+                                  row.urgency === 'URGENT'
+                                    ? 'danger'
+                                    : row.urgency === 'ATTENTION'
+                                    ? 'warning'
+                                    : row.urgency === 'OVERSTOCK'
+                                    ? 'secondary'
+                                    : 'success'
+                                }
+                                className="text-[10px]"
+                              >
+                                {row.urgency === 'URGENT'
+                                  ? 'Urgente'
+                                  : row.urgency === 'ATTENTION'
+                                  ? 'Atenção'
+                                  : row.urgency === 'OVERSTOCK'
+                                  ? 'Excesso'
+                                  : 'Normal'}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 px-4 font-semibold text-foreground">
+                              {row.productName}
+                            </td>
+                            <td className="py-2.5 px-4 text-muted-foreground">
+                              <div className="font-mono text-foreground text-[11px]">{row.productSku}</div>
+                              <div className="text-[10px]">{row.categoryName}</div>
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <span
+                                className={`font-mono font-bold px-2 py-0.5 rounded-md text-xs ${
+                                  row.currentStock <= 0
+                                    ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                    : row.currentStock <= row.minStock
+                                    ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                }`}
+                              >
+                                {row.currentStock} {row.unit}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-muted-foreground">
+                              {row.dailyConsumption.toFixed(2)} {row.unit}/dia
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono font-medium text-foreground">
+                              {row.monthlySalesQty} {row.unit}
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <span
+                                className={`font-mono font-semibold text-xs px-2 py-0.5 rounded-full ${
+                                  row.stockCoverageDays <= 7
+                                    ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                                    : row.stockCoverageDays <= 15
+                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                    : row.stockCoverageDays > 60
+                                    ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400'
+                                    : 'bg-muted text-muted-foreground'
+                                }`}
+                              >
+                                {row.stockCoverageDays >= 999 ? 'Sem vendas' : `${row.stockCoverageDays} dias`}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono font-bold text-primary">
+                              {row.suggestedPurchaseQty > 0 ? `+${row.suggestedPurchaseQty} ${row.unit}` : 'Abastecido'}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                              {row.suggestedInvestment > 0 ? formatCurrency(row.suggestedInvestment) : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden flex-1 min-h-0 overflow-y-auto divide-y divide-border custom-scrollbar">
+                    {(currentItems as ConsumptionDemandReportItem[]).map((row) => (
+                      <article key={row.productId} className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-semibold text-xs text-foreground">{row.productName}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{row.productSku} · {row.categoryName}</div>
+                          </div>
+                          <Badge
+                            variant={
+                              row.urgency === 'URGENT'
+                                ? 'danger'
+                                : row.urgency === 'ATTENTION'
+                                ? 'warning'
+                                : 'secondary'
+                            }
+                            className="text-[10px]"
+                          >
+                            {row.urgency}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-muted/40 p-2 rounded-lg">
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">Saldo / Consumo</div>
+                            <div className="font-bold text-foreground">
+                              {row.currentStock} {row.unit} ({row.dailyConsumption}/dia)
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] uppercase text-muted-foreground">Cobertura</div>
+                            <div className="font-bold text-foreground">
+                              {row.stockCoverageDays >= 999 ? 'Sem vendas' : `${row.stockCoverageDays} dias`}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">Sugestão Compra</div>
+                            <div className="font-bold text-primary">
+                              +{row.suggestedPurchaseQty} {row.unit}
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] uppercase text-muted-foreground">Investimento</div>
+                            <div className="font-bold text-foreground">
+                              {formatCurrency(row.suggestedInvestment)}
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* TAB: CUSTOMER TICKET & LTV REPORT */}
+              {activeTab === 'customers' && (
+                <>
+                  <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
+                        <tr>
+                          <th className="py-3 px-4 font-semibold text-center">Segmento</th>
+                          <th className="py-3 px-4 font-semibold">Cliente</th>
+                          <th className="py-3 px-4 font-semibold">Documento / Contato</th>
+                          <th className="py-3 px-4 font-semibold text-center">Pedidos</th>
+                          <th className="py-3 px-4 font-semibold text-right">LTV (Gasto Total)</th>
+                          <th className="py-3 px-4 font-semibold text-right">Ticket Médio</th>
+                          <th className="py-3 px-4 font-semibold text-center">Última Compra</th>
+                          <th className="py-3 px-4 font-semibold text-center">Canal Preferido</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(currentItems as CustomerTicketReportItem[]).map((row) => (
+                          <tr key={row.customerId} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-2.5 px-4 text-center">
+                              <Badge
+                                variant={
+                                  row.customerSegment === 'VIP'
+                                    ? 'success'
+                                    : row.customerSegment === 'FREQUENT'
+                                    ? 'warning'
+                                    : 'secondary'
+                                }
+                                className="text-[10px]"
+                              >
+                                {row.customerSegment === 'VIP'
+                                  ? '👑 VIP'
+                                  : row.customerSegment === 'FREQUENT'
+                                  ? '🔥 Frequente'
+                                  : row.customerSegment === 'OCCASIONAL'
+                                  ? 'Ocasional'
+                                  : 'Inativo'}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 px-4 font-semibold text-foreground">
+                              {row.customerName}
+                            </td>
+                            <td className="py-2.5 px-4 text-muted-foreground">
+                              <div className="font-mono text-foreground text-[11px]">{row.document || '-'}</div>
+                              <div className="text-[10px]">{row.phone || row.email || 'Sem contato'}</div>
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono font-bold text-foreground">
+                              {row.totalOrders}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(row.totalSpent)}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-semibold text-foreground">
+                              {formatCurrency(row.averageTicket)}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono text-muted-foreground text-[11px]">
+                              {row.lastOrderDate ? (
+                                <div>
+                                  <div>{formatDate(row.lastOrderDate)}</div>
+                                  <div className="text-[10px] text-muted-foreground">({row.daysSinceLastOrder} dias atrás)</div>
+                                </div>
+                              ) : (
+                                'Nunca comprou'
+                              )}
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <Badge variant="outline" className="text-[10px]">
+                                {row.topChannel}
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden flex-1 min-h-0 overflow-y-auto divide-y divide-border custom-scrollbar">
+                    {(currentItems as CustomerTicketReportItem[]).map((row) => (
+                      <article key={row.customerId} className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-semibold text-xs text-foreground">{row.customerName}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{row.document || 'Sem documento'}</div>
+                          </div>
+                          <Badge
+                            variant={row.customerSegment === 'VIP' ? 'success' : 'secondary'}
+                            className="text-[10px]"
+                          >
+                            {row.customerSegment}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-muted/40 p-2 rounded-lg">
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">LTV / Pedidos</div>
+                            <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(row.totalSpent)} ({row.totalOrders}x)
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] uppercase text-muted-foreground">Ticket Médio</div>
+                            <div className="font-bold text-foreground">
+                              {formatCurrency(row.averageTicket)}
+                            </div>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* TAB: CAPITAL INVESTMENT BY CATEGORY */}
+              {activeTab === 'investment' && (
+                <>
+                  <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
+                        <tr>
+                          <th className="py-3 px-4 font-semibold">Categoria</th>
+                          <th className="py-3 px-4 font-semibold text-center">Mix (SKUs)</th>
+                          <th className="py-3 px-4 font-semibold text-center">Qtd Física</th>
+                          <th className="py-3 px-4 font-semibold text-right">Capital Investido (Custo)</th>
+                          <th className="py-3 px-4 font-semibold text-right">Potencial de Venda</th>
+                          <th className="py-3 px-4 font-semibold text-right">Lucro Projetado</th>
+                          <th className="py-3 px-4 font-semibold text-center">Margem %</th>
+                          <th className="py-3 px-4 font-semibold text-center">% Capital Loja</th>
+                          <th className="py-3 px-4 font-semibold text-center">GMROI</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {(currentItems as CapitalInvestmentReportItem[]).map((row) => (
+                          <tr key={row.categoryId} className="hover:bg-muted/30 transition-colors">
+                            <td className="py-2.5 px-4 font-semibold text-foreground">
+                              {row.categoryName}
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono">
+                              {row.productsCount} SKUs
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono font-medium text-foreground">
+                              {row.totalPhysicalUnits} un.
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-semibold text-foreground">
+                              {formatCurrency(row.totalInvestedCost)}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                              {formatCurrency(row.totalSellingPotential)}
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                              {formatCurrency(row.potentialProfit)}
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <Badge
+                                variant={row.marginPercent >= 30 ? 'success' : row.marginPercent > 0 ? 'warning' : 'secondary'}
+                                className="font-mono text-[10px]"
+                              >
+                                {row.marginPercent.toFixed(1)}%
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono font-semibold text-foreground">
+                              {row.shareOfTotalInvestment.toFixed(1)}%
+                            </td>
+                            <td className="py-2.5 px-4 text-center">
+                              <Badge variant="outline" className="font-mono text-[10px] font-bold">
+                                {row.gmroi.toFixed(2)}x
+                              </Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile Cards */}
+                  <div className="md:hidden flex-1 min-h-0 overflow-y-auto divide-y divide-border custom-scrollbar">
+                    {(currentItems as CapitalInvestmentReportItem[]).map((row) => (
+                      <article key={row.categoryId} className="p-3 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-semibold text-xs text-foreground">{row.categoryName}</div>
+                            <div className="text-[10px] text-muted-foreground font-mono">{row.productsCount} SKUs · {row.totalPhysicalUnits} un.</div>
+                          </div>
+                          <Badge variant="success" className="font-mono text-[10px]">
+                            {row.marginPercent.toFixed(1)}% Margem
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-muted/40 p-2 rounded-lg">
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">Capital Investido</div>
+                            <div className="font-bold text-foreground">{formatCurrency(row.totalInvestedCost)}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] uppercase text-muted-foreground">Potencial Venda</div>
+                            <div className="font-bold text-foreground">{formatCurrency(row.totalSellingPotential)}</div>
+                          </div>
+                          <div>
+                            <div className="text-[9px] uppercase text-muted-foreground">% do Capital</div>
+                            <div className="font-bold text-primary">{row.shareOfTotalInvestment.toFixed(1)}%</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-[9px] uppercase text-muted-foreground">GMROI</div>
+                            <div className="font-bold text-emerald-600 dark:text-emerald-400">{row.gmroi.toFixed(2)}x</div>
+                          </div>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* TAB: PURCHASING REPORT */}
               {activeTab === 'purchasing' && (
                 <>
                   <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">

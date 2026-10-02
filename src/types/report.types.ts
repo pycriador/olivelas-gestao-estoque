@@ -106,3 +106,49 @@ export interface SalesReportItem {
   status: string
   createdAt: string
 }
+
+export interface ConsumptionDemandReportItem {
+  productId: string
+  productName: string
+  productSku: string
+  categoryName: string
+  unit: string
+  currentStock: number
+  minStock: number
+  dailyConsumption: number
+  monthlySalesQty: number
+  stockCoverageDays: number
+  suggestedPurchaseQty: number
+  unitCost: number
+  suggestedInvestment: number
+  urgency: 'URGENT' | 'ATTENTION' | 'NORMAL' | 'OVERSTOCK'
+}
+
+export interface CustomerTicketReportItem {
+  customerId: string
+  customerName: string
+  document: string | null
+  phone: string | null
+  email: string | null
+  status: string
+  totalOrders: number
+  totalSpent: number
+  averageTicket: number
+  lastOrderDate: string | null
+  daysSinceLastOrder: number
+  topChannel: string
+  customerSegment: 'VIP' | 'FREQUENT' | 'OCCASIONAL' | 'INACTIVE'
+}
+
+export interface CapitalInvestmentReportItem {
+  categoryId: string
+  categoryName: string
+  productsCount: number
+  totalPhysicalUnits: number
+  totalInvestedCost: number
+  totalSellingPotential: number
+  potentialProfit: number
+  marginPercent: number
+  shareOfTotalInvestment: number
+  gmroi: number
+}
