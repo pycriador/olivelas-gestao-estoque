@@ -139,6 +139,39 @@ export const apiKeyService = {
     return updated
   },
 
+  updateToken(
+    id: string,
+    updates: {
+      name?: string
+      storeId?: string
+      storeName?: string
+      scopes?: string[]
+      expiresInDays?: number | null
+    }
+  ): ApiToken[] {
+    const current = this.getStoredTokens()
+    const updated = current.map((t) => {
+      if (t.id !== id) return t
+      let expiresAt = t.expiresAt
+      if (updates.expiresInDays !== undefined) {
+        expiresAt =
+          updates.expiresInDays && updates.expiresInDays > 0
+            ? new Date(Date.now() + updates.expiresInDays * 86400000).toISOString()
+            : null
+      }
+      return {
+        ...t,
+        name: updates.name ?? t.name,
+        storeId: updates.storeId ?? t.storeId,
+        storeName: updates.storeName ?? t.storeName,
+        scopes: updates.scopes ?? t.scopes,
+        expiresAt,
+      }
+    })
+    this.saveTokens(updated)
+    return updated
+  },
+
   deleteToken(id: string): ApiToken[] {
     const current = this.getStoredTokens()
     const updated = current.filter((t) => t.id !== id)
