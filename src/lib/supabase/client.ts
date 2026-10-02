@@ -2,12 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 
 const env = import.meta.env as Record<string, string | undefined>
 
-const supabaseUrl =
+export const supabaseUrl =
   env.VITE_SUPABASE_URL ||
   env.SUPABASE_URL ||
   'https://placeholder.supabase.co'
 
-const supabaseKey =
+export const supabaseKey =
   env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   env.SUPABASE_PUBLISHABLE_KEY ||
   env.VITE_SUPABASE_ANON_KEY ||

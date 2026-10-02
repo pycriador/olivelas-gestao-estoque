@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import type { Store } from '@/types/store.types'
 import { formatDate } from '@/utils/dates'
+import { supabaseUrl, supabaseKey } from '@/lib/supabase/client'
 
 interface GlobalApiKeyHbacPanelProps {
   stores: Store[]
@@ -38,6 +39,7 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
   const [revokingToken, setRevokingToken] = React.useState<ApiToken | null>(null)
   const [copiedId, setCopiedId] = React.useState<string | null>(null)
   const [activeDocEndpoint, setActiveDocEndpoint] = React.useState<'products' | 'inventory' | 'orders'>('products')
+  const [codeLang, setCodeLang] = React.useState<'curl' | 'python' | 'javascript'>('curl')
 
   // Form states
   const [tokenName, setTokenName] = React.useState('')
@@ -213,58 +215,160 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
       </Card>
 
       {/* Interactive API Docs & Endpoint Explorer */}
-      <Card className="border border-border shadow-xs bg-card">
-        <CardContent className="p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4 text-primary" />
-              <h3 className="font-bold text-xs text-foreground">Exemplos de Requisição & Endpoints REST</h3>
-            </div>
-            <div className="flex items-center gap-1 bg-muted p-0.5 rounded-lg text-[11px] font-semibold">
-              <button
-                type="button"
-                onClick={() => setActiveDocEndpoint('products')}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  activeDocEndpoint === 'products' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
-                }`}
-              >
-                /products
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveDocEndpoint('inventory')}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  activeDocEndpoint === 'inventory' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
-                }`}
-              >
-                /inventory
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveDocEndpoint('orders')}
-                className={`px-2 py-1 rounded-md transition-colors ${
-                  activeDocEndpoint === 'orders' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
-                }`}
-              >
-                /orders (PDV)
-              </button>
-            </div>
-          </div>
+      {(() => {
+        const activeToken = tokens.find((t) => t.isActive)?.token || 'olv_live_9b4e72a8c13f6e5d0a24b78c9d1e3f5a'
+        const targetStoreId = selectedStoreId !== 'all' ? selectedStoreId : (stores[0]?.id || 'loja_id')
 
-          <div className="bg-muted/70 p-3.5 rounded-xl font-mono text-xs text-foreground space-y-2 border border-border">
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground border-b border-border/60 pb-2">
-              <span className="font-bold uppercase text-primary">GET /api/v1/{activeDocEndpoint}</span>
-              <span>Header: Authorization: Bearer olv_live_...</span>
-            </div>
-            <pre className="text-[11px] overflow-x-auto text-emerald-600 dark:text-emerald-400">
-{`curl -X GET "https://api.olivelas.com/v1/${activeDocEndpoint}" \\
-  -H "Authorization: Bearer olv_live_9b4e72a8c13f6e5d0a24b78c9d1e3f5a" \\
-  -H "X-Store-ID: ${selectedStoreId}" \\
-  -H "Content-Type: application/json"`}
-            </pre>
-          </div>
-        </CardContent>
-      </Card>
+        let endpointTable = 'products'
+        let queryParams = 'select=*&is_active=eq.true'
+        if (activeDocEndpoint === 'inventory') {
+          endpointTable = 'stock_balances'
+          queryParams = 'select=*,products(*)'
+        } else if (activeDocEndpoint === 'orders') {
+          endpointTable = 'orders'
+          queryParams = 'select=*,order_items(*)'
+        }
+
+        const endpointPath = `/rest/v1/${endpointTable}?${queryParams}&store_id=eq.${targetStoreId}`
+        const fullEndpointUrl = `${supabaseUrl}${endpointPath}`
+
+        const curlSnippet = `curl -X GET "${fullEndpointUrl}" \\
+  -H "apikey: ${supabaseKey}" \\
+  -H "Authorization: Bearer ${activeToken}" \\
+  -H "X-Store-ID: ${targetStoreId}" \\
+  -H "Content-Type: application/json"`
+
+        const pythonSnippet = `import requests
+
+url = "${fullEndpointUrl}"
+headers = {
+    "apikey": "${supabaseKey}",
+    "Authorization": "Bearer ${activeToken}",
+    "X-Store-ID": "${targetStoreId}",
+    "Content-Type": "application/json"
+}
+
+response = requests.get(url, headers=headers)
+data = response.json()
+print("Status Code:", response.status_code)
+print("Dados:", data)`
+
+        const jsSnippet = `const response = await fetch('${fullEndpointUrl}', {
+  method: 'GET',
+  headers: {
+    'apikey': '${supabaseKey}',
+    'Authorization': 'Bearer ${activeToken}',
+    'X-Store-ID': '${targetStoreId}',
+    'Content-Type': 'application/json'
+  }
+})
+
+const data = await response.json()
+console.log('Dados:', data)`
+
+        const currentSnippet = codeLang === 'curl' ? curlSnippet : codeLang === 'python' ? pythonSnippet : jsSnippet
+
+        return (
+          <Card className="border border-border shadow-xs bg-card">
+            <CardContent className="p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Code className="h-4 w-4 text-primary" />
+                  <div>
+                    <h3 className="font-bold text-xs text-foreground">Exemplos de Requisição & Endpoints REST (Supabase PostgREST)</h3>
+                    <div className="text-[10px] text-muted-foreground font-mono">
+                      Host: <span className="text-foreground font-semibold">{supabaseUrl}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                  {/* Endpoint Switcher */}
+                  <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-lg text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setActiveDocEndpoint('products')}
+                      className={`px-2 py-1 rounded-md transition-colors ${
+                        activeDocEndpoint === 'products' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
+                      }`}
+                    >
+                      /products
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveDocEndpoint('inventory')}
+                      className={`px-2 py-1 rounded-md transition-colors ${
+                        activeDocEndpoint === 'inventory' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
+                      }`}
+                    >
+                      /stock_balances
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveDocEndpoint('orders')}
+                      className={`px-2 py-1 rounded-md transition-colors ${
+                        activeDocEndpoint === 'orders' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground'
+                      }`}
+                    >
+                      /orders (PDV)
+                    </button>
+                  </div>
+
+                  {/* Language Selector */}
+                  <div className="flex items-center gap-0.5 bg-muted p-0.5 rounded-lg text-[11px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setCodeLang('curl')}
+                      className={`px-2 py-1 rounded-md transition-colors ${
+                        codeLang === 'curl' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground'
+                      }`}
+                    >
+                      cURL
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCodeLang('python')}
+                      className={`px-2 py-1 rounded-md transition-colors ${
+                        codeLang === 'python' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground'
+                      }`}
+                    >
+                      Python
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCodeLang('javascript')}
+                      className={`px-2 py-1 rounded-md transition-colors ${
+                        codeLang === 'javascript' ? 'bg-primary text-primary-foreground shadow-xs' : 'text-muted-foreground'
+                      }`}
+                    >
+                      JavaScript
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-muted/70 p-3.5 rounded-xl font-mono text-xs text-foreground space-y-2 border border-border relative group">
+                <div className="flex items-center justify-between text-[11px] text-muted-foreground border-b border-border/60 pb-2">
+                  <span className="font-bold uppercase text-primary">GET /rest/v1/{endpointTable}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="hidden sm:inline text-[10px]">Autenticação: Bearer Token + apikey</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(currentSnippet, 'code')}
+                      className="px-2 py-0.5 rounded bg-card hover:bg-muted border border-border text-foreground text-[10px] font-semibold inline-flex items-center gap-1"
+                    >
+                      <Copy className="h-3 w-3" /> {copiedId === 'code' ? 'Copiado!' : 'Copiar Código'}
+                    </button>
+                  </div>
+                </div>
+                <pre className="text-[11px] overflow-x-auto text-emerald-600 dark:text-emerald-400 leading-relaxed font-mono">
+                  {currentSnippet}
+                </pre>
+              </div>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Create Token Modal */}
       <Modal
