@@ -756,15 +756,31 @@ console.log('Status:', response.status, data)`
         </CardContent>
       </Card>
 
-      {/* CREATE TOKEN MODAL */}
+      {/* CREATE NEW TOKEN MODAL */}
       <Modal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         title="Gerar Novo Token de API com HBAC"
         description="Defina a loja de isolamento, a expiração e os escopos hierárquicos de acesso"
         maxWidth="2xl"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              form="create-token-form"
+              size="sm"
+              isLoading={isSubmitting}
+              disabled={selectedScopes.length === 0 || !tokenName.trim()}
+            >
+              Gerar Chave de API
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleCreateToken} className="space-y-4 pt-1 text-xs">
+        <form id="create-token-form" onSubmit={handleCreateToken} className="space-y-4 pt-1 text-xs">
           <div className="space-y-1">
             <label className="font-bold text-foreground">Nome da Aplicação / Integração *</label>
             <Input
@@ -877,20 +893,6 @@ console.log('Status:', response.status, data)`
               })}
             </div>
           </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              isLoading={isSubmitting}
-              disabled={selectedScopes.length === 0 || !tokenName.trim()}
-            >
-              Gerar Chave de API
-            </Button>
-          </div>
         </form>
       </Modal>
 
@@ -904,8 +906,32 @@ console.log('Status:', response.status, data)`
         title={`Editar Permissões do Token: ${editingToken?.name}`}
         description="Altere a loja de isolamento, a expiração e os escopos hierárquicos de acesso permitidos para esta chave."
         maxWidth="2xl"
+        footer={
+          <div className="flex items-center justify-end gap-2 w-full">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsEditModalOpen(false)
+                setEditingToken(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              form="edit-token-form"
+              size="sm"
+              isLoading={isSubmitting}
+              disabled={editScopes.length === 0 || !editTokenName.trim()}
+            >
+              Salvar Alterações
+            </Button>
+          </div>
+        }
       >
-        <form onSubmit={handleSaveEditToken} className="space-y-4 pt-1 text-xs">
+        <form id="edit-token-form" onSubmit={handleSaveEditToken} className="space-y-4 pt-1 text-xs">
           <div className="space-y-1">
             <label className="font-bold text-foreground">Nome da Aplicação / Identificador *</label>
             <Input
@@ -1018,28 +1044,6 @@ console.log('Status:', response.status, data)`
               })}
             </div>
           </div>
-
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setIsEditModalOpen(false)
-                setEditingToken(null)
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              isLoading={isSubmitting}
-              disabled={editScopes.length === 0 || !editTokenName.trim()}
-            >
-              Salvar Alterações
-            </Button>
-          </div>
         </form>
       </Modal>
 
@@ -1050,6 +1054,13 @@ console.log('Status:', response.status, data)`
         title="Token de API Gerado com Sucesso!"
         description="Copie o token agora. Por razões de segurança, este token completo não será exibido novamente."
         maxWidth="lg"
+        footer={
+          <div className="flex justify-end w-full">
+            <Button size="sm" onClick={() => setNewTokenResult(null)}>
+              Concluir & Fechar
+            </Button>
+          </div>
+        }
       >
         <div className="space-y-4 pt-1 text-xs">
           <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-semibold">
@@ -1073,12 +1084,6 @@ console.log('Status:', response.status, data)`
                 <Copy className="h-3.5 w-3.5 mr-1" /> Copiar
               </Button>
             </div>
-          </div>
-
-          <div className="flex justify-end pt-2">
-            <Button size="sm" onClick={() => setNewTokenResult(null)}>
-              Concluir & Fechar
-            </Button>
           </div>
         </div>
       </Modal>
