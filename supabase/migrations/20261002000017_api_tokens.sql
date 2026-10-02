@@ -48,19 +48,19 @@ CREATE POLICY "store_admins_manage_store_api_tokens" ON public.api_tokens
     USING (
         store_id IS NOT NULL AND
         EXISTS (
-            SELECT 1 FROM public.user_store_roles usr
-            WHERE usr.user_id = auth.uid()
-              AND usr.store_id = api_tokens.store_id
-              AND usr.role IN ('STORE_ADMIN', 'STORE_MANAGER')
+            SELECT 1 FROM public.store_users su
+            WHERE su.user_id = auth.uid()
+              AND su.store_id = api_tokens.store_id
+              AND su.role IN ('STORE_ADMIN', 'STORE_MANAGER')
         )
     )
     WITH CHECK (
         store_id IS NOT NULL AND
         EXISTS (
-            SELECT 1 FROM public.user_store_roles usr
-            WHERE usr.user_id = auth.uid()
-              AND usr.store_id = api_tokens.store_id
-              AND usr.role IN ('STORE_ADMIN', 'STORE_MANAGER')
+            SELECT 1 FROM public.store_users su
+            WHERE su.user_id = auth.uid()
+              AND su.store_id = api_tokens.store_id
+              AND su.role IN ('STORE_ADMIN', 'STORE_MANAGER')
         )
     );
 
