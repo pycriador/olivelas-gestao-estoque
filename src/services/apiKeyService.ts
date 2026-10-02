@@ -31,8 +31,16 @@ export const AVAILABLE_API_SCOPES: ApiScope[] = [
   { id: 'customers:read', name: 'Consultar Clientes', description: 'Ver lista de clientes e contatos', category: 'customers' },
   { id: 'customers:write', name: 'Gerenciar Clientes', description: 'Criar e atualizar cadastros de clientes', category: 'customers' },
 
-  // Relatórios
-  { id: 'reports:read', name: 'Relatórios & Métricas', description: 'Acessar indicadores financeiros, Curva ABC e KPIs', category: 'reports' },
+  // Relatórios & IA
+  { id: 'reports:read', name: 'Relatórios & Métricas (Geral)', description: 'Acessar indicadores financeiros e relatórios da loja', category: 'reports' },
+  { id: 'reports:list', name: 'Catálogo de Relatórios', description: 'Listar todos os relatórios analíticos disponíveis via API', category: 'reports' },
+  { id: 'reports:kpis', name: 'KPIs Executivos', description: 'Métricas consolidadas de custo, venda, faturamento e margem', category: 'reports' },
+  { id: 'reports:valuation', name: 'Valorização & Lucro', description: 'Valoração física a custo e venda com margem % por item', category: 'reports' },
+  { id: 'reports:abc', name: 'Curva ABC & Mix', description: 'Classificação de Pareto (80/15/5) por faturamento', category: 'reports' },
+  { id: 'reports:stockouts', name: 'Ruptura & Reposição', description: 'Produtos esgotados, alertas de mínimo e déficit de compra', category: 'reports' },
+  { id: 'reports:purchases', name: 'Relatório de Compras', description: 'Histórico de ordens de compra e custos de fornecedores', category: 'reports' },
+  { id: 'reports:losses', name: 'Perdas & Baixas', description: 'Registro de quebras, avarias e desvios operacionais', category: 'reports' },
+  { id: 'reports:sales', name: 'Desempenho de Vendas', description: 'Faturamento consolidado, volume e ticket médio', category: 'reports' },
 
   // Auditoria & Sistema
   { id: 'audit:read', name: 'Logs de Auditoria', description: 'Consultar trilha de auditoria e segurança', category: 'system' },

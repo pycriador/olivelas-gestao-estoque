@@ -222,12 +222,84 @@ const SCOPE_ENDPOINT_DOCS: Record<string, ScopeEndpointMeta> = {
   },
   'reports:read': {
     scopeId: 'reports:read',
-    name: 'Relatórios & KPIs',
+    name: 'Relatórios & Métricas (Geral)',
     category: 'Relatórios',
     method: 'GET',
     table: 'stock_balances',
     queryParams: (stId) => `select=*${stId !== 'all' ? `&store_id=eq.${stId}` : ''}`,
     desc: 'Extrai todos os dados brutos de saldos e produtos para consolidação de relatórios.',
+  },
+  'reports:list': {
+    scopeId: 'reports:list',
+    name: 'Catálogo de Relatórios',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'stores',
+    queryParams: (stId) => `select=id,name,slug${stId !== 'all' ? `&id=eq.${stId}` : ''}`,
+    desc: 'Lista os 7 relatórios analíticos disponíveis (KPIs, Valuation, Curva ABC, Ruptura, Compras, Perdas, Vendas).',
+  },
+  'reports:kpis': {
+    scopeId: 'reports:kpis',
+    name: 'KPIs Executivos',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'stock_balances',
+    queryParams: (stId) => `select=*${stId !== 'all' ? `&store_id=eq.${stId}` : ''}`,
+    desc: 'Métricas executivas: Estoque a Custo, Estoque a Venda, Margem Bruta média e Alertas.',
+  },
+  'reports:valuation': {
+    scopeId: 'reports:valuation',
+    name: 'Valorização & Lucro',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'products',
+    queryParams: (stId) => `select=id,name,sku,unit,cost_price,selling_price,min_stock${stId !== 'all' ? `&store_id=eq.${stId}` : ''}&is_active=eq.true&order=name.asc`,
+    desc: 'Tabela de valoração física de estoque com cálculo de markup, lucro estimado e margem % por item.',
+  },
+  'reports:abc': {
+    scopeId: 'reports:abc',
+    name: 'Curva ABC & Mix',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'products',
+    queryParams: (stId) => `select=id,name,sku,cost_price,selling_price${stId !== 'all' ? `&store_id=eq.${stId}` : ''}&is_active=eq.true&order=selling_price.desc`,
+    desc: 'Classificação de Pareto (80/15/5) para identificar produtos de maior impacto no faturamento.',
+  },
+  'reports:stockouts': {
+    scopeId: 'reports:stockouts',
+    name: 'Ruptura & Reposição',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'stock_balances',
+    queryParams: (stId) => `select=*${stId !== 'all' ? `&store_id=eq.${stId}` : ''}&quantity=lte.0`,
+    desc: 'Identificação imediata de produtos esgotados ou com estoque crítico abaixo do mínimo de segurança.',
+  },
+  'reports:purchases': {
+    scopeId: 'reports:purchases',
+    name: 'Relatório de Compras',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'purchase_orders',
+    queryParams: (stId) => `select=*${stId !== 'all' ? `&store_id=eq.${stId}` : ''}&order=created_at.desc`,
+    desc: 'Histórico de ordens de compra com volume financeiro negociado com fornecedores.',
+  },
+  'reports:losses': {
+    scopeId: 'reports:losses',
+    name: 'Perdas & Baixas',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'stock_movements',
+    queryParams: (stId) => `select=*${stId !== 'all' ? `&store_id=eq.${stId}` : ''}&movement_type=in.(LOSS,DAMAGE,EXPIRATION,ADJUSTMENT)&order=created_at.desc`,
+    desc: 'Registro de quebras operacionais, avarias e vencimentos com totalização financeira.',
+  },
+  'reports:sales': {
+    scopeId: 'reports:sales',
+    name: 'Desempenho de Vendas',
+    category: 'Relatórios',
+    method: 'GET',
+    table: 'orders',
+    queryParams: (stId) => `select=*${stId !== 'all' ? `&store_id=eq.${stId}` : ''}&order=created_at.desc`,
+    desc: 'Consolidação de pedidos faturados, receita total, descontos e ticket médio.',
   },
   'audit:read': {
     scopeId: 'audit:read',
@@ -272,7 +344,9 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
     'products:read',
     'inventory:read',
     'orders:read',
-    'orders:write',
+    'reports:read',
+    'reports:kpis',
+    'reports:valuation',
   ])
   const [expirationOption, setExpirationOption] = React.useState<string>('never')
 
@@ -290,12 +364,14 @@ export function GlobalApiKeyHbacPanel({ stores }: GlobalApiKeyHbacPanelProps) {
   }
 
   const handleApplyPreset = (
-    preset: 'READ_ONLY' | 'POS' | 'STOCK' | 'FULL',
+    preset: 'READ_ONLY' | 'REPORTS_AI' | 'POS' | 'STOCK' | 'FULL',
     target: 'create' | 'edit' = 'create'
   ) => {
     let scopes: string[] = []
     if (preset === 'READ_ONLY') {
       scopes = ['products:read', 'inventory:read', 'reports:read', 'customers:read']
+    } else if (preset === 'REPORTS_AI') {
+      scopes = ['reports:read', 'reports:list', 'reports:kpis', 'reports:valuation', 'reports:abc', 'reports:stockouts', 'reports:purchases', 'reports:losses', 'reports:sales', 'products:read', 'inventory:read', 'orders:read']
     } else if (preset === 'POS') {
       scopes = ['orders:read', 'orders:write', 'products:read', 'inventory:read', 'customers:read', 'customers:write']
     } else if (preset === 'STOCK') {
@@ -854,15 +930,23 @@ console.log('Status:', response.status, data)`
                 <button
                   type="button"
                   onClick={() => handleApplyPreset('STOCK', 'create')}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline cursor-pointer"
                 >
                   Estoque
                 </button>
                 <span>·</span>
                 <button
                   type="button"
+                  onClick={() => handleApplyPreset('REPORTS_AI', 'create')}
+                  className="text-primary hover:underline cursor-pointer font-semibold text-emerald-600 dark:text-emerald-400"
+                >
+                  Relatórios / IA
+                </button>
+                <span>·</span>
+                <button
+                  type="button"
                   onClick={() => handleApplyPreset('FULL', 'create')}
-                  className="text-primary hover:underline"
+                  className="text-primary hover:underline cursor-pointer"
                 >
                   Todos
                 </button>
@@ -1008,6 +1092,14 @@ console.log('Status:', response.status, data)`
                   className="text-primary hover:underline cursor-pointer"
                 >
                   Estoque
+                </button>
+                <span>·</span>
+                <button
+                  type="button"
+                  onClick={() => handleApplyPreset('REPORTS_AI', 'edit')}
+                  className="text-primary hover:underline cursor-pointer font-semibold text-emerald-600 dark:text-emerald-400"
+                >
+                  Relatórios / IA
                 </button>
                 <span>·</span>
                 <button

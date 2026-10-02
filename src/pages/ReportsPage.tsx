@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { reportService } from '@/services/reportService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
+import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatCurrency } from '@/utils/currency'
 import { formatDate, formatDateTime } from '@/utils/dates'
 import { exportToCSV, printFormattedDocument } from '@/utils/export'
@@ -44,16 +45,32 @@ export function ReportsPage() {
   const { storeId, storeName, hasActiveStore } = useTenant()
   const { t } = useI18n()
 
-  const [activeTab, setActiveTab] = React.useState<ReportTab>('valuation')
-  const [search, setSearch] = React.useState('')
-  const [categoryFilter, setCategoryFilter] = React.useState('ALL')
-  const [statusFilter, setStatusFilter] = React.useState('ALL')
-  const [page, setPage] = React.useState(1)
-  const [pageSize, setPageSize] = React.useState(15)
+  const {
+    page,
+    pageSize,
+    search,
+    filters,
+    setPage,
+    setPageSize,
+    setSearch,
+    setFilter,
+  } = useTablePagination({
+    defaultPage: 1,
+    defaultPageSize: 15,
+    defaultFilters: {
+      tab: 'valuation',
+      category: 'ALL',
+      status: 'ALL',
+    },
+  })
+
+  const activeTab = (filters.tab as ReportTab) || 'valuation'
+  const categoryFilter = filters.category || 'ALL'
+  const statusFilter = filters.status || 'ALL'
 
   const handleTabChange = (tab: ReportTab) => {
-    setActiveTab(tab)
-    setStatusFilter('ALL')
+    setFilter('tab', tab)
+    setFilter('status', 'ALL')
     setPage(1)
   }
 
@@ -63,12 +80,12 @@ export function ReportsPage() {
   }
 
   const handleCategoryChange = (val: string) => {
-    setCategoryFilter(val)
+    setFilter('category', val)
     setPage(1)
   }
 
   const handleStatusChange = (val: string) => {
-    setStatusFilter(val)
+    setFilter('status', val)
     setPage(1)
   }
 
