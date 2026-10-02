@@ -18,10 +18,13 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { GlobalDeletePanel } from '@/components/admin/GlobalDeletePanel'
+import { GlobalBackupPanel } from '@/components/admin/GlobalBackupPanel'
+import { GlobalDbExplorerPanel } from '@/components/admin/GlobalDbExplorerPanel'
+import { GlobalApiKeyHbacPanel } from '@/components/admin/GlobalApiKeyHbacPanel'
 import {
   Store,
-  Plus,
   Search,
   Shield,
   Building2,
@@ -34,11 +37,16 @@ import {
   Trash2,
   ArrowRightLeft,
   Eye,
+  HardDrive,
+  Database,
+  Sparkles,
 } from 'lucide-react'
 import { formatDate, formatDateTime } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
 import type { Store as StoreType } from '@/types/store.types'
 import type { PlatformUser } from '@/types/user.types'
+
+export type GlobalAdminTab = 'stores' | 'users' | 'backups' | 'db-explorer' | 'api-hbac' | 'delete'
 
 export function GlobalAdminDashboardPage() {
   const queryClient = useQueryClient()
@@ -64,10 +72,10 @@ export function GlobalAdminDashboardPage() {
     defaultSortOrder: 'asc',
   })
 
-  const activeTab = filters.tab || 'stores' // 'stores' | 'users' | 'delete'
+  const activeTab = (filters.tab as GlobalAdminTab) || 'stores'
   const statusFilter = filters.status || 'ALL'
 
-  const selectTab = (tab: 'stores' | 'users' | 'delete') => {
+  const selectTab = (tab: GlobalAdminTab) => {
     setSearchParams((previous) => {
       const next = new URLSearchParams(previous)
       next.set('tab', tab)
@@ -115,6 +123,12 @@ export function GlobalAdminDashboardPage() {
   const { data: globalMetrics } = useQuery({
     queryKey: ['global-admin-metrics'],
     queryFn: () => reportService.getGlobalAdminMetrics(),
+  })
+
+  // Full raw stores list for backups, db manager, and selectors
+  const { data: allStoresRaw = [] } = useQuery({
+    queryKey: ['all-stores-raw-list'],
+    queryFn: () => storeService.listAllStores(),
   })
 
   // Stores Query
@@ -425,7 +439,7 @@ export function GlobalAdminDashboardPage() {
       {/* Main Tab Switcher & Action Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         {/* Tab Pills */}
-        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
+        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border flex-wrap gap-0.5">
           <button
             onClick={() => selectTab('stores')}
             className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
@@ -434,7 +448,7 @@ export function GlobalAdminDashboardPage() {
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Building2 className="h-3.5 w-3.5 inline mr-1.5" /> Lojas da Plataforma ({globalMetrics?.totalStores ?? 0})
+            <Building2 className="h-3.5 w-3.5 inline mr-1.5" /> Lojas ({globalMetrics?.totalStores ?? 0})
           </button>
           <button
             onClick={() => selectTab('users')}
@@ -445,6 +459,36 @@ export function GlobalAdminDashboardPage() {
             }`}
           >
             <Users className="h-3.5 w-3.5 inline mr-1.5" /> Usuários ({globalMetrics?.totalUsers ?? 0})
+          </button>
+          <button
+            onClick={() => selectTab('backups')}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'backups'
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <HardDrive className="h-3.5 w-3.5 inline mr-1.5" /> Backups & SQL
+          </button>
+          <button
+            onClick={() => selectTab('db-explorer')}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'db-explorer'
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Database className="h-3.5 w-3.5 inline mr-1.5" /> Banco de Dados
+          </button>
+          <button
+            onClick={() => selectTab('api-hbac')}
+            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              activeTab === 'api-hbac'
+                ? 'bg-primary text-primary-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Sparkles className="h-3.5 w-3.5 inline mr-1.5" /> API & HBAC
           </button>
           <button
             onClick={() => selectTab('delete')}
@@ -461,63 +505,81 @@ export function GlobalAdminDashboardPage() {
         {/* Tab Actions */}
         <div className="flex items-center gap-2 ml-auto">
           {activeTab === 'stores' && (
-            <>
-              <select
-                value={statusFilter}
-                onChange={(e) => setFilter('status', e.target.value)}
-                aria-label="Filtrar por status"
-                className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-              >
-                <option value="ALL">Todos os Status</option>
-                <option value="ACTIVE">Apenas Ativas</option>
-                <option value="INACTIVE">Inativas</option>
-              </select>
-
-              <Button
-                size="sm"
-                onClick={() => {
-                  resetStoreForm()
-                  setIsStoreModalOpen(true)
-                }}
-                className="h-8 text-xs px-2.5 shadow-xs font-semibold"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Nova Loja
-              </Button>
-            </>
+            <select
+              value={statusFilter}
+              onChange={(e) => setFilter('status', e.target.value)}
+              aria-label="Filtrar por status"
+              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="ALL">Todos os Status</option>
+              <option value="ACTIVE">Apenas Ativas</option>
+              <option value="INACTIVE">Inativas</option>
+            </select>
           )}
 
           {activeTab === 'users' && (
-            <>
-              <select
-                value={userRoleFilter}
-                onChange={(e) => setFilter('userRole', e.target.value)}
-                aria-label="Filtrar tipo de usuário"
-                className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-              >
-                <option value="ALL">Todos os Usuários</option>
-                <option value="GLOBAL_ADMIN">Apenas Global Admins</option>
-                <option value="STANDARD">Usuários Padrão</option>
-              </select>
+            <select
+              value={userRoleFilter}
+              onChange={(e) => setFilter('userRole', e.target.value)}
+              aria-label="Filtrar tipo de usuário"
+              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="ALL">Todos os Usuários</option>
+              <option value="GLOBAL_ADMIN">Apenas Global Admins</option>
+              <option value="STANDARD">Usuários Padrão</option>
+            </select>
+          )}
 
-              <Button
-                size="sm"
-                onClick={() => {
+          {/* Quick Actions Dropdown Menu */}
+          <DropdownMenu
+            triggerLabel="Ações Rápidas"
+            buttonClassName="h-8 px-3 rounded-lg border border-border bg-card font-semibold text-foreground hover:bg-muted text-xs shadow-xs"
+            items={[
+              {
+                key: 'new-store',
+                label: 'Cadastrar Nova Loja',
+                icon: <Building2 className="h-3.5 w-3.5 text-primary" />,
+                onSelect: () => {
+                  resetStoreForm()
+                  setIsStoreModalOpen(true)
+                },
+              },
+              {
+                key: 'new-user',
+                label: 'Cadastrar Novo Usuário',
+                icon: <Users className="h-3.5 w-3.5 text-blue-500" />,
+                onSelect: () => {
                   resetUserForm()
                   setIsUserModalOpen(true)
-                }}
-                className="h-8 text-xs px-2.5 shadow-xs font-semibold"
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" /> Novo Usuário
-              </Button>
-            </>
-          )}
+                },
+              },
+              {
+                key: 'backup-center',
+                label: 'Gerar Backup / Exportar SQL',
+                icon: <HardDrive className="h-3.5 w-3.5 text-emerald-500" />,
+                onSelect: () => selectTab('backups'),
+              },
+              {
+                key: 'db-manager',
+                label: 'Gerenciador de Banco (CRUD)',
+                icon: <Database className="h-3.5 w-3.5 text-amber-500" />,
+                onSelect: () => selectTab('db-explorer'),
+              },
+              {
+                key: 'api-hbac-center',
+                label: 'Configurar Chaves API & HBAC',
+                icon: <Sparkles className="h-3.5 w-3.5 text-violet-500" />,
+                onSelect: () => selectTab('api-hbac'),
+              },
+            ]}
+          />
         </div>
       </div>
 
-      {/* Global Compact Metrics Cards (so nas abas de leitura) */}
+      {/* Global Compact Metrics Cards (somente nas abas principais de listagem) */}
       <div
         className={`grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0 ${
-          activeTab === 'delete' ? 'hidden' : ''
+          activeTab !== 'stores' && activeTab !== 'users' ? 'hidden' : ''
         }`}
       >
         <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
@@ -569,11 +631,20 @@ export function GlobalAdminDashboardPage() {
         </Card>
       </div>
 
-      {/* TAB 3: CROSS-STORE HARD DELETE */}
+      {/* TAB 3: BACKUP & SQL DUMP */}
+      {activeTab === 'backups' && <GlobalBackupPanel stores={allStoresRaw} />}
+
+      {/* TAB 4: DATABASE EXPLORER & CRUD */}
+      {activeTab === 'db-explorer' && <GlobalDbExplorerPanel stores={allStoresRaw} />}
+
+      {/* TAB 5: API & HBAC ACCESS CONTROL */}
+      {activeTab === 'api-hbac' && <GlobalApiKeyHbacPanel stores={allStoresRaw} />}
+
+      {/* TAB 6: CROSS-STORE HARD DELETE */}
       {activeTab === 'delete' && <GlobalDeletePanel />}
 
       {/* Main Table Card (Stores or Users Viewport) */}
-      {activeTab !== 'delete' && (
+      {(activeTab === 'stores' || activeTab === 'users') && (
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {/* TAB 1: STORES TABLE */}
@@ -683,7 +754,7 @@ export function GlobalAdminDashboardPage() {
                           {formatDate(st.created_at)}
                         </td>
                         <td className="py-2 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1.5">
                             <Button
                               variant="outline"
                               size="sm"
@@ -691,42 +762,41 @@ export function GlobalAdminDashboardPage() {
                               onClick={() => handleEnterStoreContext(st)}
                               title="Visualizar como a Loja (Acessar Painel)"
                             >
-                              <Eye className="h-3 w-3" /> Acessar Loja
+                              <Eye className="h-3 w-3" /> Acessar
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => {
-                                setTransferModalStore(st)
-                                setSelectedNewOwnerId('')
-                              }}
-                              title="Transferir Propriedade da Loja"
-                            >
-                              <ArrowRightLeft className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => handleOpenEditStore(st)}
-                              title="Editar Loja"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className={`h-7 w-7 ${
-                                st.is_active
-                                  ? 'text-destructive/80 hover:text-destructive'
-                                  : 'text-success/80 hover:text-success'
-                              }`}
-                              onClick={() => setTogglingStore(st)}
-                              title={st.is_active ? 'Desativar Loja' : 'Ativar Loja'}
-                            >
-                              <Power className="h-3.5 w-3.5" />
-                            </Button>
+                            <DropdownMenu
+                              buttonClassName="h-7 w-7 border border-border/80 bg-background hover:bg-muted"
+                              items={[
+                                {
+                                  key: 'edit',
+                                  label: 'Editar Dados da Loja',
+                                  icon: <Edit2 className="h-3.5 w-3.5 text-primary" />,
+                                  onSelect: () => handleOpenEditStore(st),
+                                },
+                                {
+                                  key: 'transfer',
+                                  label: 'Transferir Propriedade',
+                                  icon: <ArrowRightLeft className="h-3.5 w-3.5 text-amber-500" />,
+                                  onSelect: () => {
+                                    setTransferModalStore(st)
+                                    setSelectedNewOwnerId('')
+                                  },
+                                },
+                                {
+                                  key: 'view-public',
+                                  label: 'Abrir Catálogo Público',
+                                  icon: <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />,
+                                  onSelect: () => window.open(`/store/${st.slug}`, '_blank'),
+                                },
+                                {
+                                  key: 'toggle-status',
+                                  label: st.is_active ? 'Desativar Loja' : 'Ativar Loja',
+                                  icon: <Power className="h-3.5 w-3.5" />,
+                                  variant: st.is_active ? 'danger' : 'default',
+                                  onSelect: () => setTogglingStore(st),
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       </tr>
@@ -856,35 +926,30 @@ export function GlobalAdminDashboardPage() {
                           {formatDateTime(u.createdAt)}
                         </td>
                         <td className="py-2.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-primary"
-                              onClick={() => resetPasswordMutation.mutate(u.email)}
-                              title="Resetar Senha (Enviar link de redefinição por e-mail)"
-                            >
-                              <KeyRound className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
-                              onClick={() => handleOpenEditUser(u)}
-                              title="Editar Usuário"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive/80 hover:text-destructive"
-                              onClick={() => setDeletingUser(u)}
-                              title="Remover Usuário"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                          <DropdownMenu
+                            buttonClassName="h-7 w-7 border border-border/80 bg-background hover:bg-muted ml-auto"
+                            items={[
+                              {
+                                key: 'edit',
+                                label: 'Editar Usuário',
+                                icon: <Edit2 className="h-3.5 w-3.5 text-primary" />,
+                                onSelect: () => handleOpenEditUser(u),
+                              },
+                              {
+                                key: 'reset-pwd',
+                                label: 'Enviar Redefinição de Senha',
+                                icon: <KeyRound className="h-3.5 w-3.5 text-blue-500" />,
+                                onSelect: () => resetPasswordMutation.mutate(u.email),
+                              },
+                              {
+                                key: 'delete',
+                                label: 'Remover Usuário',
+                                icon: <Trash2 className="h-3.5 w-3.5" />,
+                                variant: 'danger',
+                                onSelect: () => setDeletingUser(u),
+                              },
+                            ]}
+                          />
                         </td>
                       </tr>
                     ))}
