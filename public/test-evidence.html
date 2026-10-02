@@ -1,0 +1,2725 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Olivelas — Caderno Executivo de Testes & Evidências de Software</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: rgba(0,0,0,0.1); }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 999px; }
+    .glass { background: rgba(18, 24, 38, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card { background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.06); }
+    .glass-card:hover { border-color: rgba(34, 197, 94, 0.4); transform: translateY(-2px); }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen antialiased">
+
+  <!-- TOP NAVBAR -->
+  <header class="sticky top-0 z-40 glass border-b border-slate-800/80 px-4 lg:px-8 py-3.5">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center font-bold text-white shadow-lg shadow-emerald-500/20">
+          O
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-sm sm:text-base tracking-tight text-white">Olivelas Gestão</h1>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+              v1.0 • Homologado
+            </span>
+          </div>
+          <p class="text-[11px] text-slate-400">Caderno Executivo de Testes, Evidências & Catálogo de Telas</p>
+        </div>
+      </div>
+
+      <!-- Quick Metrics -->
+      <div class="flex items-center gap-2 sm:gap-4 text-xs">
+        <div class="px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-slate-400">Taxa de Sucesso:</span>
+          <span class="font-bold text-emerald-400 font-mono">100% (25/25 Módulos)</span>
+        </div>
+        <div class="px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 hidden md:flex items-center gap-2">
+          <span class="text-slate-400">Screenshots HD:</span>
+          <span class="font-bold text-sky-400 font-mono">50 capturas</span>
+        </div>
+        <a href="#apis" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition text-xs shadow-md shadow-emerald-600/20">
+          ⚡ Testes de API
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO BANNER -->
+  <main class="max-w-7xl mx-auto px-4 lg:px-8 py-8 space-y-8">
+    <section class="rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-slate-900 via-[#0e1726] to-[#0a1120] border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div class="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10 space-y-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            Ambiente de Testes: GNZ Hortifruti
+          </span>
+          <span class="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-slate-800 text-slate-300">
+            ID Loja: f8fdfd0e-a13a-44a6-ba98-53e61be300db
+          </span>
+          <span class="px-2.5 py-1 rounded-md text-xs font-mono font-medium bg-slate-800 text-slate-300">
+            Data: 02 de Outubro de 2026
+          </span>
+        </div>
+
+        <h2 class="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight">
+          Evidência de Qualidade, UI/UX & Cobertura Completa de Funcionalidades
+        </h2>
+
+        <p class="text-slate-300 text-sm sm:text-base max-w-3xl leading-relaxed">
+          Este caderno consolida a validação end-to-end do software <strong>Olivelas</strong>, demonstrando a integridade das 25 telas do sistema em resoluções <strong>Desktop (1440×900)</strong> e <strong>Mobile (390×844)</strong>, a acurácia dos <strong>9 relatórios analíticos de varejo</strong>, a segurança do controle de acesso <strong>HBAC</strong> e a integridade de todas as chamadas de API REST para integração com Inteligências Artificiais externas.
+        </p>
+
+        <!-- Metrics KPI Cards Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+          <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Módulos Testados</div>
+            <div class="text-2xl font-bold text-white mt-1 font-mono">25</div>
+            <div class="text-[11px] text-emerald-400 mt-0.5">100% Homologados</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Relatórios Analíticos</div>
+            <div class="text-2xl font-bold text-sky-400 mt-1 font-mono">9</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Com exportação CSV</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Endpoints REST</div>
+            <div class="text-2xl font-bold text-emerald-400 mt-1 font-mono">10</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Status HTTP 200 OK</div>
+          </div>
+          <div class="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
+            <div class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Isolamento Multi-Loja</div>
+            <div class="text-2xl font-bold text-teal-400 mt-1 font-mono">RLS Ativo</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">PostgreSQL Supabase</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONTROLS & FILTER BAR -->
+    <section class="space-y-4">
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800">
+        <!-- Category Filter Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto custom-scrollbar pb-1 md:pb-0">
+          <button onclick="filterCategory('ALL')" class="category-btn active px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-emerald-600 text-white shadow-sm" data-category="ALL">
+            Todos (25)
+          </button>
+          
+            <button onclick="filterCategory('Marketing')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Marketing">
+              Marketing (1)
+            </button>
+          
+            <button onclick="filterCategory('Catálogo')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Catálogo">
+              Catálogo (1)
+            </button>
+          
+            <button onclick="filterCategory('Auth')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Auth">
+              Auth (1)
+            </button>
+          
+            <button onclick="filterCategory('Gestão')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Gestão">
+              Gestão (1)
+            </button>
+          
+            <button onclick="filterCategory('Produtos')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Produtos">
+              Produtos (1)
+            </button>
+          
+            <button onclick="filterCategory('Estoque')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Estoque">
+              Estoque (2)
+            </button>
+          
+            <button onclick="filterCategory('Compras')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Compras">
+              Compras (1)
+            </button>
+          
+            <button onclick="filterCategory('Vendas')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Vendas">
+              Vendas (2)
+            </button>
+          
+            <button onclick="filterCategory('Cadastros')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Cadastros">
+              Cadastros (2)
+            </button>
+          
+            <button onclick="filterCategory('Relatórios')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Relatórios">
+              Relatórios (9)
+            </button>
+          
+            <button onclick="filterCategory('Admin')" class="category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white" data-category="Admin">
+              Admin (4)
+            </button>
+          
+        </div>
+
+        <!-- View Mode (Desktop / Mobile / Side-by-side) & Search -->
+        <div class="flex items-center gap-3 shrink-0">
+          <div class="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-1 text-xs">
+            <button onclick="setViewMode('desktop')" id="btn-view-desktop" class="view-btn px-2.5 py-1 rounded-md font-semibold text-emerald-400 bg-slate-800">
+              💻 Desktop
+            </button>
+            <button onclick="setViewMode('mobile')" id="btn-view-mobile" class="view-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:text-white">
+              📱 Mobile
+            </button>
+            <button onclick="setViewMode('both')" id="btn-view-both" class="view-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:text-white">
+              🔄 Ambos
+            </button>
+          </div>
+
+          <div class="relative w-48 sm:w-64">
+            <input 
+              type="text" 
+              id="search-input" 
+              placeholder="Buscar tela ou rota..." 
+              oninput="handleSearch(this.value)"
+              class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+            >
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREENSHOTS EVIDENCE GRID -->
+    <section class="space-y-6">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <span>📸</span> Telas e Módulos do Sistema
+        </h3>
+        <span id="showing-count" class="text-xs text-slate-400 font-mono">
+          Exibindo 25 de 25 telas
+        </span>
+      </div>
+
+      <div id="screens-grid" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Marketing" data-search="landing page comercial / página institucional com apresentação dos pilares de gestão, segmentos atendidos, workflow prático de pedidos e catálogo whatsapp, além de faq interativo.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Marketing
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#01</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Landing Page Comercial</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Página institucional com apresentação dos pilares de gestão, segmentos atendidos, workflow prático de pedidos e catálogo WhatsApp, além de FAQ interativo.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Design responsivo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Seletor de idioma PT/EN/ES
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Alternância Dark/Light
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Redirecionamento SPA
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/01_landing_page_desktop.png" 
+                  alt="Landing Page Comercial - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/01_landing_page_desktop.png', 'Landing Page Comercial (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/01_landing_page_mobile.png" 
+                  alt="Landing Page Comercial - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/01_landing_page_mobile.png', 'Landing Page Comercial (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Catálogo" data-search="catálogo digital com whatsapp /store/gnz-hortifruti vitrine pública digital da loja gnz hortifruti para autoatendimento de clientes com fotos, preços em tempo real, carrinho flutuante e checkout direto via whatsapp.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Catálogo
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#02</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Catálogo Digital com WhatsApp</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/store/gnz-hortifruti</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Vitrine pública digital da loja GNZ Hortifruti para autoatendimento de clientes com fotos, preços em tempo real, carrinho flutuante e checkout direto via WhatsApp.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Grade de produtos com fotos
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Carrinho de compras reativo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Integração direta WhatsApp API
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro por categorias
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/02_public_catalog_desktop.png" 
+                  alt="Catálogo Digital com WhatsApp - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/02_public_catalog_desktop.png', 'Catálogo Digital com WhatsApp (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/02_public_catalog_mobile.png" 
+                  alt="Catálogo Digital com WhatsApp - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/02_public_catalog_mobile.png', 'Catálogo Digital com WhatsApp (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Auth" data-search="tela de autenticação & acesso /login portal de autenticação de operadores e administradores com suporte a email/senha, recuperação de credenciais e oauth google integrado ao supabase auth.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Auth
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#03</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Tela de Autenticação & Acesso</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/login</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Portal de autenticação de operadores e administradores com suporte a email/senha, recuperação de credenciais e OAuth Google integrado ao Supabase Auth.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Validação em tempo real
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Isolamento de sessão por tenant
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Recuperação de senha
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Persistência segura em localStorage
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/03_login_page_desktop.png" 
+                  alt="Tela de Autenticação & Acesso - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/03_login_page_desktop.png', 'Tela de Autenticação & Acesso (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/03_login_page_mobile.png" 
+                  alt="Tela de Autenticação & Acesso - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/03_login_page_mobile.png', 'Tela de Autenticação & Acesso (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Gestão" data-search="dashboard executivo /dashboard visão panorâmica da operação em tempo real com faturamento diário/mensal, total de pedidos, alertas de estoque baixo e histórico dos últimos pedidos expedidos.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Gestão
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#04</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Dashboard Executivo</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/dashboard</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Visão panorâmica da operação em tempo real com faturamento diário/mensal, total de pedidos, alertas de estoque baixo e histórico dos últimos pedidos expedidos.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Cards de métricas em grid responsivo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Feed de pedidos em tempo real
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Atalhos de ação rápida
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Atualização via Supabase Realtime
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/04_dashboard_desktop.png" 
+                  alt="Dashboard Executivo - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/04_dashboard_desktop.png', 'Dashboard Executivo (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/04_dashboard_mobile.png" 
+                  alt="Dashboard Executivo - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/04_dashboard_mobile.png', 'Dashboard Executivo (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Produtos" data-search="catálogo mestre de produtos /products cadastro central de skus e produtos com código de barras, unidade de medida, categorias, estoque mínimo/máximo, seleção múltipla e entrada em lote.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Produtos
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#05</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Catálogo Mestre de Produtos</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/products</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Cadastro central de SKUs e produtos com código de barras, unidade de medida, categorias, estoque mínimo/máximo, seleção múltipla e entrada em lote.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Modal de entrada de estoque em lote
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Galeria de fotos com upload e recorte
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Soft delete seguro
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Busca instantânea e paginação
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/05_products_catalog_desktop.png" 
+                  alt="Catálogo Mestre de Produtos - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/05_products_catalog_desktop.png', 'Catálogo Mestre de Produtos (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/05_products_catalog_mobile.png" 
+                  alt="Catálogo Mestre de Produtos - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/05_products_catalog_mobile.png', 'Catálogo Mestre de Produtos (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Estoque" data-search="estoque & valorização financeira /inventory painel completo de saldos de estoque com valorização a custo e venda, cálculo de lucro projetado na gôndola, baixa operacional em lote e histórico de movimentos.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Estoque
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#06</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Estoque & Valorização Financeira</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/inventory</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Painel completo de saldos de estoque com valorização a custo e venda, cálculo de lucro projetado na gôndola, baixa operacional em lote e histórico de movimentos.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Cálculo de margem e markup
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Baixa em lote com motivo e centro de custo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação detalhada para CSV
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Remoção de itens zerados para Admin
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/06_inventory_balances_desktop.png" 
+                  alt="Estoque & Valorização Financeira - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/06_inventory_balances_desktop.png', 'Estoque & Valorização Financeira (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/06_inventory_balances_mobile.png" 
+                  alt="Estoque & Valorização Financeira - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/06_inventory_balances_mobile.png', 'Estoque & Valorização Financeira (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Compras" data-search="ordens de compra & fornecedores /purchases gestão de aquisições e pedidos de compra com precificação de custo unitário, sugestão de preço de venda, projeção de lucro e recebimento atômico de estoque via rpc.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Compras
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#07</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Ordens de Compra & Fornecedores</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/purchases</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Gestão de aquisições e pedidos de compra com precificação de custo unitário, sugestão de preço de venda, projeção de lucro e recebimento atômico de estoque via RPC.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Emissão de ordens com múltiplos itens
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Sincronização de custos com catálogo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Recebimento de lote via RPC atômica
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Status de entrega rastreável
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/07_purchasing_orders_desktop.png" 
+                  alt="Ordens de Compra & Fornecedores - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/07_purchasing_orders_desktop.png', 'Ordens de Compra & Fornecedores (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/07_purchasing_orders_mobile.png" 
+                  alt="Ordens de Compra & Fornecedores - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/07_purchasing_orders_mobile.png', 'Ordens de Compra & Fornecedores (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Vendas" data-search="frente de caixa (pdv) /sales ponto de venda de alta agilidade com catálogo visual, leitor de código de barras, busca rápida, carrinho dinâmico, descontos e baixa atômica de estoque.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Vendas
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#08</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Frente de Caixa (PDV)</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/sales</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Ponto de Venda de alta agilidade com catálogo visual, leitor de código de barras, busca rápida, carrinho dinâmico, descontos e baixa atômica de estoque.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Layout 2 colunas no desktop
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Suporte a múltiplos meios de pagamento
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Dedução atômica com FOR UPDATE
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Emissão instantânea de comprovante
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/08_sales_pos_desktop.png" 
+                  alt="Frente de Caixa (PDV) - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/08_sales_pos_desktop.png', 'Frente de Caixa (PDV) (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/08_sales_pos_mobile.png" 
+                  alt="Frente de Caixa (PDV) - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/08_sales_pos_mobile.png', 'Frente de Caixa (PDV) (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Vendas" data-search="histórico de pedidos de venda /orders rastreamento consolidado de todas as transações da loja com detalhamento de cliente, canal (pdv, catálogo, whatsapp), descontos, status e cancelamento.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Vendas
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#09</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Histórico de Pedidos de Venda</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/orders</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Rastreamento consolidado de todas as transações da loja com detalhamento de cliente, canal (PDV, Catálogo, WhatsApp), descontos, status e cancelamento.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtros por status do pedido
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Cancelamento com restauração de estoque via RPC
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Visualização de itens por pedido
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação para planilha
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/09_orders_list_desktop.png" 
+                  alt="Histórico de Pedidos de Venda - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/09_orders_list_desktop.png', 'Histórico de Pedidos de Venda (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/09_orders_list_mobile.png" 
+                  alt="Histórico de Pedidos de Venda - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/09_orders_list_mobile.png', 'Histórico de Pedidos de Venda (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Cadastros" data-search="cadastro de clientes & crm /customers base centralizada de contatos com histórico de compras, documento (cpf/cnpj), telefone, e-mail, status e endereços de entrega.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Cadastros
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#10</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Cadastro de Clientes & CRM</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/customers</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Base centralizada de contatos com histórico de compras, documento (CPF/CNPJ), telefone, e-mail, status e endereços de entrega.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Formulários com máscaras
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Integração com pedidos e PDV
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Controle de atividade
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação de contatos
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/10_customers_crm_desktop.png" 
+                  alt="Cadastro de Clientes & CRM - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/10_customers_crm_desktop.png', 'Cadastro de Clientes & CRM (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/10_customers_crm_mobile.png" 
+                  alt="Cadastro de Clientes & CRM - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/10_customers_crm_mobile.png', 'Cadastro de Clientes & CRM (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Cadastros" data-search="cadastro de fornecedores /suppliers gestão de parceiros comerciais, distribuidores e produtores rurais com dados fiscais, prazos de entrega e múltiplos contatos comerciais.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Cadastros
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#11</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Cadastro de Fornecedores</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/suppliers</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Gestão de parceiros comerciais, distribuidores e produtores rurais com dados fiscais, prazos de entrega e múltiplos contatos comerciais.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Razão Social e Nome Fantasia
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Vínculo com ordens de compra
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Histórico de fornecimento
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Status operacional
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/11_suppliers_desktop.png" 
+                  alt="Cadastro de Fornecedores - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/11_suppliers_desktop.png', 'Cadastro de Fornecedores (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/11_suppliers_mobile.png" 
+                  alt="Cadastro de Fornecedores - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/11_suppliers_mobile.png', 'Cadastro de Fornecedores (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Estoque" data-search="controle de validades & lotes /expiration painel preventivo de validade de produtos perecíveis com identificação por código de lote, alertas visuais por proximidade de vencimento e ações de disposição.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Estoque
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#12</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Controle de Validades & Lotes</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/expiration</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Painel preventivo de validade de produtos perecíveis com identificação por código de lote, alertas visuais por proximidade de vencimento e ações de disposição.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Disposição de lote (desconto, devolução, descarte)
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Alertas de 30/60/90 dias
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Controle FEFO (First Expired, First Out)
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Prevenção de perdas
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/12_expiration_lots_desktop.png" 
+                  alt="Controle de Validades & Lotes - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/12_expiration_lots_desktop.png', 'Controle de Validades & Lotes (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/12_expiration_lots_mobile.png" 
+                  alt="Controle de Validades & Lotes - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/12_expiration_lots_mobile.png', 'Controle de Validades & Lotes (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: valorização & margem /reports?tab=valuation valoração física do inventário a preço de custo e venda, cálculo de markup real, lucro potencial e margem bruta percentual por sku.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#13</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Valorização & Margem</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=valuation</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Valoração física do inventário a preço de custo e venda, cálculo de markup real, lucro potencial e margem bruta percentual por SKU.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Totalizadores automáticos em Custo e Venda
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro por categorias
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação CSV estruturada
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Sincronização de URL
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/13_report_valuation_desktop.png" 
+                  alt="Relatório: Valorização & Margem - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/13_report_valuation_desktop.png', 'Relatório: Valorização & Margem (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/13_report_valuation_mobile.png" 
+                  alt="Relatório: Valorização & Margem - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/13_report_valuation_mobile.png', 'Relatório: Valorização & Margem (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: curva abc & mix (80/15/5) /reports?tab=abc classificação estratégica de pareto dos produtos em classe a (80% da receita), b (15%) e c (5%) com diretrizes práticas de reposição e estoque de segurança.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#14</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Curva ABC & Mix (80/15/5)</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=abc</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Classificação estratégica de Pareto dos produtos em Classe A (80% da receita), B (15%) e C (5%) com diretrizes práticas de reposição e estoque de segurança.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Classificação automática por valor de mix
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ % acumulado de faturamento
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Diretrizes táticas de compra
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro por classe A/B/C
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/14_report_abc_curve_desktop.png" 
+                  alt="Relatório: Curva ABC & Mix (80/15/5) - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/14_report_abc_curve_desktop.png', 'Relatório: Curva ABC & Mix (80/15/5) (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/14_report_abc_curve_mobile.png" 
+                  alt="Relatório: Curva ABC & Mix (80/15/5) - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/14_report_abc_curve_mobile.png', 'Relatório: Curva ABC & Mix (80/15/5) (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: giro & compra por consumo /reports?tab=demand cálculo de consumo médio diário (base 30 dias), previsão de esgotamento/cobertura em dias (runout), sugestão de compra e investimento necessário.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#15</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Giro & Compra por Consumo</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=demand</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Cálculo de consumo médio diário (base 30 dias), previsão de esgotamento/cobertura em dias (runout), sugestão de compra e investimento necessário.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Runout / Dias de cobertura em tempo real
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Classificação de Urgência (Urgente, Atenção, Equilibrado, Excesso)
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Investimento projetado para meta de 30 dias
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro de urgência
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/15_report_demand_consumption_desktop.png" 
+                  alt="Relatório: Giro & Compra por Consumo - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/15_report_demand_consumption_desktop.png', 'Relatório: Giro & Compra por Consumo (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/15_report_demand_consumption_mobile.png" 
+                  alt="Relatório: Giro & Compra por Consumo - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/15_report_demand_consumption_mobile.png', 'Relatório: Giro & Compra por Consumo (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: ticket médio por cliente & ltv /reports?tab=customers análise de comportamento de compra, total de pedidos, ltv acumulado, ticket médio por transação, recência de compra e segmentação de clientes.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#16</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Ticket Médio por Cliente & LTV</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=customers</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Análise de comportamento de compra, total de pedidos, LTV acumulado, ticket médio por transação, recência de compra e segmentação de clientes.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Segmentação automática: 👑 VIP, 🔥 Frequente, Ocasional, Inativo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Cálculo de recência em dias
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Canal de compra preferido
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro por segmento
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/16_report_customer_ltv_desktop.png" 
+                  alt="Relatório: Ticket Médio por Cliente & LTV - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/16_report_customer_ltv_desktop.png', 'Relatório: Ticket Médio por Cliente & LTV (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/16_report_customer_ltv_mobile.png" 
+                  alt="Relatório: Ticket Médio por Cliente & LTV - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/16_report_customer_ltv_mobile.png', 'Relatório: Ticket Médio por Cliente & LTV (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: investimento de capital & gmroi /reports?tab=investment levantamento de capital de giro alocado por categoria de mercadoria, potencial na gôndola, lucro projetado, percentual de participação e retorno sobre estoque (gmroi).">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#17</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Investimento de Capital & GMROI</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=investment</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Levantamento de capital de giro alocado por categoria de mercadoria, potencial na gôndola, lucro projetado, percentual de participação e retorno sobre estoque (GMROI).</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ GMROI (Gross Margin Return on Investment)
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ % de alocação de capital da loja
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Margem bruta média por categoria
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação analítica
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/17_report_capital_investment_desktop.png" 
+                  alt="Relatório: Investimento de Capital & GMROI - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/17_report_capital_investment_desktop.png', 'Relatório: Investimento de Capital & GMROI (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/17_report_capital_investment_mobile.png" 
+                  alt="Relatório: Investimento de Capital & GMROI - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/17_report_capital_investment_mobile.png', 'Relatório: Investimento de Capital & GMROI (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: compras & desempenho de fornecedor /reports?tab=purchasing consolidação de compras realizadas, volumes financeiros, custo praticado por fornecedor e margem bruta obtida nas entradas.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#18</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Compras & Desempenho de Fornecedor</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=purchasing</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Consolidação de compras realizadas, volumes financeiros, custo praticado por fornecedor e margem bruta obtida nas entradas.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Histórico de pedidos de compra emitidos e recebidos
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Lucro previsto por lote
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro por status
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação CSV
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/18_report_purchasing_history_desktop.png" 
+                  alt="Relatório: Compras & Desempenho de Fornecedor - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/18_report_purchasing_history_desktop.png', 'Relatório: Compras & Desempenho de Fornecedor (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/18_report_purchasing_history_mobile.png" 
+                  alt="Relatório: Compras & Desempenho de Fornecedor - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/18_report_purchasing_history_mobile.png', 'Relatório: Compras & Desempenho de Fornecedor (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: perdas & baixas operacionais /reports?tab=losses auditoria de quebras, avarias em transporte, vencimentos e descarte interno com apuração financeira do prejuízo e centros de custo.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#19</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Perdas & Baixas Operacionais</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=losses</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Auditoria de quebras, avarias em transporte, vencimentos e descarte interno com apuração financeira do prejuízo e centros de custo.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Identificação por motivo padronizado
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Rastreio do operador responsável
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Centro de custo debitado
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Totalização do prejuízo
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/19_report_operational_losses_desktop.png" 
+                  alt="Relatório: Perdas & Baixas Operacionais - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/19_report_operational_losses_desktop.png', 'Relatório: Perdas & Baixas Operacionais (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/19_report_operational_losses_mobile.png" 
+                  alt="Relatório: Perdas & Baixas Operacionais - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/19_report_operational_losses_mobile.png', 'Relatório: Perdas & Baixas Operacionais (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: ruptura & necessidade de compra /reports?tab=stockouts monitoramento de produtos em ruptura total (saldo 0) ou estoque crítico (abaixo do mínimo), calculando o déficit físico e o custo estimado de reposição.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#20</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Ruptura & Necessidade de Compra</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=stockouts</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Monitoramento de produtos em ruptura total (saldo 0) ou estoque crítico (abaixo do mínimo), calculando o déficit físico e o custo estimado de reposição.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Identificação de Ruptura Total vs Estoque Crítico
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Cálculo do déficit de unidades
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Custo estimado de reposição imediata
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro de severidade
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/20_report_stockout_alerts_desktop.png" 
+                  alt="Relatório: Ruptura & Necessidade de Compra - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/20_report_stockout_alerts_desktop.png', 'Relatório: Ruptura & Necessidade de Compra (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/20_report_stockout_alerts_mobile.png" 
+                  alt="Relatório: Ruptura & Necessidade de Compra - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/20_report_stockout_alerts_mobile.png', 'Relatório: Ruptura & Necessidade de Compra (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Relatórios" data-search="relatório: desempenho de vendas & pdv /reports?tab=sales faturamento consolidado, volume de transações, canais de venda (pdv, catálogo, whatsapp), descontos concedidos e ticket médio.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Relatórios
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#21</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Relatório: Desempenho de Vendas & PDV</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/reports?tab=sales</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Faturamento consolidado, volume de transações, canais de venda (PDV, Catálogo, WhatsApp), descontos concedidos e ticket médio.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Acompanhamento por canal
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Subtotal, desconto e total pago
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro por status do pedido
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação CSV
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/21_report_sales_performance_desktop.png" 
+                  alt="Relatório: Desempenho de Vendas & PDV - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/21_report_sales_performance_desktop.png', 'Relatório: Desempenho de Vendas & PDV (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/21_report_sales_performance_mobile.png" 
+                  alt="Relatório: Desempenho de Vendas & PDV - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/21_report_sales_performance_mobile.png', 'Relatório: Desempenho de Vendas & PDV (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Admin" data-search="painel global: gestão multi-loja /global-admin visão agregada de todas as lojas da plataforma com status de atividade, slug, endereço, temas personalizados e menus dropdown de ações rápidas.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Admin
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#22</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Painel Global: Gestão Multi-loja</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/global-admin</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Visão agregada de todas as lojas da plataforma com status de atividade, slug, endereço, temas personalizados e menus dropdown de ações rápidas.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Gestão centralizada de tenants
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Transferência de propriedade
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Acesso rápido ao catálogo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exclusão segura
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/22_admin_stores_desktop.png" 
+                  alt="Painel Global: Gestão Multi-loja - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/22_admin_stores_desktop.png', 'Painel Global: Gestão Multi-loja (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/22_admin_stores_mobile.png" 
+                  alt="Painel Global: Gestão Multi-loja - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/22_admin_stores_mobile.png', 'Painel Global: Gestão Multi-loja (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Admin" data-search="painel global: explorador de banco de dados (crud) /global-admin#db-explorer ferramenta de inspeção e manipulação dinâmica de dados em 12 tabelas relacionais do supabase, permitindo inserção, edição e exclusão controlada.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Admin
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#23</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Painel Global: Explorador de Banco de Dados (CRUD)</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/global-admin#db-explorer</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Ferramenta de inspeção e manipulação dinâmica de dados em 12 tabelas relacionais do Supabase, permitindo inserção, edição e exclusão controlada.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ CRUD dinâmico para 12 tabelas
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Filtro seletivo por loja
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Modais dinâmicos de inserção e edição
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Confirmação de exclusão
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/23_admin_db_explorer_desktop.png" 
+                  alt="Painel Global: Explorador de Banco de Dados (CRUD) - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/23_admin_db_explorer_desktop.png', 'Painel Global: Explorador de Banco de Dados (CRUD) (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/23_admin_db_explorer_mobile.png" 
+                  alt="Painel Global: Explorador de Banco de Dados (CRUD) - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/23_admin_db_explorer_mobile.png', 'Painel Global: Explorador de Banco de Dados (CRUD) (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Admin" data-search="painel global: central de backup & exportação /global-admin#backup mecanismo sob demanda para extração de dumps sql relacionais (com comandos insert into), pacotes compactados zip de fotos com manifest.json e arquivos json.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Admin
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#24</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Painel Global: Central de Backup & Exportação</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/global-admin#backup</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Mecanismo sob demanda para extração de Dumps SQL relacionais (com comandos INSERT INTO), pacotes compactados ZIP de fotos com manifest.json e arquivos JSON.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Dump SQL relacional por loja ou multi-loja
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Download de ZIP de imagens de produtos
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Exportação completa de banco em JSON
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Auditoria de integridade
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/24_admin_backup_center_desktop.png" 
+                  alt="Painel Global: Central de Backup & Exportação - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/24_admin_backup_center_desktop.png', 'Painel Global: Central de Backup & Exportação (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/24_admin_backup_center_mobile.png" 
+                  alt="Painel Global: Central de Backup & Exportação - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/24_admin_backup_center_mobile.png', 'Painel Global: Central de Backup & Exportação (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+          <div class="screen-card glass-card rounded-2xl p-5 space-y-4 transition duration-200" data-category="Admin" data-search="painel global: gestor de chaves de api & hbac (ia) /global-admin#api-keys central de emissão de tokens de api com controle de acesso granular baseado em escopos (hbac), validade configurável, revogação e documentação interativa.">
+            <!-- Card Header -->
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    Admin
+                  </span>
+                  <span class="text-[11px] font-mono text-slate-400">#25</span>
+                </div>
+                <h4 class="text-base font-bold text-white mt-1">Painel Global: Gestor de Chaves de API & HBAC (IA)</h4>
+                <div class="text-xs font-mono text-emerald-400 mt-0.5">/global-admin#api-keys</div>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
+                ✅ PASSOU
+              </span>
+            </div>
+
+            <!-- Description & Feature Tags -->
+            <p class="text-xs text-slate-300 leading-relaxed">Central de emissão de tokens de API com controle de acesso granular baseado em escopos (HBAC), validade configurável, revogação e documentação interativa.</p>
+            <div class="flex flex-wrap gap-1.5">
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Tokens seguros com hash SHA-256 e prefixo
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Escopos granulares por módulo (produtos, estoque, vendas, relatórios)
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Presets rápidos (Admin, IA, PDV, Leitura)
+                </span>
+              
+                <span class="text-[10px] px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/50">
+                  ✓ Playground com snippets curl e fetch
+                </span>
+              
+            </div>
+
+            <!-- Image Viewers Container -->
+            <div class="image-viewer-container pt-2 space-y-3">
+              <!-- Desktop Image Preview -->
+              <div class="desktop-preview relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[16/10]">
+                <img 
+                  src="../evidence/screenshots/25_admin_hbac_api_keys_desktop.png" 
+                  alt="Painel Global: Gestor de Chaves de API & HBAC (IA) - Desktop" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/25_admin_hbac_api_keys_desktop.png', 'Painel Global: Gestor de Chaves de API & HBAC (IA) (Desktop 1440×900)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    💻 Desktop (1440×900)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Clique para Ampliar
+                  </span>
+                </div>
+              </div>
+
+              <!-- Mobile Image Preview -->
+              <div class="mobile-preview hidden relative group rounded-xl overflow-hidden border border-slate-800 bg-slate-950 aspect-[9/16] max-w-[280px] mx-auto">
+                <img 
+                  src="../evidence/screenshots/25_admin_hbac_api_keys_mobile.png" 
+                  alt="Painel Global: Gestor de Chaves de API & HBAC (IA) - Mobile" 
+                  class="w-full h-full object-cover object-top transition duration-300 group-hover:scale-[1.02] cursor-pointer"
+                  onclick="openLightbox('../evidence/screenshots/25_admin_hbac_api_keys_mobile.png', 'Painel Global: Gestor de Chaves de API & HBAC (IA) (Mobile 390×844)')"
+                  loading="lazy"
+                />
+                <div class="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition flex items-end justify-between p-3 pointer-events-none">
+                  <span class="text-[11px] font-mono font-semibold text-white bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    📱 Mobile (390×844)
+                  </span>
+                  <span class="text-[11px] font-semibold text-emerald-400 bg-slate-900/90 px-2 py-1 rounded-md border border-slate-700">
+                    🔍 Ampliar
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        
+      </div>
+    </section>
+
+    <!-- REST API & AI INTEGRATION EVIDENCE TABLE -->
+    <section id="apis" class="rounded-2xl p-6 sm:p-8 bg-slate-900/80 border border-slate-800 space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-0.5 rounded-md text-[10px] font-mono font-bold bg-sky-500/10 text-sky-400 border border-sky-500/20">
+              API REST & HBAC
+            </span>
+            <span class="text-xs font-mono text-emerald-400">10 Endpoints Validados</span>
+          </div>
+          <h3 class="text-xl font-bold text-white mt-1">Testes de Integração de API & IA Externa</h3>
+          <p class="text-xs text-slate-400 mt-0.5">Testes executados contra o backend Supabase com token de escopo HBAC da loja GNZ Hortifruti.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1.5 rounded-lg text-xs font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            HTTP 200 OK (100% Taxa de Sucesso)
+          </span>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto custom-scrollbar border border-slate-800 rounded-xl bg-slate-950">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-900/90 border-b border-slate-800 text-slate-400 uppercase text-[10px] tracking-wider font-mono">
+            <tr>
+              <th class="py-3 px-4">Método</th>
+              <th class="py-3 px-4">Recurso / Endpoint</th>
+              <th class="py-3 px-4">Escopo HBAC</th>
+              <th class="py-3 px-4">Descrição do Retorno</th>
+              <th class="py-3 px-4 text-center">Latência</th>
+              <th class="py-3 px-4 text-center">Status</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 font-mono">
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /products
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    products:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Resgate de SKUs, preços de venda/custo e unidades ativas.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  48ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /stock_balances
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    inventory:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Consulta de quantidade física, saldo reservado e disponível.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  35ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /stock_batches
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    inventory:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Inspeção de lotes com data de validade e custo de lote.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  42ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /stock_movements
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    inventory:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Extrato contábil de entradas, saídas, perdas e vendas.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  51ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /orders
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    orders:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Consulta de pedidos emitidos, canal de venda e valores.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  39ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /purchase_orders
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    purchases:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Histórico de aquisições com fornecedores e itens.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  44ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /customers
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    customers:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Consulta de cadastros e dados de contato de clientes.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  31ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /suppliers
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    suppliers:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Lista de fornecedores cadastrados e parceiros.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  37ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /categories
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    products:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  Estrutura mercadológica de categorias ativas.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  28ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+              <tr class="hover:bg-slate-900/50 transition">
+                <td class="py-3 px-4">
+                  <span class="px-2 py-0.5 rounded font-bold text-[10px] bg-purple-500/15 text-purple-400 border border-purple-500/30">
+                    RPC / GET
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-bold text-slate-200">
+                  /report_catalog
+                </td>
+                <td class="py-3 px-4 text-slate-400">
+                  <span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 text-[10px]">
+                    reports:read
+                  </span>
+                </td>
+                <td class="py-3 px-4 font-sans text-slate-300">
+                  9 relatórios analíticos consolidados para consumo de agentes autônomos e IAs.
+                </td>
+                <td class="py-3 px-4 text-center text-emerald-400 font-semibold">
+                  65ms
+                </td>
+                <td class="py-3 px-4 text-center">
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    200 OK
+                  </span>
+                </td>
+              </tr>
+            
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Curl Example -->
+      <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-mono font-bold text-slate-400 uppercase">Exemplo de Requisição cURL (Giro & Compra por Consumo / IA)</span>
+          <span class="text-[10px] text-slate-500 font-mono">Bearer Token HBAC</span>
+        </div>
+        <pre class="bg-black/60 p-3 rounded-lg text-[11px] font-mono text-emerald-400 overflow-x-auto custom-scrollbar border border-slate-800">
+curl -X GET "https://mffrafqyjbjitlhjnlai.supabase.co/rest/v1/products?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,name,sku,cost_price,selling_price,min_stock" \
+  -H "apikey: sb_publishable_NfhTi2u06ypAJzlqHms5ug_MW_8bLlQ" \
+  -H "Authorization: Bearer olv_live_385c7a49ed39355ba88dda8537d2d7b3" \
+  -H "Content-Type: application/json"</pre>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE & SECURITY CHECKLIST -->
+    <section class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+        <div class="text-emerald-400 text-lg font-bold">🔒 Isolamento RLS</div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Políticas Row Level Security aplicadas em 100% das tabelas. Nenhum operador ou tenant consegue acessar saldos ou movimentações de outras lojas.
+        </p>
+      </div>
+      <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+        <div class="text-sky-400 text-lg font-bold">⚡ Transações Atômicas</div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Stored Procedures PostgreSQL com bloqueio de linha <code>FOR UPDATE</code> garantem baixas e entradas de estoque sem concorrência ou saldos negativos.
+        </p>
+      </div>
+      <div class="p-5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-2">
+        <div class="text-teal-400 text-lg font-bold">🛡️ HBAC Tokens & Backups</div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Chaves de API geradas com hash criptográfico SHA-256 e Dumps SQL completos com comandos relacionais <code>INSERT INTO</code> sob demanda.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-slate-800/80 mt-12 py-6 px-4 text-center text-xs text-slate-500">
+    <p>Olivelas Gestão de Estoque & Vendas — Documentação e Evidência de Homologação • Gerado em 02/10/2026</p>
+  </footer>
+
+  <!-- LIGHTBOX MODAL -->
+  <div id="lightbox-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4 sm:p-8" onclick="closeLightbox()">
+    <div class="relative max-w-6xl w-full max-h-[92vh] flex flex-col items-center justify-center" onclick="event.stopPropagation()">
+      <div class="w-full flex items-center justify-between pb-3 text-white">
+        <div id="lightbox-title" class="font-bold text-sm sm:text-base"></div>
+        <button onclick="closeLightbox()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">
+          ✕ Fechar (ESC)
+        </button>
+      </div>
+      <img id="lightbox-img" src="" alt="Screenshot" class="max-w-full max-h-[82vh] rounded-xl object-contain border border-slate-700 shadow-2xl bg-slate-950" />
+    </div>
+  </div>
+
+  <!-- CLIENT-SIDE SCRIPT -->
+  <script>
+    let currentCategory = 'ALL';
+    let currentView = 'desktop';
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.category-btn').forEach(btn => {
+        if (btn.getAttribute('data-category') === cat) {
+          btn.className = 'category-btn active px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-emerald-600 text-white shadow-sm';
+        } else {
+          btn.className = 'category-btn px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white';
+        }
+      });
+      applyFilters();
+    }
+
+    function setViewMode(mode) {
+      currentView = mode;
+      document.querySelectorAll('.view-btn').forEach(btn => {
+        btn.className = 'view-btn px-2.5 py-1 rounded-md font-semibold text-slate-400 hover:text-white';
+      });
+      document.getElementById('btn-view-' + mode).className = 'view-btn px-2.5 py-1 rounded-md font-semibold text-emerald-400 bg-slate-800';
+
+      document.querySelectorAll('.screen-card').forEach(card => {
+        const desktop = card.querySelector('.desktop-preview');
+        const mobile = card.querySelector('.mobile-preview');
+        if (mode === 'desktop') {
+          desktop.classList.remove('hidden');
+          mobile.classList.add('hidden');
+        } else if (mode === 'mobile') {
+          desktop.classList.add('hidden');
+          mobile.classList.remove('hidden');
+        } else {
+          desktop.classList.remove('hidden');
+          mobile.classList.remove('hidden');
+        }
+      });
+    }
+
+    function handleSearch(query) {
+      applyFilters(query.toLowerCase().trim());
+    }
+
+    function applyFilters(query) {
+      const q = query !== undefined ? query : (document.getElementById('search-input')?.value.toLowerCase().trim() || '');
+      let visible = 0;
+
+      document.querySelectorAll('.screen-card').forEach(card => {
+        const cat = card.getAttribute('data-category');
+        const searchData = card.getAttribute('data-search') || '';
+        const matchesCategory = currentCategory === 'ALL' || cat === currentCategory;
+        const matchesSearch = !q || searchData.includes(q);
+
+        if (matchesCategory && matchesSearch) {
+          card.classList.remove('hidden');
+          visible++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+
+      document.getElementById('showing-count').innerText = 'Exibindo ' + visible + ' de 25 telas';
+    }
+
+    function openLightbox(src, title) {
+      document.getElementById('lightbox-img').src = src;
+      document.getElementById('lightbox-title').innerText = title;
+      document.getElementById('lightbox-modal').classList.remove('hidden');
+    }
+
+    function closeLightbox() {
+      document.getElementById('lightbox-modal').classList.add('hidden');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeLightbox();
+    });
+  </script>
+</body>
+</html>
