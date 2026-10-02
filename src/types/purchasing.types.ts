@@ -9,6 +9,9 @@ export interface PurchaseOrder {
   subtotal: number
   shipping_cost: number
   total_amount: number
+  total_selling_amount?: number
+  potential_profit?: number
+  margin_percent?: number
   notes: string | null
   issued_at: string | null
   received_at: string | null
@@ -29,7 +32,12 @@ export interface PurchaseOrderItem {
   quantity_received: number
   unit_cost: number
   total_cost: number
+  selling_price?: number
+  total_selling_value?: number
+  profit?: number
+  margin_percent?: number
   lot_number: string | null
   expiration_date: string | null
   product_name?: string
+  product_sku?: string
 }

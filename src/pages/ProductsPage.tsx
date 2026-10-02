@@ -269,11 +269,13 @@ export function ProductsPage() {
         { header: 'SKU', key: 'sku' },
         { header: 'Código de Barras', key: (r) => r.barcode || '-' },
         { header: 'Categoria', key: (r) => r.category_name || '-' },
-        { header: 'Preço de Custo', key: (r) => r.cost_price },
-        { header: 'Preço de Venda', key: (r) => r.selling_price },
+        { header: 'Unidade', key: (r) => r.unit || 'UN' },
         { header: 'Estoque Atual', key: (r) => r.stock_quantity ?? 0 },
-        { header: 'Estoque Mínimo', key: 'min_stock' },
-        { header: 'Unidade', key: 'unit' },
+        { header: 'Estoque Mínimo', key: (r) => r.min_stock ?? 0 },
+        { header: 'Estoque Máximo', key: (r) => r.max_stock ?? 0 },
+        { header: 'Controla Lote', key: (r) => (r.controls_batch ? 'Sim' : 'Não') },
+        { header: 'Controla Validade', key: (r) => (r.controls_expiration ? 'Sim' : 'Não') },
+        { header: 'Status', key: (r) => (r.is_active ? 'Ativo' : 'Inativo') },
       ]
     )
   }
@@ -451,23 +453,9 @@ export function ProductsPage() {
                       onSort={toggleSort}
                     />
                     <th className="py-3 px-4 font-semibold">Categoria</th>
-                    <SortableHeader
-                      column="cost_price"
-                      label="Preço de Custo"
-                      align="right"
-                      currentSortBy={sortBy}
-                      currentSortOrder={sortOrder}
-                      onSort={toggleSort}
-                    />
-                    <SortableHeader
-                      column="selling_price"
-                      label="Preço de Venda"
-                      align="right"
-                      currentSortBy={sortBy}
-                      currentSortOrder={sortOrder}
-                      onSort={toggleSort}
-                    />
-                    <th className="py-3 px-4 font-semibold text-center">Estoque</th>
+                    <th className="py-3 px-4 font-semibold text-center">Unidade</th>
+                    <th className="py-3 px-4 font-semibold text-center">Estoque Mínimo</th>
+                    <th className="py-3 px-4 font-semibold text-center">Estoque Atual</th>
                     <th className="py-3 px-4 font-semibold text-center">Status</th>
                     <th className="py-3 px-4 font-semibold text-right">Ações</th>
                   </tr>
@@ -549,17 +537,19 @@ export function ProductsPage() {
                           )}
                         </td>
 
-                        <td className="py-2.5 px-4 text-right font-mono text-muted-foreground">
-                          {formatCurrency(p.cost_price || 0)}
+                        <td className="py-2.5 px-4 text-center font-mono text-muted-foreground">
+                          <Badge variant="secondary" className="font-mono text-[10px]">
+                            {p.unit || 'UN'}
+                          </Badge>
                         </td>
 
-                        <td className="py-2.5 px-4 text-right font-mono font-semibold text-foreground">
-                          {formatCurrency(p.selling_price || 0)}
+                        <td className="py-2.5 px-4 text-center font-mono text-muted-foreground">
+                          {p.min_stock ?? 0} {p.unit || 'UN'}
                         </td>
 
                         <td className="py-2.5 px-4 text-center">
                           <span
-                            className={`font-mono font-bold px-2 py-0.5 rounded-md text-xs ${
+                            className={`font-mono font-bold px-2.5 py-1 rounded-md text-xs ${
                               isLowStock
                                 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
                                 : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
@@ -704,18 +694,13 @@ export function ProductsPage() {
                       </div>
                     )}
 
-                    <div className="ml-[50px] mt-2 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-2">
+                    <div className="ml-[50px] mt-2 flex items-center justify-between gap-2">
                       <div className="min-w-0">
-                        <div className="text-[9px] uppercase text-muted-foreground">Venda</div>
-                        <div className="truncate text-xs font-semibold text-foreground">
-                          {formatCurrency(p.selling_price || 0)}
-                        </div>
-                        <div className="truncate text-[10px] text-muted-foreground">
-                          Custo {formatCurrency(p.cost_price || 0)}
+                        <div className="text-[10px] text-muted-foreground">
+                          Mínimo: <span className="font-mono font-medium text-foreground">{p.min_stock ?? 0} {p.unit || 'UN'}</span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[9px] uppercase text-muted-foreground">Estoque</div>
                         <span
                           className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 font-mono text-xs font-bold ${
                             isLowStock
@@ -857,7 +842,7 @@ export function ProductsPage() {
                   setPastedText(e.target.value)
                   processRawImportText(e.target.value)
                 }}
-                placeholder={`name;sku;selling_price;cost_price;category_name;initial_stock\nAzeite Extra Virgem;AZE-01;49.90;28.00;Azeites;50`}
+                placeholder={`name;sku;category_name;unit;initial_stock\nAzeite Extra Virgem;AZE-01;Azeites;UN;50`}
                 className="w-full p-3 rounded-xl border border-input bg-background font-mono text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -913,9 +898,8 @@ export function ProductsPage() {
                 <div className="grid grid-cols-12 gap-2 p-2.5 bg-muted/60 font-bold uppercase text-[10px] text-muted-foreground">
                   <div className="col-span-4">Produto</div>
                   <div className="col-span-2">SKU</div>
-                  <div className="col-span-2">Categoria</div>
-                  <div className="col-span-2 text-right">Preço Venda</div>
-                  <div className="col-span-2 text-center">Estoque Inicial</div>
+                  <div className="col-span-3">Categoria</div>
+                  <div className="col-span-3 text-center">Estoque Inicial</div>
                 </div>
                 {parsedItems.slice(0, 5).map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 p-2.5 items-center font-mono text-xs">
@@ -925,13 +909,10 @@ export function ProductsPage() {
                     <div className="col-span-2 text-muted-foreground truncate">
                       {item.sku || <span className="text-primary italic">Automático</span>}
                     </div>
-                    <div className="col-span-2 font-sans text-muted-foreground truncate">
+                    <div className="col-span-3 font-sans text-muted-foreground truncate">
                       {item.category_name || '-'}
                     </div>
-                    <div className="col-span-2 text-right font-bold text-foreground">
-                      {formatCurrency(item.selling_price)}
-                    </div>
-                    <div className="col-span-2 text-center text-primary font-bold">
+                    <div className="col-span-3 text-center text-primary font-bold">
                       {item.initial_stock}
                     </div>
                   </div>
@@ -973,7 +954,7 @@ export function ProductsPage() {
           setEditingProduct(null)
         }}
         title={editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
-        description="Preencha os dados cadastrais, fiscais e operacionais do produto"
+        description="Preencha os dados cadastrais, unidades e parâmetros operacionais do produto"
         maxWidth="2xl"
       >
         <form onSubmit={handleSave} className="space-y-4 pt-1">
@@ -1041,34 +1022,13 @@ export function ProductsPage() {
                 <option value="CX">Caixa (CX)</option>
                 <option value="LT">Litro (LT)</option>
                 <option value="FD">Fardo (FD)</option>
+                <option value="PCT">Pacote (PCT)</option>
+                <option value="PAR">Par (PAR)</option>
               </select>
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Preço de Custo (R$)</label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.costPrice}
-                onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Preço de Venda (R$) *</label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={formData.sellingPrice}
-                onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
-                required
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">Estoque Mínimo</label>
+              <label className="text-xs font-semibold text-foreground">Estoque Mínimo (Alerta)</label>
               <Input
                 type="number"
                 value={formData.minStock}

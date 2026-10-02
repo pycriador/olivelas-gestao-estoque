@@ -9,6 +9,7 @@ export interface CreatePurchaseOrderPayload {
     productId: string
     quantityOrdered: number
     unitCost: number
+    sellingPrice?: number
     lotNumber?: string
     expirationDate?: string
   }[]
@@ -56,7 +57,7 @@ export const purchasingService = {
           total_cost,
           lot_number,
           expiration_date,
-          products ( name )
+          products ( id, name, sku, cost_price, selling_price )
         )
       `,
         { count: 'exact' }
@@ -88,14 +89,46 @@ export const purchasingService = {
 
     if (error) throw error
 
-    const mapped = (data || []).map((po: any) => ({
-      ...po,
-      supplier_name: po.suppliers?.trade_name || po.suppliers?.corporate_name || 'Fornecedor',
-      items: (po.purchase_order_items || []).map((poi: any) => ({
-        ...poi,
-        product_name: poi.products?.name || 'Produto',
-      })),
-    }))
+    const mapped = (data || []).map((po: any) => {
+      let orderSellingTotal = 0
+
+      const mappedItems = (po.purchase_order_items || []).map((poi: any) => {
+        const prod = Array.isArray(poi.products) ? poi.products[0] : poi.products
+        const unitCost = Number(poi.unit_cost) || 0
+        const sellingPrice = Number(prod?.selling_price) || 0
+        const qty = Number(poi.quantity_ordered) || 0
+        const totalCost = Number(poi.total_cost) || qty * unitCost
+        const totalSelling = qty * sellingPrice
+        const profit = totalSelling - totalCost
+        const marginPercent = totalSelling > 0 ? (profit / totalSelling) * 100 : 0
+
+        orderSellingTotal += totalSelling
+
+        return {
+          ...poi,
+          product_name: prod?.name || 'Produto',
+          product_sku: prod?.sku || '',
+          selling_price: sellingPrice,
+          total_selling_value: totalSelling,
+          profit,
+          margin_percent: marginPercent,
+        }
+      })
+
+      const totalCostAmount = Number(po.total_amount) || 0
+      const orderPotentialProfit = orderSellingTotal - totalCostAmount
+      const orderMarginPercent =
+        orderSellingTotal > 0 ? (orderPotentialProfit / orderSellingTotal) * 100 : 0
+
+      return {
+        ...po,
+        supplier_name: po.suppliers?.trade_name || po.suppliers?.corporate_name || 'Fornecedor',
+        items: mappedItems,
+        total_selling_amount: orderSellingTotal,
+        potential_profit: orderPotentialProfit,
+        margin_percent: orderMarginPercent,
+      }
+    })
 
     return {
       data: mapped,
@@ -135,7 +168,7 @@ export const purchasingService = {
     if (poError) throw poError
 
     // 2. Insert items
-    const items = payload.items.map(item => ({
+    const items = payload.items.map((item) => ({
       purchase_order_id: po.id,
       store_id: payload.storeId,
       product_id: item.productId,
@@ -152,6 +185,24 @@ export const purchasingService = {
       .insert(items)
 
     if (itemsError) throw itemsError
+
+    // 3. Update products' cost_price and selling_price in catalog so it reflects in inventory
+    for (const item of payload.items) {
+      const updates: Record<string, any> = {}
+      if (item.unitCost !== undefined && item.unitCost > 0) {
+        updates.cost_price = item.unitCost
+      }
+      if (item.sellingPrice !== undefined && item.sellingPrice > 0) {
+        updates.selling_price = item.sellingPrice
+      }
+      if (Object.keys(updates).length > 0) {
+        await supabase
+          .from('products')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', item.productId)
+          .eq('store_id', payload.storeId)
+      }
+    }
 
     auditService.logAction({
       storeId: payload.storeId,
