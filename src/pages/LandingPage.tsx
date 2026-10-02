@@ -342,6 +342,78 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Evidence & Live Test Suite Showcase */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="rounded-3xl bg-surface border border-primary/20 p-8 sm:p-12 shadow-xl space-y-8 relative overflow-hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-3 max-w-2xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                <ShieldCheck className="h-3.5 w-3.5" /> Transparência & Qualidade de Software
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
+                Galeria Completa de Evidências: 50 Telas & APIs Validadas
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                Explore todas as 25 telas do sistema em resoluções Desktop (1440×900) e Mobile (390×844), incluindo todos os 9 relatórios de varejo e os testes de chamadas REST autenticadas via HBAC.
+              </p>
+            </div>
+            <Link to="/evidence">
+              <Button size="lg" className="shadow-lg shadow-primary/25 font-semibold">
+                Explorar Painel de Evidências <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+
+          {/* Screenshot Mini Grid Preview */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+            <Link to="/evidence" className="group block rounded-xl overflow-hidden border border-border bg-muted/40 hover:border-primary/50 transition-all shadow-xs">
+              <img
+                src="/evidence/screenshots/04_dashboard_desktop.png"
+                alt="Dashboard Preview"
+                className="w-full h-28 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="p-2.5 text-center">
+                <div className="text-xs font-bold text-foreground">Dashboard Executivo</div>
+                <div className="text-[10px] text-muted-foreground">KPIs em Tempo Real</div>
+              </div>
+            </Link>
+            <Link to="/evidence" className="group block rounded-xl overflow-hidden border border-border bg-muted/40 hover:border-primary/50 transition-all shadow-xs">
+              <img
+                src="/evidence/screenshots/08_sales_pos_desktop.png"
+                alt="PDV Preview"
+                className="w-full h-28 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="p-2.5 text-center">
+                <div className="text-xs font-bold text-foreground">Frente de Caixa (PDV)</div>
+                <div className="text-[10px] text-muted-foreground">Agilidade & PIX</div>
+              </div>
+            </Link>
+            <Link to="/evidence" className="group block rounded-xl overflow-hidden border border-border bg-muted/40 hover:border-primary/50 transition-all shadow-xs">
+              <img
+                src="/evidence/screenshots/14_report_abc_curve_desktop.png"
+                alt="Curva ABC Preview"
+                className="w-full h-28 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="p-2.5 text-center">
+                <div className="text-xs font-bold text-foreground">Curva ABC Pareto</div>
+                <div className="text-[10px] text-muted-foreground">9 Relatórios Varejo</div>
+              </div>
+            </Link>
+            <Link to="/evidence" className="group block rounded-xl overflow-hidden border border-border bg-muted/40 hover:border-primary/50 transition-all shadow-xs">
+              <img
+                src="/evidence/screenshots/25_admin_hbac_api_keys_desktop.png"
+                alt="API Keys Preview"
+                className="w-full h-28 object-cover object-top group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="p-2.5 text-center">
+                <div className="text-xs font-bold text-foreground">APIs REST & HBAC</div>
+                <div className="text-[10px] text-muted-foreground">Tokens por Loja</div>
+              </div>
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
       <section id="faq" className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="text-center mb-10 space-y-2">

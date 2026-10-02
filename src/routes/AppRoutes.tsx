@@ -10,6 +10,7 @@ import { FeaturesPage } from '@/pages/FeaturesPage'
 import { PricingPage } from '@/pages/PricingPage'
 import { ContactPage } from '@/pages/ContactPage'
 import { CatalogPublicPage } from '@/pages/CatalogPublicPage'
+import { EvidencePage } from '@/pages/EvidencePage'
 
 // Auth Pages
 import { LoginPage } from '@/pages/LoginPage'
@@ -46,6 +47,8 @@ export function AppRoutes() {
         <Route path="/features" element={<FeaturesPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/evidence" element={<EvidencePage />} />
+        <Route path="/test-evidence" element={<EvidencePage />} />
       </Route>
 
       {/* 2. Public Store Catalog with WhatsApp Checkout */}

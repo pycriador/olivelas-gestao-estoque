@@ -1,6 +1,9 @@
 # Olivelas — Plataforma SaaS Multi-Loja de Gestão de Estoque & Vendas
 
-> 📊 **Caderno Executivo de Testes & Evidências Interativo:** Acesse o relatório visual com prints de todas as 25 telas em Desktop/Mobile e testes de API em **[docs/pt-BR/test-evidence.html](docs/pt-BR/test-evidence.html)**.
+> 📊 **Caderno Executivo de Testes & Evidências:**
+> - 📄 **Relatório em Markdown com Prints:** [docs/pt-BR/test-evidence.md](docs/pt-BR/test-evidence.md) *(Todas as 50 capturas de tela Desktop & Mobile)*
+> - 🌐 **Dashboard Interativo em HTML:** [docs/pt-BR/test-evidence.html](docs/pt-BR/test-evidence.html)
+> - 🚀 **Página ao Vivo na Aplicação:** Acesse a rota `/evidence` diretamente no navegador.
 >
 > 📚 **Documentação Técnica Completa:** Índice de engenharia em **[docs/pt-BR/README.md](docs/pt-BR/README.md)**. Entrada para agentes: **[docs/pt-BR/ai-context.md](docs/pt-BR/ai-context.md)**. Guia de integração REST para IA: **[docs/pt-BR/api-ai-integration.md](docs/pt-BR/api-ai-integration.md)**.
 
@@ -12,7 +15,8 @@
 
 - **Taxa de Sucesso dos Testes:** 100% Homologado (25 módulos testados, 10 endpoints de API com status HTTP 200 OK).
 - **Ambiente de Teste:** Loja de referência **GNZ Hortifruti** (`f8fdfd0e-a13a-44a6-ba98-53e61be300db`).
-- **Galeria Visual Completa:** 50 capturas em alta resolução (Desktop 1440×900 e Mobile 390×844) disponíveis no [Relatório HTML Interativo](docs/pt-BR/test-evidence.html).
+- **Galeria Visual Completa:** 50 capturas em alta resolução (Desktop 1440×900 e Mobile 390×844) disponíveis no [Relatório Markdown com Prints](docs/pt-BR/test-evidence.md) e no [Relatório HTML Interativo](docs/pt-BR/test-evidence.html).
+- **Painel Interativo na Landing Page:** O menu de navegação da página inicial conta com acesso direto à seção `/evidence`.
 
 ---
 

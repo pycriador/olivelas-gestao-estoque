@@ -33,6 +33,9 @@ export function PublicLayout() {
             <Link to="/pricing" className="hover:text-foreground transition-colors">
               Planos & Preços
             </Link>
+            <Link to="/evidence" className="hover:text-foreground transition-colors text-primary flex items-center gap-1 font-semibold">
+              Evidências & Testes
+            </Link>
             <Link to="/contact" className="hover:text-foreground transition-colors">
               Contato
             </Link>
@@ -81,6 +84,9 @@ export function PublicLayout() {
                 </Link>
                 <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
                   Planos & Preços
+                </Link>
+                <Link to="/evidence" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground text-primary font-medium">
+                  Evidências & Testes
                 </Link>
                 <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
                   Contato
@@ -132,12 +138,13 @@ export function PublicLayout() {
             </p>
           </div>
           <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">Módulos</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">Módulos & Qualidade</h4>
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li><Link to="/features" className="hover:text-foreground">Controle de Estoque</Link></li>
               <li><Link to="/features" className="hover:text-foreground">PDV & Vendas</Link></li>
               <li><Link to="/features" className="hover:text-foreground">Lotes & Validades</Link></li>
               <li><Link to="/features" className="hover:text-foreground">Catálogo no WhatsApp</Link></li>
+              <li><Link to="/evidence" className="hover:text-primary text-primary font-medium">Galeria de Evidências (50 Prints)</Link></li>
             </ul>
           </div>
           <div>
@@ -145,6 +152,7 @@ export function PublicLayout() {
             <ul className="space-y-2 text-xs text-muted-foreground">
               <li><Link to="/pricing" className="hover:text-foreground">Planos</Link></li>
               <li><Link to="/contact" className="hover:text-foreground">Fale Conosco</Link></li>
+              <li><Link to="/evidence" className="hover:text-foreground">Relatório de Testes E2E</Link></li>
               <li><a href="#faq" className="hover:text-foreground">Dúvidas Frequentes</a></li>
             </ul>
           </div>
