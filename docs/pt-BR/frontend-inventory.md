@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-02
 language: pt-BR
 classification: Confirmed
 source:
@@ -49,16 +49,16 @@ source:
 | `/dashboard` | `DashboardPage` | |
 | `/global-admin` | `GlobalAdminDashboardPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
 | `/stores` | `StoresPage` | |
-| `/products` | `ProductsPage` | |
+| `/products` | `ProductsPage` | Catálogo mestre com entrada em lote e galeria |
 | `/categories` | `CategoriesPage` | |
-| `/inventory` | `InventoryPage` | |
+| `/inventory` | `InventoryPage` | Saldos, valorização a custo/venda, baixa em lote, lotes e movimentações |
 | `/expiration` | `ExpirationPage` | |
 | `/sales` | `SalesPage` | PDV |
 | `/orders` | `OrdersPage` | |
 | `/customers` | `CustomersPage` | |
 | `/suppliers` | `SuppliersPage` | |
-| `/purchases` | `PurchasingPage` | |
-| `/reports` | `ReportsPage` | |
+| `/purchases` | `PurchasingPage` | Ordens de compra com cálculo de markup e margem |
+| `/reports` | `ReportsPage` | 9 relatórios analíticos com paginação por URL e exportação CSV |
 | `/notifications` | `NotificationsPage` | |
 | `/audit` | `AuditLogsPage` | |
 | `/team` | `TeamPage` | |
@@ -89,10 +89,13 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | --- | --- |
 | `DashboardPage` | cards de métrica (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) + lista de pedidos recentes |
 | `SalesPage` | PDV: `grid-cols-1 lg:grid-cols-12` (catálogo 8 / carrinho 4 em `lg`) |
-| `ProductsPage` | tabela `hidden md:block` + lista `md:hidden` |
+| `ProductsPage` | catálogo mestre: tabela `hidden md:block` + lista `md:hidden`, seleção múltipla e `BulkStockEntryModal` |
+| `InventoryPage` | KPI de valorização a custo/venda + abas de saldos, lotes, movimentações, centros de custo, motivos de perda e `BulkStockWriteoffModal` |
+| `ReportsPage` | menu segmentado com 9 abas analíticas, KPI summary, barra contextual de filtros por categoria/status/classe/urgência/segmento, busca instantânea, sincronização de URL e exportação CSV |
+| `GlobalAdminDashboardPage` | métricas globais + abas de Lojas, Usuários, `GlobalDbExplorerPanel` (CRUD dinâmico), `GlobalBackupPanel` (Dumps SQL/ZIP/JSON) e `GlobalApiKeyHbacPanel` (Gestor de Chaves HBAC) |
+| `PurchasingPage` | ordens de compra com cálculo de custo unitário, markup, preço de venda sugerido e lucro previsto |
 | Maioria cadastros | `ResponsiveTable` e/ou tabela + `Modal` CRUD; rodapé de modal `flex-col-reverse sm:flex-row` |
 | `CatalogPublicPage` | grade de produtos, modal de carrinho, WhatsApp |
-| `GlobalAdminDashboardPage` | métricas globais + `GlobalDeletePanel` |
 
 ## Componentes
 
@@ -110,9 +113,9 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 
 | Pasta | Arquivos |
 | --- | --- |
-| `admin/` | `GlobalDeletePanel.tsx` |
-| `inventory/` | `StockWriteoffModal.tsx`, `StockImportModal.tsx` |
-| `products/` | `ProductGalleryModal.tsx` |
+| `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx` |
+| `inventory/` | `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`, `StockImportModal.tsx` |
+| `products/` | `ProductGalleryModal.tsx`, `BulkStockEntryModal.tsx` |
 | `sales/` | `CustomerCombobox.tsx` |
 | `settings/` | `StoreThemeSelector.tsx` |
 
@@ -124,7 +127,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | `useTenant` | `storeId`, `storeName`, `storeSlug`, `role`, `setActiveStore` |
 | `usePermissions` | mapa local `ROLE_PERMISSIONS_MAP` + flags `canManageStore`, `canManageInventory`, `canSell`, `canViewReports` |
 | `useRealtimeSubscriptions` | canais `stock_balances`, `orders`, `notifications` filtrados por `store_id` |
-| `useTablePagination` | `page`, `pageSize`, `search`, `sortBy`, `sortOrder` e filtros extras na **query string** |
+| `useTablePagination` | `page`, `pageSize`, `search`, `sortBy`, `sortOrder` e filtros extras (`tab`, `category`, `status`) sincronizados na **query string da URL** |
 | `useI18n` | locale persistido `olivelas_preferred_locale` |
 | `useTheme` | `olivelas_theme_preference` (`light` \| `dark` \| `system`) |
 
@@ -137,11 +140,11 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | `cartStore` | carrinho do catálogo público (arquivo `src/stores/cartStore.ts`) |
 | `useI18nStore` | em `src/i18n/index.ts` |
 
-Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayout` (`src/lib/storeThemes.ts`). Famílias de cor listadas nesse arquivo (ex.: `ocean-dark` default).
+Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayout` (`src/lib/storeThemes.ts`).
 
 ## Services — operações exportadas
 
-| Módulo | Métodos |
+| Módulo | Métodos principais |
 | --- | --- |
 | `authService` | `getCurrentSession`, `getCurrentUser`, `getUserStores`, `signInWithEmail`, `signUpWithEmail`, `signInWithGoogle`, `resetPasswordForEmail`, `updatePassword`, `signOut` |
 | `storeService` | `getStoreBySlug`, `getStoreById`, `listAllStores`, `listStores`, `createStore`, `updateStore`, `softDeleteStore` |
@@ -149,24 +152,28 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `categoryService` | `listCategories`, `createCategory`, `updateCategory`, `deleteCategory` |
 | `productImageService` | listagem, upload biblioteca/produto, attach, primary, reorder, remove |
 | `storageService` | `uploadProductImage`, `deleteProductImage`, `uploadStoreLogo` |
-| `inventoryService` | saldos, movimentos, lotes, `applyMovement` (RPC), centros de custo, motivos de perda, import, disposições de lote |
+| `inventoryService` | saldos, valorização financeira, movimentos, lotes, `applyMovement` (RPC), centros de custo, motivos de perda, import, disposições de lote, baixa em lote (`writeoffBulkStock`), remoção de estoque zerado |
 | `orderService` | `listOrders`, `createOrder` (RPC), `cancelOrder` (RPC `restore_sale_stock`), `updateOrderStatus` |
 | `customerService` | list/get/create/update/`softDeleteCustomer` |
 | `supplierService` | list/create/update/`softDeleteSupplier` |
-| `purchasingService` | list/create/`receivePurchaseOrder` (RPC) |
+| `purchasingService` | list/create/`receivePurchaseOrder` (RPC), cálculo de lucratividade e sincronização de custos/preços com catálogo |
 | `userService` | usuários plataforma, membros da loja, convite, papéis, delete via RPC |
 | `globalAdminService` | `listEntities`, `hardDelete` (RPC `global_admin_delete`) |
+| `dbManagerService` | `listTableData`, `createRow`, `updateRow`, `deleteRow` para CRUD dinâmico de 12 tabelas no painel admin |
+| `backupService` | `generateSqlDump`, `generateImagesZip`, `generateJsonBackup` (multi-loja e loja individual) |
+| `apiKeyService` | `listApiKeys`, `createApiKey`, `toggleApiKeyStatus`, `revokeApiKey`, validação e documentação interativa de escopos HBAC |
 | `notificationService` | list, mark read, `generateStockAlerts` (RPC) |
 | `auditService` | `listAuditLogs`, `logAction` |
-| `reportService` | `getDashboardMetrics`, `getGlobalAdminMetrics` |
+| `reportService` | `getRetailSummaryKPIs`, `getValuationReport`, `getAbcCurveReport`, `getConsumptionDemandReport`, `getCustomerTicketReport`, `getCapitalInvestmentReport`, `getPurchasingReport`, `getLossesReport`, `getStockoutsReport`, `getSalesPerformanceReport`, `getAvailableReportsList`, `getGlobalAdminMetrics` |
 
 ## Utils
 
-`cn.ts`, `currency.ts`, `dates.ts`, `barcode.ts`, `export.ts`, `importParser.ts`, `errorHandler.ts`.
+`cn.ts`, `currency.ts`, `dates.ts`, `barcode.ts`, `export.ts` (`exportToCSV`, `printFormattedDocument`), `importParser.ts`, `errorHandler.ts`.
 
 ## Tipos
 
-Reexport em `src/types/index.ts`: `database`, `auth`, `store`, `product`, `inventory`, `order`. Também existem `customer.types.ts`, `supplier.types.ts`, `purchasing.types.ts`, `user.types.ts` fora do barrel.
+Reexport em `src/types/index.ts`: `database`, `auth`, `store`, `product`, `inventory`, `order`.
+Módulos dedicados: `report.types.ts`, `apiKey.types.ts`, `backup.types.ts`, `dbManager.types.ts`, `customer.types.ts`, `supplier.types.ts`, `purchasing.types.ts`, `user.types.ts`.
 
 ## i18n
 

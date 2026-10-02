@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-02
 language: pt-BR
 classification: Confirmed
 source:
@@ -63,9 +63,9 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 
 `purchase_orders`, `purchase_order_items`, `orders`, `order_items`, `payments`, `shipments`, `catalogs`.
 
-### Operação
+### Operação & Integrações
 
-`notifications`, `audit_logs`, `security_logs`.
+`notifications`, `audit_logs`, `security_logs`, `api_keys` (tokens de acesso HBAC com prefixo, hash, escopos `jsonb`, controle de validade e revogação).
 
 ## Helpers RLS (migration 02)
 

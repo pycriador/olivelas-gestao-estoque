@@ -5,7 +5,7 @@ type: Context
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-02
 language: pt-BR
 classification: Confirmed
 source:
@@ -18,7 +18,7 @@ source:
 
 ## Problema que o código endereça
 
-Operação de **várias lojas** (tenants) no mesmo banco, com usuários associados via `store_users`, produtos, estoque (saldos, lotes, movimentações), pedidos/PDV, compras, catálogo público por slug e painel de administrador global.
+Operação de **várias lojas** (tenants) no mesmo banco, com usuários associados via `store_users`, produtos, estoque (saldos, lotes, movimentações, valorização de estoque, baixas em lote), pedidos/PDV, compras com margem e markup, 9 relatórios analíticos de varejo, central de backups multi-loja, gerenciamento de tokens HBAC para integração com IA externa, catálogo público por slug e painel de administrador global com CRUD dinâmico de banco de dados.
 
 ## Atores (implementados)
 
@@ -34,7 +34,7 @@ Papéis de loja no enum SQL: `GLOBAL_ADMIN`, `STORE_ADMIN`, `FINANCE`, `SELLER`,
 
 ## Limite do sistema (o que este repo contém)
 
-**Contém:** frontend SPA, migrations e seed SQL, workflow GitHub Pages.
+**Contém:** frontend SPA, migrations e seed SQL, workflow GitHub Pages, central de relatórios de varejo, backups relacionais (SQL/ZIP/JSON), gestor de tokens de API com HBAC e catálogo de IA.
 
 **Não contém neste repositório (Unknown / ausente):** app iOS/Android nativo, BFF, gateway próprio, testes automatizados de UI, SLOs, runbooks de incidente, Dockerfile, Terraform.
 

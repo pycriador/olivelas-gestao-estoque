@@ -55,9 +55,14 @@ Fallback SPA: `public/404.html` (mencionado no README).
 
 Realtime invalida caches de estoque, pedidos e notificações (`useRealtime.ts`).
 
-## Backup / DR
+## Backup / DR & Exportação
 
-Não documentado neste repo. Depende da plataforma Supabase (Unknown aqui).
+A aplicação conta com uma central nativa de backup e exportação no painel de administração global (`/global-admin` → `GlobalBackupPanel.tsx` / `backupService.ts`):
+- **Dump SQL Relacional**: Geração sob demanda de arquivo `.sql` contendo `INSERT INTO` relacionais de todas as entidades, com suporte a filtro por loja individual ou extração completa multi-loja.
+- **Pacote Compactado de Imagens (`.ZIP`)**: Download em lote de todas as fotos de produtos associadas às lojas, acompanhado de manifesto estruturado (`manifest.json` com SKU, nome e ID do produto).
+- **Pacote Estruturado `.JSON`**: Exportação unificada para auditoria, migração de dados e relatórios externos.
+
+Para disaster recovery em nível de infraestrutura, os snapshots continuam gerenciados na plataforma Supabase.
 
 ## Mudança de schema
 

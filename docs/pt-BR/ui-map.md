@@ -80,6 +80,23 @@ Padrão sheet:
 
 CommandK: mobile `items-end`; `sm:items-start sm:pt-20`. Atalho Ctrl/Cmd+K (pouco relevante em teclado virtual; a UI ainda abre se `isOpen`).
 
+## Central de Relatórios (`ReportsPage`)
+
+Estrutura visual e responsividade:
+- **Barra de KPIs Executivos no Topo**: 6 cards responsivos (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-6`) fixados para visualização instantânea de métricas financeiras.
+- **Navegação Segmentada**: Barra de pílulas com rolagem horizontal suave no mobile (`overflow-x-auto custom-scrollbar`), ícones coloridos por contexto e badges dinâmicos de alerta.
+- **Barra Contextual de Filtros**: Header dinâmico com descrição da análise ativa, contador instantâneo de registros, seletores contextuais (Categoria, Classe ABC, Urgência de Compra, Segmento de Cliente ou Gravidade) e botões de ação para Exportação CSV e Impressão de Demonstrativo.
+- **Modo Tabela vs Mobile Cards**: Desktop exibe tabela densa com sticky header e colunas numéricas alinhadas à direita; mobile (`md:hidden`) renderiza cards detalhados estruturados em grid 2 colunas com tipografia mono para valores.
+- **Paginação Paginada no Rodapé**: Fixada no card principal e sincronizada com a query string da URL.
+
+## Painel Global Admin (`GlobalAdminDashboardPage`)
+
+- **Navegação em 5 Abas**: Lojas, Usuários da Plataforma, Explorador de Banco de Dados (`GlobalDbExplorerPanel`), Central de Backup Multi-loja (`GlobalBackupPanel`) e Chaves de API / HBAC (`GlobalApiKeyHbacPanel`).
+- **Menus de Ações Rápidas**: Menus dropdown (`<DropdownMenu />`) na listagem de lojas e usuários para evitar poluição visual.
+- **Explorador de Banco de Dados**: CRUD completo para 12 entidades relacionais com modais de inserção/edição e confirmação de exclusão.
+- **Central de Backup**: Geração sob demanda de Dumps SQL relacionais completos (`INSERT INTO`), pacotes compactados `.ZIP` de imagens com `manifest.json` e arquivos estruturados `.JSON`.
+- **Gestor de Tokens HBAC**: Criação de chaves com seleção granular de escopos, preset rápido, cópia instantânea e documentação interativa com exemplos `curl`/`fetch`.
+
 ## PDV (`SalesPage`)
 
 `grid-cols-1 lg:grid-cols-12`: abaixo de `lg`, grade de produtos e painel do carrinho **empilham**. Grid de cards de produto: `grid-cols-2 sm:grid-cols-3 xl:grid-cols-4`.

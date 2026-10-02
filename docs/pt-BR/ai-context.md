@@ -5,7 +5,7 @@ type: Context
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-02
 language: pt-BR
 classification: Confirmed
 related:
@@ -18,7 +18,7 @@ related:
 
 ## O que é este sistema
 
-SPA React (Vite) de gestão multi-loja de estoque e vendas. O browser fala com o projeto Supabase (Auth, PostgreSQL com RLS, Storage, Realtime, RPCs). Não há servidor de API próprio neste repositório.
+SPA React (Vite) de gestão multi-loja de estoque e vendas. O browser fala com o projeto Supabase (Auth, PostgreSQL com RLS, Storage, Realtime, RPCs). Não há servidor de API próprio neste repositório, mas há catálogo REST e tokens de acesso HBAC para integração com IAs externas e agentes autônomos.
 
 ## Pergunta → onde ler
 
@@ -29,9 +29,10 @@ SPA React (Vite) de gestão multi-loja de estoque e vendas. O browser fala com o
 | Quais rotas, páginas e pastas `src/` existem? | [frontend-inventory.md](frontend-inventory.md) |
 | Quais tabelas, RPCs e políticas RLS existem? | [backend-inventory.md](backend-inventory.md) |
 | O que muda entre viewport &lt; 768px e ≥ 768px? | [ui-map.md](ui-map.md) |
-| Como o front chama o banco? | [contracts.md](contracts.md) |
+| Como o front chama o banco e integrações? | [contracts.md](contracts.md) |
+| Como integrar com IAs externas via REST/HBAC? | [api-ai-integration.md](api-ai-integration.md) |
 | Quem pode o quê? | [security.md](security.md) |
-| Como rodar e publicar? | [operations.md](operations.md) |
+| Como rodar, exportar backups e publicar? | [operations.md](operations.md) |
 | Replicar shell desktop em outro projeto | [guides/ui-desktop.md](guides/ui-desktop.md) |
 | Replicar shell mobile em outro projeto | [guides/ui-mobile.md](guides/ui-mobile.md) |
 | O que não sabemos / não está no repo | [knowledge-gaps.md](knowledge-gaps.md) |

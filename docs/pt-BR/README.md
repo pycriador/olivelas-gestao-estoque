@@ -5,7 +5,7 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-02
 language: pt-BR
 classification: Confirmed
 source:
