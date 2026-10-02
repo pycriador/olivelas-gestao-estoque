@@ -631,17 +631,15 @@ export function GlobalAdminDashboardPage() {
         </Card>
       </div>
 
-      {/* TAB 3: BACKUP & SQL DUMP */}
-      {activeTab === 'backups' && <GlobalBackupPanel stores={allStoresRaw} />}
-
-      {/* TAB 4: DATABASE EXPLORER & CRUD */}
-      {activeTab === 'db-explorer' && <GlobalDbExplorerPanel stores={allStoresRaw} />}
-
-      {/* TAB 5: API & HBAC ACCESS CONTROL */}
-      {activeTab === 'api-hbac' && <GlobalApiKeyHbacPanel stores={allStoresRaw} />}
-
-      {/* TAB 6: CROSS-STORE HARD DELETE */}
-      {activeTab === 'delete' && <GlobalDeletePanel />}
+      {/* TAB PANELS: SCROLLABLE VIEWPORT */}
+      {activeTab !== 'stores' && activeTab !== 'users' && (
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-8 pr-1 space-y-4">
+          {activeTab === 'backups' && <GlobalBackupPanel stores={allStoresRaw} />}
+          {activeTab === 'db-explorer' && <GlobalDbExplorerPanel stores={allStoresRaw} />}
+          {activeTab === 'api-hbac' && <GlobalApiKeyHbacPanel stores={allStoresRaw} />}
+          {activeTab === 'delete' && <GlobalDeletePanel />}
+        </div>
+      )}
 
       {/* Main Table Card (Stores or Users Viewport) */}
       {(activeTab === 'stores' || activeTab === 'users') && (
