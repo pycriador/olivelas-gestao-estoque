@@ -51,7 +51,7 @@ CREATE POLICY "store_admins_manage_store_api_tokens" ON public.api_tokens
             SELECT 1 FROM public.store_users su
             WHERE su.user_id = auth.uid()
               AND su.store_id = api_tokens.store_id
-              AND su.role IN ('STORE_ADMIN', 'STORE_MANAGER')
+              AND su.role = 'STORE_ADMIN'::public.user_role_enum
         )
     )
     WITH CHECK (
@@ -60,7 +60,7 @@ CREATE POLICY "store_admins_manage_store_api_tokens" ON public.api_tokens
             SELECT 1 FROM public.store_users su
             WHERE su.user_id = auth.uid()
               AND su.store_id = api_tokens.store_id
-              AND su.role IN ('STORE_ADMIN', 'STORE_MANAGER')
+              AND su.role = 'STORE_ADMIN'::public.user_role_enum
         )
     );
 
