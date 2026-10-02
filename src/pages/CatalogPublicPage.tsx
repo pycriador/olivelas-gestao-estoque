@@ -7,7 +7,6 @@ import { useCartStore } from '@/stores/cartStore'
 import { formatCurrency } from '@/utils/currency'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { useTablePagination } from '@/hooks/useTablePagination'
@@ -21,11 +20,8 @@ import {
   Trash2,
   Store as StoreIcon,
   Phone,
-  MapPin,
-  Clock,
-  Package
+  Package,
 } from 'lucide-react'
-import type { Product } from '@/types/product.types'
 
 export function CatalogPublicPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -64,7 +60,6 @@ export function CatalogPublicPage() {
     addItem,
     removeItem,
     updateQuantity,
-    clearCart,
     getTotalAmount,
     getTotalItemsCount,
   } = useCartStore()

@@ -2,7 +2,7 @@ import * as React from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Mail, MessageCircle, Phone, MapPin, CheckCircle2 } from 'lucide-react'
+import { Mail, MessageCircle, CheckCircle2 } from 'lucide-react'
 
 export function ContactPage() {
   const [submitted, setSubmitted] = React.useState(false)

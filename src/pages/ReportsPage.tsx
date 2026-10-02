@@ -9,7 +9,7 @@ import { exportToCSV, printFormattedDocument } from '@/utils/export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -19,20 +19,14 @@ import {
   Download,
   Printer,
   DollarSign,
-  Package,
   Layers,
-  Users,
   Search,
   AlertTriangle,
   ShoppingCart,
   Percent,
-  Sparkles,
-  ArrowDownRight,
   PieChart,
   BarChart3,
   ShieldAlert,
-  Archive,
-  RefreshCw,
 } from 'lucide-react'
 import type {
   ValuationReportItem,
@@ -56,13 +50,34 @@ export function ReportsPage() {
   const [page, setPage] = React.useState(1)
   const [pageSize, setPageSize] = React.useState(15)
 
-  // Reset page on tab or filter change
-  React.useEffect(() => {
+  const handleTabChange = (tab: ReportTab) => {
+    setActiveTab(tab)
+    setStatusFilter('ALL')
     setPage(1)
-  }, [activeTab, search, categoryFilter, statusFilter, pageSize])
+  }
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val)
+    setPage(1)
+  }
+
+  const handleCategoryChange = (val: string) => {
+    setCategoryFilter(val)
+    setPage(1)
+  }
+
+  const handleStatusChange = (val: string) => {
+    setStatusFilter(val)
+    setPage(1)
+  }
+
+  const handlePageSizeChange = (val: number) => {
+    setPageSize(val)
+    setPage(1)
+  }
 
   // 1. Retail Summary KPIs
-  const { data: summaryKPIs, isLoading: isSummaryLoading, refetch: refetchSummary } = useQuery({
+  const { data: summaryKPIs, isLoading: isSummaryLoading } = useQuery({
     queryKey: ['report-retail-summary', storeId],
     queryFn: () => reportService.getRetailSummaryKPIs(storeId),
     enabled: Boolean(hasActiveStore),
@@ -437,7 +452,7 @@ export function ReportsPage() {
         <Input
           placeholder="Buscar no relatório ativo..."
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="h-8 text-xs bg-background/90"
           icon={<Search className="h-3.5 w-3.5" />}
         />
@@ -530,10 +545,7 @@ export function ReportsPage() {
         <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-1 sm:pb-0 bg-muted/50 p-1 rounded-xl border border-border">
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('valuation')
-              setStatusFilter('ALL')
-            }}
+            onClick={() => handleTabChange('valuation')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'valuation'
                 ? 'bg-card text-primary shadow-xs'
@@ -546,10 +558,7 @@ export function ReportsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('abc')
-              setStatusFilter('ALL')
-            }}
+            onClick={() => handleTabChange('abc')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'abc'
                 ? 'bg-card text-primary shadow-xs'
@@ -562,10 +571,7 @@ export function ReportsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('purchasing')
-              setStatusFilter('ALL')
-            }}
+            onClick={() => handleTabChange('purchasing')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'purchasing'
                 ? 'bg-card text-primary shadow-xs'
@@ -578,10 +584,7 @@ export function ReportsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('losses')
-              setStatusFilter('ALL')
-            }}
+            onClick={() => handleTabChange('losses')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'losses'
                 ? 'bg-card text-primary shadow-xs'
@@ -594,10 +597,7 @@ export function ReportsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('stockouts')
-              setStatusFilter('ALL')
-            }}
+            onClick={() => handleTabChange('stockouts')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'stockouts'
                 ? 'bg-card text-primary shadow-xs'
@@ -610,10 +610,7 @@ export function ReportsPage() {
 
           <button
             type="button"
-            onClick={() => {
-              setActiveTab('sales')
-              setStatusFilter('ALL')
-            }}
+            onClick={() => handleTabChange('sales')}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'sales'
                 ? 'bg-card text-primary shadow-xs'
@@ -630,7 +627,7 @@ export function ReportsPage() {
           {activeTab === 'valuation' && categories.length > 0 && (
             <select
               value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               aria-label="Filtrar por categoria"
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
@@ -646,7 +643,7 @@ export function ReportsPage() {
           {activeTab === 'abc' && (
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => handleStatusChange(e.target.value)}
               aria-label="Filtrar por classe ABC"
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
@@ -660,7 +657,7 @@ export function ReportsPage() {
           {activeTab === 'stockouts' && (
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => handleStatusChange(e.target.value)}
               aria-label="Filtrar por gravidade"
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
@@ -1284,7 +1281,7 @@ export function ReportsPage() {
             totalItems={totalFiltered}
             pageSize={pageSize}
             onPageChange={setPage}
-            onPageSizeChange={setPageSize}
+            onPageSizeChange={handlePageSizeChange}
           />
         </div>
       </Card>

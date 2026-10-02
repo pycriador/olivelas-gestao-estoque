@@ -4,7 +4,6 @@ import { purchasingService } from '@/services/purchasingService'
 import { supplierService } from '@/services/supplierService'
 import { productService } from '@/services/productService'
 import { useTenant } from '@/hooks/useTenant'
-import { useI18n } from '@/hooks/useI18n'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { formatCurrency } from '@/utils/currency'
 import { formatDate } from '@/utils/dates'
@@ -12,7 +11,7 @@ import { parseApiError } from '@/utils/errorHandler'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
@@ -25,21 +24,14 @@ import {
   FileText,
   Plus,
   Search,
-  Truck,
-  CheckCircle2,
   PackageCheck,
-  AlertCircle,
   Eye,
-  Wallet,
-  CircleDollarSign,
-  TrendingUp,
   Sparkles,
 } from 'lucide-react'
 import type { PurchaseOrder } from '@/types/purchasing.types'
 
 export function PurchasingPage() {
   const { storeId, hasActiveStore } = useTenant()
-  const { t } = useI18n()
   const queryClient = useQueryClient()
 
   const {

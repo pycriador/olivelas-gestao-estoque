@@ -16,7 +16,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
-import { Shield, Eye, Search, Store as StoreIcon, User, Globe, Laptop, FileDown, Braces, X } from 'lucide-react'
+import { Shield, Eye, Search, Store as StoreIcon, User, Laptop, FileDown, Braces, X } from 'lucide-react'
 
 export function AuditLogsPage() {
   const { storeId, hasActiveStore } = useTenant()

@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow, parseISO, isValid, isBefore, isAfter, addDays } from 'date-fns'
+import { format, formatDistanceToNow, parseISO, isValid, isBefore, addDays } from 'date-fns'
 import { ptBR, enUS, es } from 'date-fns/locale'
 
 const localesMap: Record<string, typeof ptBR> = {

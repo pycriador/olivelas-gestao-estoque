@@ -5,7 +5,6 @@ import { productImageService } from '@/services/productImageService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
 import { useTablePagination } from '@/hooks/useTablePagination'
-import { formatCurrency } from '@/utils/currency'
 import { exportToCSV } from '@/utils/export'
 import { generateSKU } from '@/utils/barcode'
 import { parseApiError } from '@/utils/errorHandler'
@@ -18,7 +17,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
@@ -45,7 +44,6 @@ import {
   ImageOff,
   ImagePlus,
   ArrowDownRight,
-  CheckSquare,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 

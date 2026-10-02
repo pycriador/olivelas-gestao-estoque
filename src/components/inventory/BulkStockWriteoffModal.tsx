@@ -4,9 +4,6 @@ import { toast } from 'sonner'
 import {
   AlertTriangle,
   BadgeCheck,
-  Calendar,
-  Hash,
-  Layers,
   Package,
   ShieldAlert,
   Sparkles,
@@ -197,9 +194,6 @@ export function BulkStockWriteoffModal({
 
   // Validation
   const hasInvalidQty = items.some((it) => !it.quantity || it.quantity <= 0)
-  const hasOverBalance =
-    !isTargetQuantity &&
-    items.some((it) => it.quantity > it.currentStock && it.currentStock >= 0)
 
   const canSubmit =
     items.length > 0 &&

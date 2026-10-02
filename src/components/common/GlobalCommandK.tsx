@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, Package, Users, Truck, ShoppingBag, LayoutDashboard, X } from 'lucide-react'
+import { Search, Package, Users, ShoppingBag, LayoutDashboard, X } from 'lucide-react'
 import { useTenant } from '@/hooks/useTenant'
 import { productService } from '@/services/productService'
 import { customerService } from '@/services/customerService'
@@ -15,6 +15,13 @@ export function GlobalCommandK() {
   const { storeId, hasActiveStore } = useTenant()
   const navigate = useNavigate()
 
+  const handleClose = () => {
+    setIsOpen(false)
+    setQuery('')
+    setProducts([])
+    setCustomers([])
+  }
+
   // Keyboard shortcut listener
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -23,7 +30,7 @@ export function GlobalCommandK() {
         setIsOpen((prev) => !prev)
       }
       if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false)
+        handleClose()
       }
     }
     window.addEventListener('keydown', handleKeyDown)
@@ -33,8 +40,6 @@ export function GlobalCommandK() {
   // Perform search
   React.useEffect(() => {
     if (!isOpen || !hasActiveStore || !query.trim() || query.length < 2) {
-      setProducts([])
-      setCustomers([])
       return
     }
 
@@ -57,9 +62,16 @@ export function GlobalCommandK() {
     return () => clearTimeout(timer)
   }, [query, isOpen, storeId, hasActiveStore])
 
+  const handleQueryChange = (val: string) => {
+    setQuery(val)
+    if (!val.trim() || val.length < 2) {
+      setProducts([])
+      setCustomers([])
+    }
+  }
+
   const handleSelect = (path: string) => {
-    setIsOpen(false)
-    setQuery('')
+    handleClose()
     navigate(path)
   }
 
@@ -87,13 +99,13 @@ export function GlobalCommandK() {
             type="text"
             placeholder="Pesquisar produtos, SKU, código de barras ou clientes..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-muted-foreground text-foreground"
           />
           {query ? (
             <button
               type="button"
-              onClick={() => setQuery('')}
+              onClick={() => handleQueryChange('')}
               className="p-1.5 text-muted-foreground hover:text-foreground rounded-lg"
             >
               <X className="h-4 w-4" />
@@ -101,7 +113,7 @@ export function GlobalCommandK() {
           ) : (
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="sm:hidden text-xs text-muted-foreground hover:text-foreground font-medium px-2 py-1"
             >
               Fechar

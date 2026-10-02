@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
-import type { Order, OrderItem, Payment } from '@/types/order.types'
+import type { Order } from '@/types/order.types'
 import type { OrderChannel, OrderStatus, PaymentMethod } from '@/types/database.types'
 
 export interface CreateOrderPayload {

@@ -2,7 +2,6 @@ import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { userService } from '@/services/userService'
 import { useTenant } from '@/hooks/useTenant'
-import { usePermissions } from '@/hooks/usePermissions'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,14 +17,10 @@ import {
   Users,
   Plus,
   Search,
-  Mail,
-  Shield,
   KeyRound,
   Trash2,
   Edit2,
-  CheckCircle2,
   Power,
-  UserCheck,
   UserPlus,
   Send,
 } from 'lucide-react'
@@ -69,7 +64,6 @@ const ROLE_LABELS: Record<UserRole, { label: string; variant: 'default' | 'outli
 
 export function TeamPage() {
   const { storeId, storeName, hasActiveStore } = useTenant()
-  const { canManageStore } = usePermissions()
   const queryClient = useQueryClient()
 
   const {

@@ -2,11 +2,7 @@ import * as React from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
-  Package,
-  Layers,
-  Calendar,
   AlertTriangle,
-  CheckCircle2,
   Trash2,
   ArrowDownRight,
   Sparkles,
@@ -16,7 +12,6 @@ import { useTenant } from '@/hooks/useTenant'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
-import { formatCurrency } from '@/utils/currency'
 import type { Product } from '@/types/product.types'
 
 export interface BulkStockEntryItem {
@@ -64,7 +59,7 @@ export function BulkStockEntryModal({
       )
       setErrorMsg(null)
     }
-  }, [isOpen, products])
+  }, [isOpen, products, defaultQuantity])
 
   const handleApplyGlobalQuantity = () => {
     if (defaultQuantity <= 0) return

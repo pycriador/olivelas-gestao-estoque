@@ -34,11 +34,6 @@ import {
   Trash2,
   ArrowRightLeft,
   Eye,
-  UserCheck,
-  UserX,
-  Mail,
-  Phone,
-  Layers,
 } from 'lucide-react'
 import { formatDate, formatDateTime } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
@@ -126,7 +121,7 @@ export function GlobalAdminDashboardPage() {
   const userRoleFilter = filters.userRole || 'ALL'
 
   // Stores Query
-  const { data: storesData, isLoading: loadingStores, error: storesQueryError, refetch: refetchStores } = useQuery({
+  const { data: storesData, isLoading: loadingStores } = useQuery({
     queryKey: ['all-stores', { search, statusFilter, page, pageSize, sortBy, sortOrder }],
     queryFn: () =>
       storeService.listStores({

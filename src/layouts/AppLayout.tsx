@@ -20,7 +20,6 @@ import {
   X,
   Store as StoreIcon,
   ChevronDown,
-  Search,
   ExternalLink,
   Calendar,
   Tags,
@@ -33,7 +32,6 @@ import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
-import { usePermissions } from '@/hooks/usePermissions'
 import { useRealtimeSubscriptions } from '@/hooks/useRealtime'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { GlobalCommandK } from '@/components/common/GlobalCommandK'
@@ -49,7 +47,6 @@ export function AppLayout() {
   const { user, userStores, signOut, isGlobalAdmin } = useAuth()
   const { storeId, storeName, storeSlug, role, setActiveStore } = useTenant()
   const { t } = useI18n()
-  const { canManageStore } = usePermissions()
 
   // Realtime updates for stock, orders, and notifications
   useRealtimeSubscriptions(storeId)

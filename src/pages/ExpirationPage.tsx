@@ -10,7 +10,7 @@ import { exportToCSV } from '@/utils/export'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Pagination } from '@/components/ui/pagination'
@@ -27,7 +27,6 @@ import {
   CheckCircle,
   Download,
   Search,
-  RotateCcw
 } from 'lucide-react'
 
 /** Rotulo curto da acao registrada, usado no badge e no export. */
