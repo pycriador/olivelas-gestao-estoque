@@ -534,45 +534,47 @@ export function StoresPage() {
 
                         {/* Ações */}
                         <td className="py-2.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             {s.isCurrentActive ? (
                               <Button
                                 size="sm"
                                 variant="outline"
-                                className="h-7 text-[11px] px-2 text-primary border-primary/30 bg-primary/5 pointer-events-none"
+                                className="h-8 text-xs px-2.5 text-primary border-primary/30 bg-primary/5 pointer-events-none"
                               >
-                                <Check className="h-3 w-3 mr-1" /> Selecionada
+                                <Check className="h-3.5 w-3.5 mr-1" /> Selecionada
                               </Button>
                             ) : (
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleSelectStore(s)}
-                                className="h-7 text-[11px] px-2 hover:bg-primary hover:text-primary-foreground font-medium"
+                                className="h-8 text-xs px-2.5 hover:bg-primary hover:text-primary-foreground font-medium"
                               >
-                                Acessar <ArrowRight className="h-3 w-3 ml-1" />
+                                Acessar <ArrowRight className="h-3.5 w-3.5 ml-1" />
                               </Button>
                             )}
 
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => handleOpenEdit(s)}
-                              title="Editar Loja"
-                              className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              className="h-8 text-xs font-semibold px-2.5"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
+                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                            </Button>
 
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => setTogglingStore(s)}
-                              title={s.isActive ? 'Desativar Loja' : 'Ativar Loja'}
-                              className={`p-1.5 rounded-lg transition-colors ${
+                              className={`h-8 text-xs font-semibold px-2.5 ${
                                 s.isActive
-                                  ? 'text-muted-foreground hover:bg-danger/15 hover:text-danger'
-                                  : 'text-success hover:bg-success/15'
+                                  ? 'text-danger hover:bg-danger/10 border-danger/30'
+                                  : 'text-success hover:bg-success/10 border-success/30'
                               }`}
                             >
-                              <Power className="h-3.5 w-3.5" />
-                            </button>
+                              <Power className="h-3.5 w-3.5 mr-1" /> {s.isActive ? 'Desativar' : 'Ativar'}
+                            </Button>
                           </div>
                         </td>
                       </tr>

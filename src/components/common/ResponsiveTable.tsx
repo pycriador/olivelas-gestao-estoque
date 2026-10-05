@@ -47,7 +47,7 @@ export function ResponsiveTable({ children, className = '' }: ResponsiveTablePro
           cell.dataset.mobileLabel = labels[index] || ''
           cell.classList.toggle(
             'mobile-table-actions',
-            /^(aç(ões|ão)|ações rápidas|inspecionar)$/i.test(labels[index] || ''),
+            /^(aç(ões|ão)|ações rápidas|inspecionar|opções|ação|acao|acoes|actions)$/i.test(labels[index] || ''),
           )
         })
       })

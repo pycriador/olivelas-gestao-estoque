@@ -251,30 +251,32 @@ export function CategoriesPage() {
                           </Badge>
                         </td>
                         {(canUpdate || canDelete) && (
-                          <td className="py-2.5 px-4">
-                            <div className="flex items-center justify-end gap-1">
+                          <td className="py-2.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
                               {canUpdate && (
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => handleOpenEdit(c)}
                                   title="Editar categoria"
                                   aria-label={`Editar ${c.name}`}
-                                  className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                                  className="h-8 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground font-medium"
                                 >
-                                  <Pencil className="h-3.5 w-3.5" />
+                                  <Pencil className="h-3.5 w-3.5 mr-1" />
+                                  <span>Editar</span>
                                 </Button>
                               )}
                               {canDelete && (
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
+                                  variant="outline"
+                                  size="sm"
                                   onClick={() => setDeletingCategory(c)}
                                   title="Excluir categoria"
                                   aria-label={`Excluir ${c.name}`}
-                                  className="h-7 w-7 text-muted-foreground hover:text-danger"
+                                  className="h-8 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-danger hover:border-danger/30 font-medium"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <Trash2 className="h-3.5 w-3.5 mr-1 text-danger" />
+                                  <span>Excluir</span>
                                 </Button>
                               )}
                             </div>

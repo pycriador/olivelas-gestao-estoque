@@ -358,49 +358,49 @@ export function TeamPage() {
                         </td>
 
                         <td className="py-2.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5"
                               onClick={() => resetPasswordMutation.mutate(m.email)}
                               title="Resetar Senha (Enviar link por e-mail)"
                             >
-                              <KeyRound className="h-3.5 w-3.5" />
+                              <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset Senha
                             </Button>
 
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5"
                               onClick={() => handleOpenEdit(m)}
                               title="Editar Papel"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
+                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
                             </Button>
 
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className={`h-7 w-7 ${
+                              variant="outline"
+                              size="sm"
+                              className={`h-8 text-xs font-semibold px-2.5 ${
                                 m.isActive
-                                  ? 'text-destructive/80 hover:text-destructive'
-                                  : 'text-success/80 hover:text-success'
+                                  ? 'text-warning hover:bg-warning/10 border-warning/30'
+                                  : 'text-success hover:bg-success/10 border-success/30'
                               }`}
                               onClick={() => setTogglingMember(m)}
                               title={m.isActive ? 'Desativar Acesso' : 'Ativar Acesso'}
                             >
-                              <Power className="h-3.5 w-3.5" />
+                              <Power className="h-3.5 w-3.5 mr-1" /> {m.isActive ? 'Desativar' : 'Ativar'}
                             </Button>
 
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
                               onClick={() => setRemovingMember(m)}
                               title="Remover da Loja"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover
                             </Button>
                           </div>
                         </td>

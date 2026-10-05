@@ -369,7 +369,7 @@ export function ExpirationPage() {
                       onSort={toggleSort}
                     />
                     <th className="py-3 px-4 text-center">Situação</th>
-                    <th className="py-3 px-4 text-right">Ação</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -429,19 +429,19 @@ export function ExpirationPage() {
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             {status === 'expired' && batch.quantity > 0 && (
                               <Button
                                 variant="destructive"
                                 size="sm"
-                                className="text-[11px] h-7 px-2"
+                                className="text-xs h-8 px-2.5 font-semibold"
                                 onClick={() => setWriteoffBatch(batch)}
                               >
-                                Dar Baixa
+                                <PackageX className="h-3.5 w-3.5 mr-1" /> Baixa
                               </Button>
                             )}
                             <DropdownMenu
-                              triggerLabel="Ação"
+                              triggerLabel="Justificar"
                               items={dispositionMenuItems(batch)}
                             />
                           </div>

@@ -278,26 +278,28 @@ export function OrdersPage() {
                         {formatCurrency(o.total_amount)}
                       </td>
                       <td className="py-2.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setViewingOrder(o)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-                            title="Ver Detalhes"
+                            className="h-8 text-xs font-semibold px-2.5"
                           >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                            <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
+                          </Button>
                           {o.status !== 'CANCELLED' && (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
                               onClick={() => {
                                 setCancellingOrder(o)
                                 setCancelReason('')
                                 setCancelError(null)
                               }}
-                              className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger"
-                              title="Cancelar Pedido"
+                              className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
                             >
-                              <Ban className="h-4 w-4" />
-                            </button>
+                              <Ban className="h-3.5 w-3.5 mr-1" /> Cancelar
+                            </Button>
                           )}
                         </div>
                       </td>

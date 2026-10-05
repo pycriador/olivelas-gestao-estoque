@@ -300,20 +300,23 @@ export function SuppliersPage() {
                         </Badge>
                       </td>
                       <td className="py-2.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleOpenEdit(s)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                            className="h-8 text-xs font-semibold px-2.5"
                           >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
+                            <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setDeletingSupplier(s)}
-                            className="p-1.5 rounded-lg text-muted-foreground hover:bg-danger/15 hover:text-danger"
-                            title="Desativar"
+                            className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                            <Trash2 className="h-3.5 w-3.5 mr-1" /> Desativar
+                          </Button>
                         </div>
                       </td>
                     </tr>

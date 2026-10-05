@@ -26,6 +26,7 @@ import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { ProductGalleryModal } from '@/components/products/ProductGalleryModal'
 import { BulkStockEntryModal } from '@/components/products/BulkStockEntryModal'
 import {
@@ -416,9 +417,8 @@ export function ProductsPage() {
               />
             </div>
           ) : (
-            <>
-            <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse">
+            <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+              <ResponsiveTable className="w-full text-left text-xs border-collapse">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
                     <th className="py-3 px-3 w-10 text-center">
@@ -468,7 +468,7 @@ export function ProductsPage() {
 
                     return (
                       <tr key={p.id} className={`hover:bg-muted/30 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
-                        <td className="py-2.5 px-3 w-10 text-center">
+                        <td className="py-2.5 px-3 w-10 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={isSelected}
@@ -487,7 +487,7 @@ export function ProductsPage() {
                               type="button"
                               onClick={() => setGalleryProduct(p)}
                               title="Gerenciar imagens do produto"
-                              className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-border bg-muted/40 hover:ring-2 hover:ring-primary/50 transition-all"
+                              className="relative h-11 w-11 shrink-0 rounded-lg overflow-hidden border border-border bg-muted/40 hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
                             >
                               {primaryImage ? (
                                 <img
@@ -563,158 +563,46 @@ export function ProductsPage() {
                           </Badge>
                         </td>
 
-                        <td className="py-2.5 px-4 text-right space-x-1">
-                          <DropdownMenu
-                            triggerLabel="Ações"
-                            items={[
-                              {
-                                key: 'foto',
-                                label: 'Foto',
-                                icon: <Images className="h-3.5 w-3.5 shrink-0" />,
-                                onSelect: () => setGalleryProduct(p),
-                              },
-                              {
-                                key: 'editar',
-                                label: 'Editar',
-                                icon: <Edit2 className="h-3.5 w-3.5 shrink-0" />,
-                                onSelect: () => handleOpenEdit(p),
-                              },
-                              {
-                                key: 'deletar',
-                                label: 'Deletar',
-                                variant: 'danger',
-                                icon: <Trash2 className="h-3.5 w-3.5 shrink-0" />,
-                                onSelect: () => setDeletingProduct(p),
-                              },
-                            ]}
-                          />
+                        <td className="py-2.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setGalleryProduct(p)}
+                              title="Gerenciar Fotos"
+                              className="h-8 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground font-medium"
+                            >
+                              <Images className="h-3.5 w-3.5 mr-1 text-primary" />
+                              <span>Fotos</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenEdit(p)}
+                              title="Editar Produto"
+                              className="h-8 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-foreground font-medium"
+                            >
+                              <Edit2 className="h-3.5 w-3.5 mr-1" />
+                              <span>Editar</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeletingProduct(p)}
+                              title="Excluir Produto"
+                              className="h-8 sm:h-7 px-2.5 text-xs text-muted-foreground hover:text-danger hover:border-danger/30 font-medium"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1 text-danger" />
+                              <span>Excluir</span>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     )
                   })}
                 </tbody>
-              </table>
+              </ResponsiveTable>
             </div>
-            <div className="md:hidden flex-1 min-h-0 overflow-y-auto divide-y divide-border custom-scrollbar">
-              {products.map((p) => {
-                const isLowStock = (p.stock_quantity ?? 0) <= (p.min_stock ?? 5)
-                const primaryImage =
-                  (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
-                const imageCount = (p.images || []).length
-
-                const isSelected = selectedProductIds.includes(p.id)
-
-                return (
-                  <article key={p.id} className={`px-3 py-3 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() =>
-                          setSelectedProductIds((prev) =>
-                            prev.includes(p.id) ? prev.filter((id) => id !== p.id) : [...prev, p.id]
-                          )
-                        }
-                        aria-label={`Selecionar produto ${p.name}`}
-                        className="rounded border-input text-primary focus:ring-primary h-4 w-4 shrink-0 cursor-pointer"
-                      />
-
-                      <button
-                        type="button"
-                        onClick={() => setGalleryProduct(p)}
-                        title="Gerenciar imagens do produto"
-                        className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-border bg-muted/40"
-                      >
-                        {primaryImage ? (
-                          <img
-                            src={primaryImage.public_url}
-                            alt={p.name}
-                            loading="lazy"
-                            className="h-full w-full object-cover"
-                          />
-                        ) : (
-                          <span className="flex h-full w-full items-center justify-center text-muted-foreground">
-                            <ImageOff className="h-4 w-4" />
-                          </span>
-                        )}
-                        {imageCount > 1 && (
-                          <span className="absolute bottom-0 inset-x-0 bg-black/70 py-px text-[9px] font-bold leading-tight text-white">
-                            +{imageCount - 1}
-                          </span>
-                        )}
-                      </button>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <h3 className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground" title={p.name}>
-                            {p.name}
-                          </h3>
-                          <Badge variant={p.is_active ? 'success' : 'secondary'} className="shrink-0 px-1.5 py-0 text-[9px]">
-                            {p.is_active ? 'Ativo' : 'Inativo'}
-                          </Badge>
-                        </div>
-                        <div className="truncate text-[10px] text-muted-foreground">
-                          <span className="font-mono">{p.sku}</span>
-                          <span className="mx-1">·</span>
-                          {p.category_name || 'Sem categoria'}
-                        </div>
-                      </div>
-
-                      <DropdownMenu
-                        items={[
-                          {
-                            key: 'foto',
-                            label: 'Foto',
-                            icon: <Images className="h-3.5 w-3.5 shrink-0" />,
-                            onSelect: () => setGalleryProduct(p),
-                          },
-                          {
-                            key: 'editar',
-                            label: 'Editar',
-                            icon: <Edit2 className="h-3.5 w-3.5 shrink-0" />,
-                            onSelect: () => handleOpenEdit(p),
-                          },
-                          {
-                            key: 'deletar',
-                            label: 'Deletar',
-                            variant: 'danger',
-                            icon: <Trash2 className="h-3.5 w-3.5 shrink-0" />,
-                            onSelect: () => setDeletingProduct(p),
-                          },
-                        ]}
-                        buttonClassName="h-8 w-8 px-0"
-                      />
-                    </div>
-
-                    {p.barcode && (
-                      <div className="ml-[50px] mt-1 truncate font-mono text-[10px] text-muted-foreground">
-                        Cód. barras: {p.barcode}
-                      </div>
-                    )}
-
-                    <div className="ml-[50px] mt-2 flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-[10px] text-muted-foreground">
-                          Mínimo: <span className="font-mono font-medium text-foreground">{p.min_stock ?? 0} {p.unit || 'UN'}</span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span
-                          className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 font-mono text-xs font-bold ${
-                            isLowStock
-                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                          }`}
-                        >
-                          {p.stock_quantity ?? 0} {p.unit || 'UN'}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                )
-              })}
-            </div>
-            </>
           )}
         </CardContent>
 

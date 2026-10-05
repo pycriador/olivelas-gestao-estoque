@@ -667,15 +667,15 @@ export function InventoryPage() {
                           </td>
                           <td className="py-2.5 px-3 text-right">
                             {isGlobalAdmin && b.quantity <= 0 ? (
-                              <button
-                                type="button"
+                              <Button
+                                size="sm"
+                                variant="outline"
                                 onClick={() => setDeletingZeroStockBalance(b)}
                                 title="Remover produto com estoque zerado"
-                                className="p-1.5 rounded-lg text-danger hover:bg-danger/10 transition-colors inline-flex items-center gap-1 text-xs font-semibold cursor-pointer"
+                                className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
                               >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                <span className="hidden sm:inline">Remover</span>
-                              </button>
+                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover
+                              </Button>
                             ) : (
                               <span className="text-[10px] text-muted-foreground font-mono">
                                 {b.quantity <= 0 ? 'Zerado' : '-'}

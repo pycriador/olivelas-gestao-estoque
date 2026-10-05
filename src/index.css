@@ -227,5 +227,26 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-end;
+    gap: 0.5rem;
+    padding-top: 0.625rem;
+    margin-top: 0.25rem;
+    border-top: 1px solid hsl(var(--border) / 0.7);
+    width: 100%;
+  }
+
+  .responsive-mobile-cards tbody td.mobile-table-actions::before {
+    display: none !important;
+  }
+
+  .responsive-mobile-cards tbody td.mobile-table-actions button,
+  .responsive-mobile-cards tbody td.mobile-table-actions a,
+  .responsive-mobile-cards tbody td.mobile-table-actions .btn {
+    min-height: 2.35rem; /* ~38px large touch area */
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 0.5rem;
   }
 }
+

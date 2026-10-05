@@ -322,9 +322,7 @@ export function AuditLogsPage() {
                       currentSortOrder={sortOrder}
                       onSort={toggleSort}
                     />
-                    <th className="py-2.5 px-3">Responsável</th>
-                    <th className="py-2.5 px-3">ID do Recurso</th>
-                    <th className="py-2.5 px-3 text-right">Inspecionar</th>
+                    <th className="py-2.5 px-3 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -381,13 +379,15 @@ export function AuditLogsPage() {
                         </td>
 
                         <td className="py-2.5 px-3 text-right">
-                          <button
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => setInspectLog(log)}
-                            className="p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            className="h-8 text-xs font-semibold px-2.5"
                             title="Inspecionar Payload"
                           >
-                            <Eye className="h-4 w-4" />
-                          </button>
+                            <Eye className="h-3.5 w-3.5 mr-1" /> Inspecionar
+                          </Button>
                         </td>
                       </tr>
                     )

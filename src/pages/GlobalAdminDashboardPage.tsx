@@ -752,25 +752,28 @@ export function GlobalAdminDashboardPage() {
                           {formatDate(st.created_at)}
                         </td>
                         <td className="py-2 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-7 text-[11px] px-2 gap-1 text-primary hover:bg-primary/10"
+                              className="h-8 text-xs font-semibold px-2.5 gap-1 text-primary hover:bg-primary/10"
                               onClick={() => handleEnterStoreContext(st)}
                               title="Visualizar como a Loja (Acessar Painel)"
                             >
-                              <Eye className="h-3 w-3" /> Acessar
+                              <Eye className="h-3.5 w-3.5" /> Acessar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5"
+                              onClick={() => handleOpenEditStore(st)}
+                              title="Editar Dados da Loja"
+                            >
+                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
                             </Button>
                             <DropdownMenu
-                              buttonClassName="h-7 w-7 border border-border/80 bg-background hover:bg-muted"
+                              triggerLabel="Mais"
                               items={[
-                                {
-                                  key: 'edit',
-                                  label: 'Editar Dados da Loja',
-                                  icon: <Edit2 className="h-3.5 w-3.5 text-primary" />,
-                                  onSelect: () => handleOpenEditStore(st),
-                                },
                                 {
                                   key: 'transfer',
                                   label: 'Transferir Propriedade',
@@ -924,30 +927,34 @@ export function GlobalAdminDashboardPage() {
                           {formatDateTime(u.createdAt)}
                         </td>
                         <td className="py-2.5 px-4 text-right">
-                          <DropdownMenu
-                            buttonClassName="h-7 w-7 border border-border/80 bg-background hover:bg-muted ml-auto"
-                            items={[
-                              {
-                                key: 'edit',
-                                label: 'Editar Usuário',
-                                icon: <Edit2 className="h-3.5 w-3.5 text-primary" />,
-                                onSelect: () => handleOpenEditUser(u),
-                              },
-                              {
-                                key: 'reset-pwd',
-                                label: 'Enviar Redefinição de Senha',
-                                icon: <KeyRound className="h-3.5 w-3.5 text-blue-500" />,
-                                onSelect: () => resetPasswordMutation.mutate(u.email),
-                              },
-                              {
-                                key: 'delete',
-                                label: 'Remover Usuário',
-                                icon: <Trash2 className="h-3.5 w-3.5" />,
-                                variant: 'danger',
-                                onSelect: () => setDeletingUser(u),
-                              },
-                            ]}
-                          />
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5"
+                              onClick={() => handleOpenEditUser(u)}
+                            >
+                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5"
+                              onClick={() => resetPasswordMutation.mutate(u.email)}
+                              title="Enviar Redefinição de Senha"
+                            >
+                              <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset Senha
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
+                              onClick={() => setDeletingUser(u)}
+                              title="Remover Usuário"
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}

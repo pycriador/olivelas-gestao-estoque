@@ -300,7 +300,7 @@ export function PurchasingPage() {
                     />
                     <th className="py-3 px-4 text-right">Venda Prevista</th>
                     <th className="py-3 px-4 text-center">Status</th>
-                    <th className="py-3 px-4 text-right">Ação</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -335,25 +335,26 @@ export function PurchasingPage() {
                         </Badge>
                       </td>
                       <td className="py-2.5 px-4 text-right">
-                        <DropdownMenu
-                          triggerLabel="Ações"
-                          items={[
-                            {
-                              key: 'details',
-                              label: 'Ver detalhes',
-                              icon: <Eye className="h-3.5 w-3.5 shrink-0" />,
-                              onSelect: () => setViewingPO(po),
-                            },
-                            ...(po.status === 'ISSUED'
-                              ? [{
-                                  key: 'receive',
-                                  label: 'Receber Mercadoria',
-                                  icon: <PackageCheck className="h-3.5 w-3.5 shrink-0" />,
-                                  onSelect: () => setReceivingPO(po),
-                                }]
-                              : []),
-                          ]}
-                        />
+                        <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setViewingPO(po)}
+                            className="h-8 text-xs font-semibold px-2.5"
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1" /> Detalhes
+                          </Button>
+                          {po.status === 'ISSUED' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => setReceivingPO(po)}
+                              className="h-8 text-xs font-semibold px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                            >
+                              <PackageCheck className="h-3.5 w-3.5 mr-1" /> Receber
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

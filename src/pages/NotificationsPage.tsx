@@ -13,6 +13,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
 import {
   Bell,
+  Check,
   CheckCheck,
   AlertTriangle,
   Search,
@@ -304,12 +305,12 @@ export function NotificationsPage() {
 
                   {!n.is_read && (
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       size="sm"
-                      className="text-[11px] h-7 shrink-0"
+                      className="text-xs h-8 px-2.5 shrink-0 font-semibold"
                       onClick={() => markReadMutation.mutate(n.id)}
                     >
-                      Marcar lida
+                      <Check className="h-3.5 w-3.5 mr-1" /> Marcar lida
                     </Button>
                   )}
                 </div>
