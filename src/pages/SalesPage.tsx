@@ -37,8 +37,18 @@ import type { Product } from '@/types/product.types'
 import type { POSStockFilter } from '@/services/productService'
 
 export const isWeighedProduct = (product: Product | { unit?: string | null }): boolean => {
-  const unit = (product.unit || '').trim().toUpperCase()
-  return unit === 'KG' || unit === 'QUILOGRAMA' || unit === 'QUILOGRAMAS' || unit === 'KILOGRAM' || unit === 'KILOGRAMS'
+  const unit = (product?.unit || '').trim().toUpperCase()
+  return (
+    unit === 'KG' ||
+    unit === 'QUILOGRAMA' ||
+    unit === 'QUILOGRAMAS' ||
+    unit === 'QUILOGRAMA (KG)' ||
+    unit === 'KILOGRAM' ||
+    unit === 'KILOGRAMS' ||
+    unit.includes('KG') ||
+    unit.includes('QUILO') ||
+    unit.includes('GRAMA')
+  )
 }
 
 interface CartLine {

@@ -38,9 +38,9 @@ export function WeightInputModal({
   onConfirm,
 }: WeightInputModalProps) {
   const [inputMode, setInputMode] = React.useState<'grams' | 'kg' | 'money'>('grams')
-  const [gramsValue, setGramsValue] = React.useState<number>(150)
-  const [kgValue, setKgValue] = React.useState<number>(0.15)
-  const [moneyValue, setMoneyValue] = React.useState<number>(0)
+  const [gramsText, setGramsText] = React.useState<string>('150')
+  const [kgText, setKgText] = React.useState<string>('0.150')
+  const [moneyText, setMoneyText] = React.useState<string>('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   const pricePerKg = Number(product?.selling_price || 0)
@@ -49,40 +49,62 @@ export function WeightInputModal({
   React.useEffect(() => {
     if (isOpen && product) {
       const initialGrams = Math.round((initialQuantity || 0.15) * 1000)
-      setGramsValue(initialGrams)
-      setKgValue(Number((initialGrams / 1000).toFixed(3)))
-      setMoneyValue(Number(((initialGrams / 1000) * pricePerKg).toFixed(2)))
+      const initialKg = Number((initialGrams / 1000).toFixed(3))
+      const initialMoney = Number((initialKg * pricePerKg).toFixed(2))
+
+      setGramsText(String(initialGrams))
+      setKgText(String(initialKg))
+      setMoneyText(initialMoney > 0 ? initialMoney.toFixed(2) : '')
       setErrorMsg(null)
     }
   }, [isOpen, product, initialQuantity, pricePerKg])
 
   if (!product) return null
 
-  const handleGramsChange = (val: number) => {
-    const validGrams = Math.max(0, val)
-    setGramsValue(validGrams)
-    const inKg = Number((validGrams / 1000).toFixed(3))
-    setKgValue(inKg)
-    setMoneyValue(Number((inKg * pricePerKg).toFixed(2)))
-    validateStock(inKg)
+  const currentKg = parseFloat(kgText.replace(',', '.')) || 0
+  const currentGrams = parseFloat(gramsText.replace(',', '.')) || Math.round(currentKg * 1000)
+  const totalCalculated = Number((currentKg * pricePerKg).toFixed(2))
+
+  const handleGramsChange = (raw: string) => {
+    setGramsText(raw)
+    const g = parseFloat(raw.replace(',', '.'))
+    if (!isNaN(g) && g >= 0) {
+      const calculatedKg = Number((g / 1000).toFixed(3))
+      setKgText(String(calculatedKg))
+      if (pricePerKg > 0) {
+        setMoneyText((calculatedKg * pricePerKg).toFixed(2))
+      }
+      validateStock(calculatedKg)
+    } else {
+      setKgText('')
+      setMoneyText('')
+    }
   }
 
-  const handleKgChange = (val: number) => {
-    const validKg = Math.max(0, val)
-    setKgValue(validKg)
-    const inGrams = Math.round(validKg * 1000)
-    setGramsValue(inGrams)
-    setMoneyValue(Number((validKg * pricePerKg).toFixed(2)))
-    validateStock(validKg)
+  const handleKgChange = (raw: string) => {
+    setKgText(raw)
+    const k = parseFloat(raw.replace(',', '.'))
+    if (!isNaN(k) && k >= 0) {
+      const calculatedGrams = Math.round(k * 1000)
+      setGramsText(String(calculatedGrams))
+      if (pricePerKg > 0) {
+        setMoneyText((k * pricePerKg).toFixed(2))
+      }
+      validateStock(k)
+    } else {
+      setGramsText('')
+      setMoneyText('')
+    }
   }
 
-  const handleMoneyChange = (val: number) => {
-    const validMoney = Math.max(0, val)
-    setMoneyValue(validMoney)
-    if (pricePerKg > 0) {
-      const calculatedKg = Number((validMoney / pricePerKg).toFixed(3))
-      setKgValue(calculatedKg)
-      setGramsValue(Math.round(calculatedKg * 1000))
+  const handleMoneyChange = (raw: string) => {
+    setMoneyText(raw)
+    const m = parseFloat(raw.replace(',', '.'))
+    if (!isNaN(m) && m >= 0 && pricePerKg > 0) {
+      const calculatedKg = Number((m / pricePerKg).toFixed(3))
+      const calculatedGrams = Math.round(calculatedKg * 1000)
+      setKgText(String(calculatedKg))
+      setGramsText(String(calculatedGrams))
       validateStock(calculatedKg)
     }
   }
@@ -96,29 +118,29 @@ export function WeightInputModal({
   }
 
   const handlePresetClick = (grams: number) => {
-    handleGramsChange(grams)
+    handleGramsChange(String(grams))
   }
 
   const handleAdjustGrams = (delta: number) => {
-    const newGrams = Math.max(10, gramsValue + delta)
-    handleGramsChange(newGrams)
+    const current = parseFloat(gramsText.replace(',', '.')) || 0
+    const nextGrams = Math.max(1, current + delta)
+    handleGramsChange(String(nextGrams))
   }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (kgValue <= 0) {
-      setErrorMsg('Informe um peso maior que zero.')
+    const kg = parseFloat(kgText.replace(',', '.'))
+    if (isNaN(kg) || kg <= 0) {
+      setErrorMsg('Informe um peso livre válido maior que zero.')
       return
     }
-    if (maxAvailable !== undefined && kgValue > maxAvailable) {
+    if (maxAvailable !== undefined && kg > maxAvailable) {
       setErrorMsg(`Estoque insuficiente. Máximo disponível: ${maxAvailable} kg.`)
       return
     }
-    onConfirm(kgValue)
+    onConfirm(kg)
     onClose()
   }
-
-  const totalCalculated = Number((kgValue * pricePerKg).toFixed(2))
 
   return (
     <Modal
@@ -145,13 +167,13 @@ export function WeightInputModal({
               {formatCurrency(totalCalculated)}
             </div>
             <div className="text-[11px] text-muted-foreground font-mono">
-              {gramsValue}g ({kgValue} kg) × {formatCurrency(pricePerKg)}/kg
+              {currentGrams}g ({currentKg} kg) × {formatCurrency(pricePerKg)}/kg
             </div>
           </div>
 
           <div className="text-right">
             <Badge variant="default" className="text-xs px-2.5 py-1 font-mono font-bold">
-              {gramsValue >= 1000 ? `${kgValue} kg` : `${gramsValue}g`}
+              {currentGrams >= 1000 ? `${currentKg} kg` : `${currentGrams}g`}
             </Badge>
             {maxAvailable !== undefined && (
               <div className="text-[10px] text-muted-foreground mt-1">
@@ -201,32 +223,35 @@ export function WeightInputModal({
         {/* Interactive Input Fields based on Mode */}
         {inputMode === 'grams' && (
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground">
-              Quantidade em Gramas (g)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground">
+                Digite qualquer peso livre em Gramas (g)
+              </label>
+              <span className="text-[11px] text-muted-foreground">Ex: 85, 137, 260, 1450</span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => handleAdjustGrams(-50)}
-                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-base"
+                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-base cursor-pointer"
                 title="-50g"
               >
                 -50g
               </button>
               <Input
-                type="number"
-                step="10"
-                min="1"
-                value={gramsValue || ''}
-                onChange={(e) => handleGramsChange(parseFloat(e.target.value) || 0)}
-                className="h-11 text-center font-mono text-lg font-bold"
-                placeholder="Ex: 150"
+                type="text"
+                inputMode="decimal"
+                value={gramsText}
+                onChange={(e) => handleGramsChange(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                className="h-11 text-center font-mono text-xl font-bold"
+                placeholder="Digite o peso em gramas"
                 autoFocus
               />
               <button
                 type="button"
                 onClick={() => handleAdjustGrams(50)}
-                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-base"
+                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-base cursor-pointer"
                 title="+50g"
               >
                 +50g
@@ -237,32 +262,35 @@ export function WeightInputModal({
 
         {inputMode === 'kg' && (
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground">
-              Quantidade em Quilos (kg)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground">
+                Digite qualquer peso livre em Quilos (kg)
+              </label>
+              <span className="text-[11px] text-muted-foreground">Ex: 0.135, 0.480, 1.250</span>
+            </div>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => handleAdjustGrams(-100)}
-                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-xs"
+                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-xs cursor-pointer"
                 title="-0,100kg"
               >
                 -0,1kg
               </button>
               <Input
-                type="number"
-                step="0.005"
-                min="0.001"
-                value={kgValue || ''}
-                onChange={(e) => handleKgChange(parseFloat(e.target.value) || 0)}
-                className="h-11 text-center font-mono text-lg font-bold"
+                type="text"
+                inputMode="decimal"
+                value={kgText}
+                onChange={(e) => handleKgChange(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                className="h-11 text-center font-mono text-xl font-bold"
                 placeholder="Ex: 0.150"
                 autoFocus
               />
               <button
                 type="button"
                 onClick={() => handleAdjustGrams(100)}
-                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-xs"
+                className="h-11 w-11 shrink-0 rounded-xl border border-border flex items-center justify-center hover:bg-muted font-bold text-xs cursor-pointer"
                 title="+0,100kg"
               >
                 +0,1kg
@@ -273,16 +301,19 @@ export function WeightInputModal({
 
         {inputMode === 'money' && (
           <div className="space-y-2">
-            <label className="text-xs font-semibold text-foreground">
-              Quanto o cliente deseja gastar em R$? (Calcula o peso automaticamente)
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-foreground">
+                Quanto o cliente deseja gastar em R$?
+              </label>
+              <span className="text-[11px] text-muted-foreground">Calcula o peso automaticamente</span>
+            </div>
             <Input
-              type="number"
-              step="0.50"
-              min="0.10"
-              value={moneyValue || ''}
-              onChange={(e) => handleMoneyChange(parseFloat(e.target.value) || 0)}
-              className="h-11 text-center font-mono text-lg font-bold"
+              type="text"
+              inputMode="decimal"
+              value={moneyText}
+              onChange={(e) => handleMoneyChange(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              className="h-11 text-center font-mono text-xl font-bold"
               placeholder="Ex: 5.00"
               autoFocus
             />
@@ -292,11 +323,11 @@ export function WeightInputModal({
         {/* Quick Weight Presets */}
         <div className="space-y-1.5">
           <label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
-            <Sparkles className="h-3 w-3 text-amber-500" /> Pesos Frequentes / Rápidos
+            <Sparkles className="h-3 w-3 text-amber-500" /> Ou escolha um atalho rápido
           </label>
           <div className="grid grid-cols-5 gap-1.5">
             {COMMON_PRESETS.map((preset) => {
-              const isSelected = Math.abs(gramsValue - preset.grams) < 1
+              const isSelected = Math.abs(currentGrams - preset.grams) < 1
               return (
                 <button
                   key={preset.grams}
@@ -329,7 +360,7 @@ export function WeightInputModal({
             type="submit"
             className="w-full sm:w-auto h-11 sm:h-10 font-semibold shadow-xs"
           >
-            <Check className="h-4 w-4 mr-1.5" /> Confirmar {gramsValue >= 1000 ? `${kgValue} kg` : `${gramsValue}g`} ({formatCurrency(totalCalculated)})
+            <Check className="h-4 w-4 mr-1.5" /> Confirmar {currentGrams >= 1000 ? `${currentKg} kg` : `${currentGrams}g`} ({formatCurrency(totalCalculated)})
           </Button>
         </div>
       </form>
