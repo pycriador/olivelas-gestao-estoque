@@ -29,10 +29,17 @@ import {
   RotateCcw,
   AlertTriangle,
   EyeOff,
+  Scale,
 } from 'lucide-react'
+import { WeightInputModal } from '@/components/sales/WeightInputModal'
 import type { PaymentMethod } from '@/types/database.types'
 import type { Product } from '@/types/product.types'
 import type { POSStockFilter } from '@/services/productService'
+
+export const isWeighedProduct = (product: Product | { unit?: string | null }): boolean => {
+  const unit = (product.unit || '').trim().toUpperCase()
+  return unit === 'KG' || unit === 'QUILOGRAMA' || unit === 'QUILOGRAMAS' || unit === 'KILOGRAM' || unit === 'KILOGRAMS'
+}
 
 interface CartLine {
   product: Product
@@ -75,6 +82,8 @@ export function SalesPage() {
   const [notes, setNotes] = React.useState('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [successOrderNumber, setSuccessOrderNumber] = React.useState<string | null>(null)
+  const [weighedProduct, setWeighedProduct] = React.useState<Product | null>(null)
+  const [weighedInitialQty, setWeighedInitialQty] = React.useState<number>(0.15)
 
   // Categorias: alimentam o filtro do grid do PDV.
   const { data: categories = [] } = useQuery({
@@ -127,9 +136,21 @@ export function SalesPage() {
 
   // Add to cart
   const addToCart = (product: Product) => {
-    const available = Number(product.stock_quantity ?? 0)
-    const existing = cart.find((i) => i.product.id === product.id)
+    const available = stockByProduct.get(product.id) ?? Number(product.stock_quantity ?? 0)
+    if (available <= 0) {
+      setErrorMsg(`"${product.name}" está sem estoque disponível.`)
+      return
+    }
 
+    // Se o produto é vendido por peso (KG), abrir modal de pesagem/gramatura
+    if (isWeighedProduct(product)) {
+      const existing = cart.find((i) => i.product.id === product.id)
+      setWeighedInitialQty(existing ? existing.quantity : 0.15)
+      setWeighedProduct(product)
+      return
+    }
+
+    const existing = cart.find((i) => i.product.id === product.id)
     if (existing) {
       if (existing.quantity + 1 > available) {
         setErrorMsg(
@@ -143,10 +164,6 @@ export function SalesPage() {
         )
       )
     } else {
-      if (available < 1) {
-        setErrorMsg(`"${product.name}" está sem estoque disponível.`)
-        return
-      }
       setCart([
         ...cart,
         {
@@ -159,19 +176,50 @@ export function SalesPage() {
     }
   }
 
+  const handleConfirmWeight = (quantityInKg: number) => {
+    if (!weighedProduct) return
+    const available = stockByProduct.get(weighedProduct.id) ?? Number(weighedProduct.stock_quantity ?? 0)
+    if (quantityInKg > available) {
+      setErrorMsg(`Estoque insuficiente para "${weighedProduct.name}". Disponível: ${available} kg.`)
+      return
+    }
+
+    const existingIndex = cart.findIndex((i) => i.product.id === weighedProduct.id)
+    if (existingIndex >= 0) {
+      setCart(
+        cart.map((item, idx) =>
+          idx === existingIndex ? { ...item, quantity: quantityInKg } : item
+        )
+      )
+    } else {
+      setCart([
+        ...cart,
+        {
+          product: weighedProduct,
+          quantity: quantityInKg,
+          unitPrice: Number(weighedProduct.selling_price),
+          discount: 0,
+        },
+      ])
+    }
+    setWeighedProduct(null)
+  }
+
   const updateQuantity = (productId: string, delta: number) => {
     setCart((prev) =>
       prev
         .map((i) => {
           if (i.product.id === productId) {
-            const newQ = i.quantity + delta
-            if (newQ <= 0) return null
+            const isWeighed = isWeighedProduct(i.product)
+            const step = isWeighed ? (Math.abs(delta) < 1 ? delta : delta > 0 ? 0.05 : -0.05) : delta
+            const newQ = Number((i.quantity + step).toFixed(3))
+            if (newQ <= 0.005) return null
             // Teto por linha: o saldo atual do produto, ou o saldo
             // publicado na pagina quando o item nao esta mais visivel.
             const available = stockByProduct.get(productId) ?? Number(i.product.stock_quantity ?? 0)
             if (newQ > available) {
               setErrorMsg(
-                `Estoque insuficiente. Disponível para "${i.product.name}": ${available}.`
+                `Estoque insuficiente. Disponível para "${i.product.name}": ${available}${isWeighed ? ' kg' : ''}.`
               )
               return i
             }
@@ -389,6 +437,7 @@ export function SalesPage() {
                     const isOutOfStock = stock <= 0
                     // Ja atingiu o saldo disponivel: nao deixa passar.
                     const atStockLimit = !isOutOfStock && inCartQty >= stock
+                    const isWeighed = isWeighedProduct(p)
 
                     return (
                       <button
@@ -399,8 +448,10 @@ export function SalesPage() {
                           isOutOfStock
                             ? 'Sem estoque disponível'
                             : atStockLimit
-                              ? `Todo o estoque disponível (${stock}) já está no carrinho`
-                              : undefined
+                              ? `Todo o estoque disponível (${stock}${isWeighed ? ' kg' : ''}) já está no carrinho`
+                              : isWeighed
+                                ? 'Clique para pesar / definir quantidade em gramas/kg'
+                                : undefined
                         }
                         className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between group relative ${
                           isOutOfStock || atStockLimit
@@ -411,8 +462,8 @@ export function SalesPage() {
                         }`}
                       >
                         {inCart && (
-                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold font-mono">
-                            {inCartQty}x
+                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold font-mono flex items-center gap-0.5">
+                            {isWeighed ? (inCartQty >= 1 ? `${inCartQty}kg` : `${Math.round(inCartQty * 1000)}g`) : `${inCartQty}x`}
                           </div>
                         )}
 
@@ -420,14 +471,21 @@ export function SalesPage() {
                           <div className="font-semibold text-xs text-foreground line-clamp-1 pr-6">
                             {p.name}
                           </div>
-                          <div className="text-[10px] text-muted-foreground font-mono mt-0.5 truncate">
-                            {p.sku || p.barcode || 'Sem SKU'}
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] text-muted-foreground font-mono truncate">
+                              {p.sku || p.barcode || 'Sem SKU'}
+                            </span>
+                            {isWeighed && (
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 text-primary border-primary/30 font-bold shrink-0">
+                                <Scale className="h-2.5 w-2.5 mr-0.5" /> KG
+                              </Badge>
+                            )}
                           </div>
                         </div>
 
                         <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-border/50">
                           <span className="font-bold text-xs text-primary font-mono">
-                            {formatCurrency(p.selling_price)}
+                            {formatCurrency(p.selling_price)}{isWeighed ? '/kg' : ''}
                           </span>
                           <span
                             className={`text-[10px] inline-flex items-center gap-0.5 ${
@@ -439,7 +497,7 @@ export function SalesPage() {
                             }`}
                           >
                             {stock <= 0 && <AlertTriangle className="h-2.5 w-2.5" />}
-                            Est: {stock}
+                            Est: {isWeighed ? `${stock} kg` : stock}
                           </span>
                         </div>
                       </button>
@@ -472,7 +530,7 @@ export function SalesPage() {
                 <ShoppingBag className="h-4 w-4 text-primary" />
                 <CardTitle className="text-xs font-bold">Carrinho</CardTitle>
                 <Badge variant="default" className="text-[10px] px-1.5 py-0">
-                  {totalItemCount} {totalItemCount === 1 ? 'item' : 'itens'}
+                  {cart.length} {cart.length === 1 ? 'item' : 'itens'}
                 </Badge>
               </div>
 
@@ -501,57 +559,111 @@ export function SalesPage() {
                 <div className="divide-y divide-border/40">
                   {cart.map((item) => {
                     const available = stockByProduct.get(item.product.id) ?? Number(item.product.stock_quantity ?? 0)
+                    const isWeighed = isWeighedProduct(item.product)
                     const atLimit = item.quantity >= available
-                    return (
-                    <div
-                      key={item.product.id}
-                      className="py-1.5 px-1 flex items-center justify-between gap-2 hover:bg-muted/30 rounded-lg transition-colors"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-xs text-foreground truncate">
-                          {item.product.name}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground font-mono">
-                          {formatCurrency(item.unitPrice)}
-                          {atLimit && (
-                            <span className="text-amber-500 font-semibold"> · máx {available}</span>
-                          )}
-                        </div>
-                      </div>
+                    const lineTotal = item.quantity * item.unitPrice
+                    const formattedWeight = item.quantity >= 1 ? `${item.quantity} kg` : `${Math.round(item.quantity * 1000)}g`
 
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, -1)}
-                          aria-label={`Diminuir ${item.product.name}`}
-                          className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
-                        >
-                          <Minus className="h-2.5 w-2.5" />
-                        </button>
-                        <span className="w-5 text-center font-mono font-bold text-xs">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, 1)}
-                          disabled={atLimit}
-                          aria-label={`Aumentar ${item.product.name}`}
-                          title={atLimit ? `Estoque disponível: ${available}` : undefined}
-                          className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-                        >
-                          <Plus className="h-2.5 w-2.5" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeFromCart(item.product.id)}
-                          aria-label={`Remover ${item.product.name}`}
-                          className="p-1 text-muted-foreground hover:text-danger ml-0.5 cursor-pointer transition-colors"
-                          title="Remover item"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                    return (
+                      <div
+                        key={item.product.id}
+                        className="py-1.5 px-1 flex items-center justify-between gap-2 hover:bg-muted/30 rounded-lg transition-colors"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1">
+                            <div className="font-semibold text-xs text-foreground truncate">
+                              {item.product.name}
+                            </div>
+                            {isWeighed && (
+                              <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 text-primary border-primary/20 shrink-0">
+                                KG
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground font-mono flex items-center gap-1.5 flex-wrap">
+                            <span className="font-semibold text-foreground">{formatCurrency(lineTotal)}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              ({formatCurrency(item.unitPrice)}{isWeighed ? '/kg' : ' un'})
+                            </span>
+                            {atLimit && (
+                              <span className="text-amber-500 font-semibold text-[10px]">
+                                · máx {available}{isWeighed ? ' kg' : ''}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isWeighed ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, -0.05)}
+                                aria-label={`Diminuir ${item.product.name}`}
+                                className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                                title="-50g"
+                              >
+                                <Minus className="h-2.5 w-2.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWeighedProduct(item.product)
+                                  setWeighedInitialQty(item.quantity)
+                                }}
+                                className="px-1.5 h-6 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-mono font-bold text-xs flex items-center gap-0.5 transition-colors cursor-pointer"
+                                title="Clique para pesar / alterar gramas"
+                              >
+                                <Scale className="h-3 w-3" />
+                                {formattedWeight}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, 0.05)}
+                                disabled={atLimit}
+                                aria-label={`Aumentar ${item.product.name}`}
+                                title={atLimit ? `Estoque disponível: ${available} kg` : '+50g'}
+                                className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <Plus className="h-2.5 w-2.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, -1)}
+                                aria-label={`Diminuir ${item.product.name}`}
+                                className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+                              >
+                                <Minus className="h-2.5 w-2.5" />
+                              </button>
+                              <span className="w-5 text-center font-mono font-bold text-xs">
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(item.product.id, 1)}
+                                disabled={atLimit}
+                                aria-label={`Aumentar ${item.product.name}`}
+                                title={atLimit ? `Estoque disponível: ${available}` : undefined}
+                                className="h-6 w-6 rounded-md border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                <Plus className="h-2.5 w-2.5" />
+                              </button>
+                            </>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeFromCart(item.product.id)}
+                            aria-label={`Remover ${item.product.name}`}
+                            className="p-1 text-muted-foreground hover:text-danger ml-0.5 cursor-pointer transition-colors"
+                            title="Remover item"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
                     )
                   })}
                 </div>
@@ -625,6 +737,19 @@ export function SalesPage() {
           </Card>
         </div>
       </div>
+
+      <WeightInputModal
+        isOpen={Boolean(weighedProduct)}
+        onClose={() => setWeighedProduct(null)}
+        product={weighedProduct}
+        initialQuantity={weighedInitialQty}
+        maxAvailable={
+          weighedProduct
+            ? (stockByProduct.get(weighedProduct.id) ?? Number(weighedProduct.stock_quantity ?? 0))
+            : undefined
+        }
+        onConfirm={handleConfirmWeight}
+      />
     </div>
   )
 }

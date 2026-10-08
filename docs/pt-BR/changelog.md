@@ -14,6 +14,20 @@ classification: Confirmed
 
 ## 2026-10-08
 
+- **Suporte a Produtos Pesáveis e Venda Fracionada (KG / Gramas) no PDV Frente de Caixa** (`SalesPage.tsx`, `WeightInputModal.tsx`):
+  - **Identificação Automática de Itens Pesáveis**: Detecção inteligente de produtos cadastrados com unidade `KG` ou `QUILOGRAMA`. Exibição de badge `KG` e preço formatado por quilo (`R$ XX,XX/kg`) no catálogo e no carrinho.
+  - **Modal Interativo de Pesagem & Gramatura** (`WeightInputModal`):
+    - Ao selecionar um produto em KG no PDV, abre modal intuitivo para informe de peso.
+    - Suporte a 3 modos de entrada sincronizados em tempo real:
+      1. **Gramas (g)** com botões de incremento/decremento rápido (-50g / +50g).
+      2. **Quilogramas (kg)** com precisão decimal (3 casas decimais - `0,150 kg`).
+      3. **Valor em Dinheiro (R$)** calculando automaticamente a quantidade correspondente em quilos/gramas.
+    - **Atalhos Rápidos de Peso**: Botões de 1 toque para pesos frequentes (`100g`, `150g`, `200g`, `250g`, `300g`, `500g`, `750g`, `1 kg`, `1,5 kg`, `2 kg`).
+    - Validação de saldo disponível em tempo real e visualização de total calculado.
+  - **Carrinho & Checkout com Precisão Fracionária**:
+    - Botão de ajuste rápido de peso diretamente no carrinho com abertura do modal ou ajuste em passos de 50g.
+    - Integração transparente com `orderService.createOrder` e a função RPC atômica do Supabase (`NUMERIC(12,3)`), baixando a fração exata do estoque (ex: 0,150 kg de Alho a Granel).
+
 - **Sincronização Cadastral, Preços de Compra/Venda, Rastreabilidade de Fornecedores e Lotes no Estoque**:
   - **Cadastro Completo de Produtos no Catálogo Mestre** (`ProductsPage.tsx`, `productService.ts`):
     - Inclusão dos campos de **Preço de Custo (R$)**, **Preço de Venda (PDV) (R$)** e seleção de **Fornecedor Principal** diretamente no modal de criação e edição de produtos.

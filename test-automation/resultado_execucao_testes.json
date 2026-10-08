@@ -1,6 +1,6 @@
 {
   "suiteName": "Plano de Teste e Roteiro de Automação E2E - Olivelas Gestão de Estoque",
-  "executedAt": "2026-10-08T10:41:01.143Z",
+  "executedAt": "2026-10-08T10:45:03.542Z",
   "environment": {
     "supabaseUrl": "https://mffrafqyjbjitlhjnlai.supabase.co",
     "nodeVersion": "v24.15.0"
@@ -9,7 +9,7 @@
     "totalSteps": 33,
     "passedSteps": 33,
     "failedSteps": 0,
-    "durationMs": 16875
+    "durationMs": 19980
   },
   "testStore": {
     "id": "809ab043-acca-44a8-9d5b-3d63de7f9d35",
@@ -22,7 +22,7 @@
       "title": "Inicializar Loja de Teste QA Dedicada",
       "category": "Tenant / Setup",
       "status": "PASSED",
-      "durationMs": 302,
+      "durationMs": 594,
       "assertions": [
         {
           "text": "Loja de teste criada ou localizada com sucesso",
@@ -49,7 +49,7 @@
       "title": "Cadastrar Fornecedor Homologado para a Loja QA",
       "category": "Fornecedores",
       "status": "PASSED",
-      "durationMs": 205,
+      "durationMs": 186,
       "assertions": [
         {
           "text": "Fornecedor de teste registrado com ID válido",
@@ -71,7 +71,7 @@
       "title": "Cadastrar Categorias Estruturais no Catálogo",
       "category": "Categorias",
       "status": "PASSED",
-      "durationMs": 1019,
+      "durationMs": 1204,
       "assertions": [
         {
           "text": "Todas as 4 categorias foram criadas no tenant",
@@ -91,7 +91,7 @@
       "title": "Cadastrar Produtos no Catálogo Mestre com Preços e SKUs",
       "category": "Produtos",
       "status": "PASSED",
-      "durationMs": 1803,
+      "durationMs": 1993,
       "assertions": [
         {
           "text": "4 produtos cadastrados e mapeados no banco",
@@ -139,7 +139,7 @@
       "title": "Dar Entrada de Estoque Inicial com Lotes e Validades (100 un/item)",
       "category": "Estoque / Lotes",
       "status": "PASSED",
-      "durationMs": 3888,
+      "durationMs": 4433,
       "assertions": [
         {
           "text": "Total de saldo físico registrado é exatamente 400 unidades",
@@ -159,7 +159,7 @@
       "title": "Executar Venda no PDV e Validar Dedução Atômica de Estoque",
       "category": "PDV / Vendas",
       "status": "PASSED",
-      "durationMs": 2030,
+      "durationMs": 2960,
       "assertions": [
         {
           "text": "Pedido criado com ID e número gerado",
@@ -179,7 +179,7 @@
         }
       ],
       "details": {
-        "orderNumber": "VND-QA-068363",
+        "orderNumber": "VND-QA-311955",
         "total": 196.3,
         "itemsCount": 2,
         "remainingStockA": 98,
@@ -192,7 +192,7 @@
       "title": "Cancelar Pedido e Validar Estorno Automático de Estoque",
       "category": "Pedidos / Cancelamento",
       "status": "PASSED",
-      "durationMs": 1784,
+      "durationMs": 1689,
       "assertions": [
         {
           "text": "Pedido atualizado para o status CANCELLED",
@@ -204,7 +204,7 @@
         }
       ],
       "details": {
-        "cancelledOrder": "VND-CANC-070394",
+        "cancelledOrder": "VND-CANC-314915",
         "restoredStock": 100
       },
       "error": null
@@ -214,7 +214,7 @@
       "title": "Emitir Ordem de Compra e Confirmar Recebimento Físico",
       "category": "Compras / Reposição",
       "status": "PASSED",
-      "durationMs": 1102,
+      "durationMs": 1650,
       "assertions": [
         {
           "text": "Ordem de compra emitida e recebida com sucesso",
@@ -226,7 +226,7 @@
         }
       ],
       "details": {
-        "poNumber": "PO-QA-072177",
+        "poNumber": "PO-QA-316605",
         "supplierId": "2ac01f88-d1fd-4dae-8ce3-0dd1b779a676",
         "itemsReceived": 50,
         "updatedTotalStock": 150
@@ -238,7 +238,7 @@
       "title": "Acesso & Validação da Tela: Painel Geral & Métricas (Dashboard) (/dashboard)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 161,
+      "durationMs": 169,
       "assertions": [
         {
           "text": "Tela Painel Geral & Métricas (Dashboard) acessada e dados validados com sucesso",
@@ -247,8 +247,8 @@
       ],
       "details": {
         "route": "/dashboard",
-        "totalOrders": 4,
-        "totalRevenue": 712.2
+        "totalOrders": 6,
+        "totalRevenue": 1068.3
       },
       "error": null
     },
@@ -257,7 +257,7 @@
       "title": "Acesso & Validação da Tela: Catálogo de Produtos Mestre (/products)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 192,
+      "durationMs": 177,
       "assertions": [
         {
           "text": "Tela Catálogo de Produtos Mestre acessada e dados validados com sucesso",
@@ -275,7 +275,7 @@
       "title": "Acesso & Validação da Tela: Categorias de Produtos (/categories)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 175,
+      "durationMs": 188,
       "assertions": [
         {
           "text": "Tela Categorias de Produtos acessada e dados validados com sucesso",
@@ -293,7 +293,7 @@
       "title": "Acesso & Validação da Tela: Estoque, Saldos & Movimentações (/inventory)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 372,
+      "durationMs": 347,
       "assertions": [
         {
           "text": "Tela Estoque, Saldos & Movimentações acessada e dados validados com sucesso",
@@ -303,7 +303,7 @@
       "details": {
         "route": "/inventory",
         "totalBalances": 4,
-        "totalMovements": 6
+        "totalMovements": 9
       },
       "error": null
     },
@@ -312,7 +312,7 @@
       "title": "Acesso & Validação da Tela: Frente de Caixa (PDV) (/sales)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 185,
+      "durationMs": 176,
       "assertions": [
         {
           "text": "Tela Frente de Caixa (PDV) acessada e dados validados com sucesso",
@@ -330,7 +330,7 @@
       "title": "Acesso & Validação da Tela: Histórico de Pedidos & Vendas (/orders)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 181,
+      "durationMs": 178,
       "assertions": [
         {
           "text": "Tela Histórico de Pedidos & Vendas acessada e dados validados com sucesso",
@@ -339,7 +339,7 @@
       ],
       "details": {
         "route": "/orders",
-        "totalOrdersCount": 4
+        "totalOrdersCount": 6
       },
       "error": null
     },
@@ -348,7 +348,7 @@
       "title": "Acesso & Validação da Tela: Gestão de Compras & Fornecedores (/purchasing)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 179,
+      "durationMs": 423,
       "assertions": [
         {
           "text": "Tela Gestão de Compras & Fornecedores acessada e dados validados com sucesso",
@@ -357,7 +357,7 @@
       ],
       "details": {
         "route": "/purchasing",
-        "totalPurchaseOrders": 3
+        "totalPurchaseOrders": 4
       },
       "error": null
     },
@@ -366,7 +366,7 @@
       "title": "Acesso & Validação da Tela: Gestão de Clientes (/customers)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 165,
+      "durationMs": 177,
       "assertions": [
         {
           "text": "Tela Gestão de Clientes acessada e dados validados com sucesso",
@@ -384,7 +384,7 @@
       "title": "Acesso & Validação da Tela: Gestão de Fornecedores (/suppliers)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 174,
+      "durationMs": 168,
       "assertions": [
         {
           "text": "Tela Gestão de Fornecedores acessada e dados validados com sucesso",
@@ -402,7 +402,7 @@
       "title": "Acesso & Validação da Tela: Lotes, Validades & Justificativas (/expiration)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 182,
+      "durationMs": 166,
       "assertions": [
         {
           "text": "Tela Lotes, Validades & Justificativas acessada e dados validados com sucesso",
@@ -420,7 +420,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Valorização & Rentabilidade do Estoque (/reports?tab=valuation)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 181,
+      "durationMs": 445,
       "assertions": [
         {
           "text": "Tela Relatório: Valorização & Rentabilidade do Estoque acessada e dados validados com sucesso",
@@ -440,7 +440,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Curva ABC & Mix de Produtos (/reports?tab=abc)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 184,
+      "durationMs": 167,
       "assertions": [
         {
           "text": "Tela Relatório: Curva ABC & Mix de Produtos acessada e dados validados com sucesso",
@@ -458,7 +458,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Compras por Fornecedor (/reports?tab=purchases)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 231,
+      "durationMs": 179,
       "assertions": [
         {
           "text": "Tela Relatório: Compras por Fornecedor acessada e dados validados com sucesso",
@@ -467,7 +467,7 @@
       ],
       "details": {
         "route": "/reports?tab=purchases",
-        "totalPurchaseVolume": 1425
+        "totalPurchaseVolume": 1900
       },
       "error": null
     },
@@ -476,7 +476,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Vendas por Canal (PDV, Whats, Catálogo) (/reports?tab=channels)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 175,
+      "durationMs": 169,
       "assertions": [
         {
           "text": "Tela Relatório: Vendas por Canal (PDV, Whats, Catálogo) acessada e dados validados com sucesso",
@@ -485,7 +485,7 @@
       ],
       "details": {
         "route": "/reports?tab=channels",
-        "channelBreakdown": 4
+        "channelBreakdown": 6
       },
       "error": null
     },
@@ -494,7 +494,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Demonstrativo Financeiro (DRE Varejo) (/reports?tab=financial)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 188,
+      "durationMs": 177,
       "assertions": [
         {
           "text": "Tela Relatório: Demonstrativo Financeiro (DRE Varejo) acessada e dados validados com sucesso",
@@ -503,7 +503,7 @@
       ],
       "details": {
         "route": "/reports?tab=financial",
-        "grossSales": 712.2
+        "grossSales": 1068.3
       },
       "error": null
     },
@@ -530,7 +530,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Giro de Estoque & Demanda / Reposição (/reports?tab=demand)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 174,
+      "durationMs": 169,
       "assertions": [
         {
           "text": "Tela Relatório: Giro de Estoque & Demanda / Reposição acessada e dados validados com sucesso",
@@ -548,7 +548,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Ticket Médio & LTV de Clientes (/reports?tab=customers)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 188,
+      "durationMs": 174,
       "assertions": [
         {
           "text": "Tela Relatório: Ticket Médio & LTV de Clientes acessada e dados validados com sucesso",
@@ -557,7 +557,7 @@
       ],
       "details": {
         "route": "/reports?tab=customers",
-        "ordersAnalyzed": 4
+        "ordersAnalyzed": 6
       },
       "error": null
     },
@@ -566,7 +566,7 @@
       "title": "Acesso & Validação da Tela: Relatório: Investimento de Capital de Giro & GMROI (/reports?tab=investment)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 187,
+      "durationMs": 161,
       "assertions": [
         {
           "text": "Tela Relatório: Investimento de Capital de Giro & GMROI acessada e dados validados com sucesso",
@@ -584,7 +584,7 @@
       "title": "Acesso & Validação da Tela: Equipe da Loja & Gestão de Acessos (/team)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 177,
+      "durationMs": 164,
       "assertions": [
         {
           "text": "Tela Equipe da Loja & Gestão de Acessos acessada e dados validados com sucesso",
@@ -602,7 +602,7 @@
       "title": "Acesso & Validação da Tela: Configurações Comerciais & Dados da Loja (/settings)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 174,
+      "durationMs": 435,
       "assertions": [
         {
           "text": "Tela Configurações Comerciais & Dados da Loja acessada e dados validados com sucesso",
@@ -621,7 +621,7 @@
       "title": "Acesso & Validação da Tela: Central de Notificações & Alertas (/notifications)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 187,
+      "durationMs": 184,
       "assertions": [
         {
           "text": "Tela Central de Notificações & Alertas acessada e dados validados com sucesso",
@@ -639,7 +639,7 @@
       "title": "Acesso & Validação da Tela: Trilha de Auditoria (Logs) (/audit)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 178,
+      "durationMs": 172,
       "assertions": [
         {
           "text": "Tela Trilha de Auditoria (Logs) acessada e dados validados com sucesso",
@@ -657,7 +657,7 @@
       "title": "Acesso & Validação da Tela: Painel de Administração Global Multi-Lojas (/global-admin)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 176,
+      "durationMs": 162,
       "assertions": [
         {
           "text": "Tela Painel de Administração Global Multi-Lojas acessada e dados validados com sucesso",
@@ -675,7 +675,7 @@
       "title": "Acesso & Validação da Tela: Catálogo Público Web da Loja QA (/store/loja-qa-automacao-e2e)",
       "category": "Navegação / Telas",
       "status": "PASSED",
-      "durationMs": 199,
+      "durationMs": 169,
       "assertions": [
         {
           "text": "Tela Catálogo Público Web da Loja QA acessada e dados validados com sucesso",
