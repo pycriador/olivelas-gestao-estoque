@@ -14,6 +14,16 @@ classification: Confirmed
 
 ## 2026-10-08
 
+- **Suporte a Produtos Pesáveis e Venda Fracionada (KG / Gramas) no Catálogo Público da Loja** (`CatalogPublicPage.tsx`, `productUtils.ts`):
+  - **Experiência de Pesagem Completa para o Consumidor Final**:
+    - Produtos com unidade `KG` recebem a etiqueta visual **`KG (PESO)`** e preço formatado por quilo (`R$ XX,XX/kg`).
+    - Botão **"Escolher Peso (KG)"** abre o modal interativo de pesagem (`WeightInputModal`) diretamente na vitrine pública.
+    - O cliente pode digitar livremente em gramas (ex: `150g`), quilos (ex: `0,150 kg`) ou valor que deseja gastar em R$ (ex: `R$ 5,00`), além de usar os atalhos rápidos (`100g`, `150g`, `250g`, `500g`, `1 kg`).
+  - **Carrinho & Pedidos via WhatsApp com Discriminação de Peso**:
+    - No carrinho do catálogo público, exibe a gramatura/quilos e cálculo proporcional exato.
+    - Ao finalizar no WhatsApp, a mensagem gerada discrimina detalhadamente os itens pesados com peso e preço por quilo (ex: `• Alho a Granel (150g) - R$ 2,47 (R$ 16,45/kg)`).
+  - **Grade Responsiva**: Catálogo adaptado para 1 item por linha no mobile e cards enriquecidos.
+
 - **Otimizações Mobile: Layout de 1 Item por Linha no PDV e Menu com Botão 'Acessar Painel' em Destaque** (`SalesPage.tsx`, `PublicLayout.tsx`, `AppLayout.tsx`):
   - **Catálogo PDV em 1 Item por Linha no Mobile** (`SalesPage.tsx`):
     - Grade ajustada para `grid-cols-1` em telas móveis (`< 640px`) e `sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`.

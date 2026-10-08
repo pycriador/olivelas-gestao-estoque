@@ -5,9 +5,12 @@ import { storeService } from '@/services/storeService'
 import { productService } from '@/services/productService'
 import { useCartStore } from '@/stores/cartStore'
 import { formatCurrency } from '@/utils/currency'
+import { isWeighedProduct, formatProductWeight } from '@/utils/productUtils'
+import { WeightInputModal } from '@/components/sales/WeightInputModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
+import { Badge } from '@/components/ui/badge'
 import { Pagination } from '@/components/ui/pagination'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { applyStoreTheme, getStoreThemeId } from '@/lib/storeThemes'
@@ -21,7 +24,9 @@ import {
   Store as StoreIcon,
   Phone,
   Package,
+  Scale,
 } from 'lucide-react'
+import type { Product } from '@/types/product.types'
 
 export function CatalogPublicPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -54,6 +59,8 @@ export function CatalogPublicPage() {
   const [customerName, setCustomerName] = React.useState('')
   const [customerAddress, setCustomerAddress] = React.useState('')
   const [noWhatsAppModal, setNoWhatsAppModal] = React.useState(false)
+  const [weighedProduct, setWeighedProduct] = React.useState<Product | null>(null)
+  const [weighedInitialQty, setWeighedInitialQty] = React.useState<number>(0.15)
 
   const {
     items: cartItems,
@@ -118,6 +125,40 @@ export function CatalogPublicPage() {
   const cartTotal = getTotalAmount()
   const cartCount = getTotalItemsCount()
 
+  const handleAddToCart = (product: Product) => {
+    if (isWeighedProduct(product)) {
+      const existing = cartItems.find((i) => i.product.id === product.id)
+      setWeighedInitialQty(existing ? existing.quantity : 0.15)
+      setWeighedProduct(product)
+      return
+    }
+    addItem(product, 1)
+  }
+
+  const handleConfirmWeight = (quantityInKg: number) => {
+    if (!weighedProduct) return
+    const existing = cartItems.find((i) => i.product.id === weighedProduct.id)
+    if (existing) {
+      updateQuantity(weighedProduct.id, quantityInKg)
+    } else {
+      addItem(weighedProduct, quantityInKg)
+    }
+    setWeighedProduct(null)
+  }
+
+  const handleUpdateItemQty = (productId: string, delta: number) => {
+    const item = cartItems.find((i) => i.product.id === productId)
+    if (!item) return
+    const isWeighed = isWeighedProduct(item.product)
+    const step = isWeighed ? (Math.abs(delta) < 1 ? delta : delta > 0 ? 0.05 : -0.05) : delta
+    const newQty = Number((item.quantity + step).toFixed(3))
+    if (newQty <= 0.005) {
+      removeItem(productId)
+    } else {
+      updateQuantity(productId, newQty)
+    }
+  }
+
   // Format WhatsApp Checkout Link
   const handleWhatsAppCheckout = () => {
     if (cartItems.length === 0 || !store) return
@@ -129,12 +170,16 @@ export function CatalogPublicPage() {
     }
 
     const itemsText = cartItems
-      .map(
-        (i) =>
-          `• ${i.quantity}x ${i.product.name} - ${formatCurrency(
-            Number(i.product.selling_price) * i.quantity
-          )}`
-      )
+      .map((i) => {
+        const isWeighed = isWeighedProduct(i.product)
+        const unitPrice = Number(i.product.selling_price)
+        const lineTotal = i.quantity * unitPrice
+        if (isWeighed) {
+          const weightLabel = formatProductWeight(i.quantity)
+          return `• ${i.product.name} (${weightLabel}) - ${formatCurrency(lineTotal)} (${formatCurrency(unitPrice)}/kg)`
+        }
+        return `• ${i.quantity}x ${i.product.name} - ${formatCurrency(lineTotal)}`
+      })
       .join('\n')
 
     const message = `*NOVO PEDIDO ONLINE*\n*Loja:* ${store.name}\n\n*Cliente:* ${
@@ -333,9 +378,10 @@ export function CatalogPublicPage() {
             Nenhum produto disponível no momento.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {products.map((p) => {
               const inCart = cartItems.find((i) => i.product.id === p.id)
+              const isWeighed = isWeighedProduct(p)
               return (
                 <div
                   key={p.id}
@@ -357,6 +403,11 @@ export function CatalogPublicPage() {
                         {p.category_name}
                       </span>
                     )}
+                    {isWeighed && (
+                      <span className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-primary text-primary-foreground backdrop-blur-md text-[10px] font-bold flex items-center gap-1 shadow-sm">
+                        <Scale className="h-3 w-3" /> KG (PESO)
+                      </span>
+                    )}
                   </div>
 
                   {/* Body */}
@@ -374,32 +425,79 @@ export function CatalogPublicPage() {
 
                     <div className="space-y-3 pt-2 border-t border-border/50">
                       <div className="font-extrabold text-base text-primary font-mono">
-                        {formatCurrency(p.selling_price)}
+                        {formatCurrency(p.selling_price)}{isWeighed ? '/kg' : ''}
                       </div>
 
                       {inCart ? (
                         <div className="flex items-center justify-between bg-muted/60 rounded-xl p-1">
-                          <button
-                            onClick={() => updateQuantity(p.id, inCart.quantity - 1)}
-                            className="h-7 w-7 rounded-lg bg-surface flex items-center justify-center hover:bg-muted text-xs"
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <span className="font-bold text-xs font-mono">{inCart.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(p.id, inCart.quantity + 1)}
-                            className="h-7 w-7 rounded-lg bg-surface flex items-center justify-center hover:bg-muted text-xs"
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
+                          {isWeighed ? (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateItemQty(p.id, -0.05)}
+                                className="h-8 w-8 rounded-lg bg-surface flex items-center justify-center hover:bg-muted text-xs cursor-pointer"
+                                title="-50g"
+                                aria-label="Diminuir 50g"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWeighedProduct(p)
+                                  setWeighedInitialQty(inCart.quantity)
+                                }}
+                                className="px-2 h-8 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-mono font-bold text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Clique para alterar o peso"
+                              >
+                                <Scale className="h-3 w-3" />
+                                {formatProductWeight(inCart.quantity)}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleUpdateItemQty(p.id, 0.05)}
+                                className="h-8 w-8 rounded-lg bg-surface flex items-center justify-center hover:bg-muted text-xs cursor-pointer"
+                                title="+50g"
+                                aria-label="Aumentar 50g"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(p.id, inCart.quantity - 1)}
+                                className="h-8 w-8 rounded-lg bg-surface flex items-center justify-center hover:bg-muted text-xs cursor-pointer"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </button>
+                              <span className="font-bold text-xs font-mono">{inCart.quantity} un</span>
+                              <button
+                                type="button"
+                                onClick={() => updateQuantity(p.id, inCart.quantity + 1)}
+                                className="h-8 w-8 rounded-lg bg-surface flex items-center justify-center hover:bg-muted text-xs cursor-pointer"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       ) : (
                         <Button
-                          onClick={() => addItem(p)}
+                          onClick={() => handleAddToCart(p)}
                           size="sm"
-                          className="w-full text-xs h-9"
+                          className="w-full text-xs h-9 font-semibold"
                         >
-                          <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
+                          {isWeighed ? (
+                            <>
+                              <Scale className="h-3.5 w-3.5 mr-1" /> Escolher Peso (KG)
+                            </>
+                          ) : (
+                            <>
+                              <Plus className="h-3.5 w-3.5 mr-1" /> Adicionar
+                            </>
+                          )}
                         </Button>
                       )}
                     </div>
@@ -441,46 +539,96 @@ export function CatalogPublicPage() {
           ) : (
             <div className="space-y-4">
               <div className="divide-y divide-border/60 max-h-72 overflow-y-auto pr-1">
-                {cartItems.map((item) => (
-                  <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-foreground text-sm truncate">{item.product.name}</div>
-                      <div className="text-xs text-muted-foreground font-mono mt-0.5">
-                        {formatCurrency(item.product.selling_price)} x {item.quantity}
+                {cartItems.map((item) => {
+                  const isWeighed = isWeighedProduct(item.product)
+                  const unitPrice = Number(item.product.selling_price)
+                  const lineTotal = item.quantity * unitPrice
+                  return (
+                    <div key={item.product.id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <div className="font-semibold text-foreground text-sm truncate">{item.product.name}</div>
+                          {isWeighed && (
+                            <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 text-primary border-primary/20 shrink-0 font-bold">
+                              KG
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-xs text-muted-foreground font-mono mt-0.5 flex items-center gap-1.5 flex-wrap">
+                          <span className="font-bold text-foreground">{formatCurrency(lineTotal)}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            ({formatProductWeight(item.quantity)} × {formatCurrency(unitPrice)}{isWeighed ? '/kg' : ' un'})
+                          </span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center border border-border rounded-xl bg-background overflow-hidden">
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isWeighed ? (
+                          <div className="flex items-center border border-border rounded-xl bg-background overflow-hidden p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItemQty(item.product.id, -0.05)}
+                              className="h-7 w-7 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors cursor-pointer"
+                              title="-50g"
+                              aria-label="Diminuir peso"
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setWeighedProduct(item.product)
+                                setWeighedInitialQty(item.quantity)
+                              }}
+                              className="px-1.5 h-7 rounded-lg bg-primary/10 hover:bg-primary/20 text-primary font-mono font-bold text-xs flex items-center gap-0.5 cursor-pointer transition-colors"
+                              title="Clique para ajustar peso"
+                            >
+                              <Scale className="h-3 w-3" />
+                              {formatProductWeight(item.quantity)}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUpdateItemQty(item.product.id, 0.05)}
+                              className="h-7 w-7 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors cursor-pointer"
+                              title="+50g"
+                              aria-label="Aumentar peso"
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center border border-border rounded-xl bg-background overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                              className="h-8 w-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors cursor-pointer"
+                              aria-label="Diminuir quantidade"
+                            >
+                              <Minus className="h-3.5 w-3.5" />
+                            </button>
+                            <span className="font-mono font-bold w-7 text-center text-xs">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                              className="h-8 w-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors cursor-pointer"
+                              aria-label="Aumentar quantidade"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        )}
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                          className="h-8 w-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors"
-                          aria-label="Diminuir quantidade"
+                          onClick={() => removeItem(item.product.id)}
+                          className="text-muted-foreground hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors cursor-pointer"
+                          aria-label="Remover produto"
                         >
-                          <Minus className="h-3.5 w-3.5" />
-                        </button>
-                        <span className="font-mono font-bold w-7 text-center text-xs">{item.quantity}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                          className="h-8 w-8 flex items-center justify-center hover:bg-muted active:bg-muted/80 text-foreground transition-colors"
-                          aria-label="Aumentar quantidade"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => removeItem(item.product.id)}
-                        className="text-muted-foreground hover:text-danger p-2 rounded-lg hover:bg-danger/10 transition-colors"
-                        aria-label="Remover produto"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
 
               {/* Customer Contact Details */}
@@ -553,6 +701,16 @@ export function CatalogPublicPage() {
           </Button>
         </div>
       </Modal>
+
+      {/* Interactive Weight / Weighing Modal */}
+      <WeightInputModal
+        isOpen={Boolean(weighedProduct)}
+        onClose={() => setWeighedProduct(null)}
+        product={weighedProduct}
+        initialQuantity={weighedInitialQty}
+        maxAvailable={weighedProduct?.stock_quantity ?? 9999}
+        onConfirm={handleConfirmWeight}
+      />
     </div>
   )
 }
