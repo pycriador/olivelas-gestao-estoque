@@ -27,6 +27,7 @@ export interface Product {
   // Joins & derived fields
   category_name?: string
   brand_name?: string
+  supplier_name?: string
   stock_quantity?: number
   images?: ProductImage[]
 }

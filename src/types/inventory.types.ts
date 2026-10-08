@@ -17,6 +17,19 @@ export interface StockBalance {
   total_cost_value?: number
   total_selling_value?: number
   potential_profit?: number
+  supplier_id?: string | null
+  supplier_name?: string | null
+  controls_batch?: boolean
+  controls_expiration?: boolean
+}
+
+export interface StockBalanceListParams {
+  search?: string
+  stockStatus?: 'all' | 'in' | 'out'
+  sortBy?: string
+  sortOrder?: 'asc' | 'desc'
+  page?: number
+  pageSize?: number
 }
 
 export interface StockMovement {
@@ -97,3 +110,39 @@ export interface StockMovementInput {
   notes?: string | null
   approvedBy?: string | null
 }
+
+export interface ProductStockTraceability {
+  product: {
+    id: string
+    name: string
+    sku: string
+    cost_price: number
+    selling_price: number
+    unit: string
+    controls_batch: boolean
+    controls_expiration: boolean
+    min_stock: number
+  }
+  supplier: {
+    id: string
+    corporate_name: string
+    trade_name: string | null
+    document: string | null
+    phone: string | null
+    email: string | null
+    contact_name: string | null
+  } | null
+  batches: StockBatch[]
+  recentEntries: {
+    id: string
+    created_at: string
+    quantity: number
+    unit_cost: number | null
+    movement_type: string
+    reference_type: string | null
+    notes: string | null
+    lot_number: string | null
+    expiration_date: string | null
+  }[]
+}
+

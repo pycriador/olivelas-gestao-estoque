@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { inventoryService } from '@/services/inventoryService'
 import { productService } from '@/services/productService'
+import { supplierService } from '@/services/supplierService'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
 import { useI18n } from '@/hooks/useI18n'
@@ -25,6 +26,7 @@ import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
 import { BulkStockWriteoffModal } from '@/components/inventory/BulkStockWriteoffModal'
 import { StockImportModal } from '@/components/inventory/StockImportModal'
+import { ProductStockDetailsModal } from '@/components/inventory/ProductStockDetailsModal'
 import { toast } from 'sonner'
 import {
   Layers,
@@ -41,6 +43,9 @@ import {
   Wallet,
   CircleDollarSign,
   TrendingUp,
+  Building2,
+  Info,
+  Calendar,
 } from 'lucide-react'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -79,17 +84,19 @@ export function InventoryPage() {
     setFilter,
   } = useTablePagination({
     defaultPage: 1,
-    defaultPageSize: 10,
-    defaultSortBy: 'quantity',
-    defaultSortOrder: 'asc',
+    defaultPageSize: 15,
+    defaultSortBy: 'updated_at',
+    defaultSortOrder: 'desc',
     defaultFilters: {
       tab: 'balances',
+      stockStatus: 'all',
       movementType: 'ALL',
       reasonCode: 'ALL',
     },
   })
 
   const activeTab = (filters.tab as 'balances' | 'movements') || 'balances'
+  const stockStatusFilter = (filters.stockStatus as 'all' | 'in' | 'out') || 'all'
   const movementTypeFilter = filters.movementType || 'ALL'
   const reasonCodeFilter = filters.reasonCode || 'ALL'
 
@@ -97,23 +104,30 @@ export function InventoryPage() {
   const [isWriteoffModalOpen, setIsWriteoffModalOpen] = React.useState(false)
   const [isBulkWriteoffModalOpen, setIsBulkWriteoffModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
+  const [selectedTraceabilityBalance, setSelectedTraceabilityBalance] = React.useState<any | null>(null)
   const [selectedBalanceIds, setSelectedBalanceIds] = React.useState<string[]>([])
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
-  // Form states
+  // Form states para lançamento de movimento
   const [productId, setProductId] = React.useState('')
   const [movementType, setMovementType] = React.useState<StockMovementType>('ENTRY')
   const [quantity, setQuantity] = React.useState<number>(1)
+  const [unitCost, setUnitCost] = React.useState<number | ''>('')
+  const [sellingPrice, setSellingPrice] = React.useState<number | ''>('')
+  const [lotNumber, setLotNumber] = React.useState('')
+  const [expirationDate, setExpirationDate] = React.useState('')
+  const [supplierId, setSupplierId] = React.useState('')
   const [notes, setNotes] = React.useState('')
 
   // Query Balances
   const { data: balancesData, isLoading: loadingBalances } = useQuery({
-    queryKey: ['stock-balances', storeId, page, pageSize, search, sortBy, sortOrder],
+    queryKey: ['stock-balances', storeId, page, pageSize, search, stockStatusFilter, sortBy, sortOrder],
     queryFn: () =>
       inventoryService.getStockBalances(storeId, {
         page,
         pageSize,
         search: search || undefined,
+        stockStatus: stockStatusFilter,
         sortBy,
         sortOrder,
       }),
@@ -161,11 +175,18 @@ export function InventoryPage() {
 
   const { data: productsData } = useQuery({
     queryKey: ['products-select', storeId],
-    queryFn: () => productService.listProducts(storeId, { pageSize: 100 }),
+    queryFn: () => productService.listProducts(storeId, { pageSize: 200 }),
+    enabled: Boolean(hasActiveStore),
+  })
+
+  const { data: suppliersData } = useQuery({
+    queryKey: ['suppliers-select', storeId],
+    queryFn: () => supplierService.listSuppliers(storeId, { pageSize: 200 }),
     enabled: Boolean(hasActiveStore),
   })
 
   const productList = productsData?.data || []
+  const suppliers = Array.isArray(suppliersData) ? suppliersData : suppliersData?.data || []
   const balances = balancesData?.data || []
   const totalBalances = balancesData?.total || 0
   const totalBalancesPages = Math.ceil(totalBalances / pageSize) || 1
@@ -179,6 +200,21 @@ export function InventoryPage() {
   const totalMovements = movementsData?.total || 0
   const totalMovementsPages = Math.ceil(totalMovements / pageSize) || 1
 
+  const handleSelectProductForMovement = (prodId: string) => {
+    setProductId(prodId)
+    const prod = productList.find((p) => p.id === prodId)
+    if (prod) {
+      setUnitCost(prod.cost_price ? Number(prod.cost_price) : '')
+      setSellingPrice(prod.selling_price ? Number(prod.selling_price) : '')
+      setSupplierId(prod.supplier_id || '')
+      if (!lotNumber) {
+        const today = new Date()
+        const yyyymm = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}`
+        setLotNumber(`LT-${yyyymm}-${prod.sku || 'GNZ'}`)
+      }
+    }
+  }
+
   const movementMutation = useMutation({
     mutationFn: () =>
       inventoryService.createManualMovement({
@@ -187,6 +223,11 @@ export function InventoryPage() {
         movementType,
         quantity,
         notes: notes || undefined,
+        unitCost: typeof unitCost === 'number' && unitCost >= 0 ? unitCost : undefined,
+        sellingPrice: typeof sellingPrice === 'number' && sellingPrice >= 0 ? sellingPrice : undefined,
+        lotNumber: lotNumber || undefined,
+        expirationDate: expirationDate || undefined,
+        supplierId: supplierId || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
@@ -194,10 +235,17 @@ export function InventoryPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-batches', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-valuation', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products-select', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      toast.success('Movimentação de estoque lançada com sucesso!')
       setIsMovementModalOpen(false)
       setProductId('')
       setQuantity(1)
+      setUnitCost('')
+      setSellingPrice('')
+      setLotNumber('')
+      setExpirationDate('')
+      setSupplierId('')
       setNotes('')
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
@@ -378,6 +426,22 @@ export function InventoryPage() {
         )}
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
+          {activeTab === 'balances' && (
+            <select
+              value={stockStatusFilter}
+              onChange={(e) => {
+                setFilter('stockStatus', e.target.value)
+                setPage(1)
+              }}
+              aria-label="Filtrar por saldo de estoque"
+              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
+            >
+              <option value="all">Todos os Produtos ({totalBalances})</option>
+              <option value="in">Com Estoque Ativo</option>
+              <option value="out">Estoque Zerado</option>
+            </select>
+          )}
+
           {activeTab === 'movements' && (
             <>
               {isGlobalAdmin && (
@@ -565,6 +629,7 @@ export function InventoryPage() {
                       </th>
                       <th className="py-2.5 px-4 font-semibold">Produto</th>
                       <th className="py-2.5 px-3 font-semibold">SKU</th>
+                      <th className="py-2.5 px-3 font-semibold">Fornecedor / Origem</th>
                       <SortableHeader
                         column="quantity"
                         label="Saldo"
@@ -613,6 +678,15 @@ export function InventoryPage() {
                           </td>
                           <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
                             {b.product_sku || '-'}
+                          </td>
+                          <td className="py-2.5 px-3 text-muted-foreground text-[11px]">
+                            {b.supplier_name ? (
+                              <div className="font-medium text-foreground truncate max-w-[9rem]" title={b.supplier_name}>
+                                {b.supplier_name}
+                              </div>
+                            ) : (
+                              <span className="italic text-muted-foreground">-</span>
+                            )}
                           </td>
                           <td className="py-2.5 px-3 text-center font-mono">
                             <div className="font-bold text-foreground text-xs">
@@ -666,21 +740,28 @@ export function InventoryPage() {
                             )}
                           </td>
                           <td className="py-2.5 px-3 text-right">
-                            {isGlobalAdmin && b.quantity <= 0 ? (
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => setDeletingZeroStockBalance(b)}
-                                title="Remover produto com estoque zerado"
-                                className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
+                                onClick={() => setSelectedTraceabilityBalance(b)}
+                                title="Ver lotes, validades, compras e fornecedor deste produto"
+                                className="h-7 text-[11px] font-semibold px-2 text-primary hover:bg-primary/10 border-primary/30"
                               >
-                                <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover
+                                <Info className="h-3.5 w-3.5 mr-1" /> Origem & Lotes
                               </Button>
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground font-mono">
-                                {b.quantity <= 0 ? 'Zerado' : '-'}
-                              </span>
-                            )}
+                              {isGlobalAdmin && b.quantity <= 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setDeletingZeroStockBalance(b)}
+                                  title="Remover produto com estoque zerado"
+                                  className="h-7 text-[11px] font-semibold px-2 text-danger hover:bg-danger/10 border-danger/30"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover
+                                </Button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       )
@@ -869,7 +950,7 @@ export function InventoryPage() {
         isOpen={isMovementModalOpen}
         onClose={() => setIsMovementModalOpen(false)}
         title="Lançar Movimento de Estoque"
-        description="Registre entradas, saídas, perdas, quebras ou ajustes manuais"
+        description="Registre entradas manuais com preço e lote, devoluções ou ajustes de saldo"
         maxWidth="lg"
       >
         <form
@@ -890,26 +971,17 @@ export function InventoryPage() {
             <label className="text-xs font-semibold text-foreground">Produto *</label>
             <select
               value={productId}
-              onChange={(e) => setProductId(e.target.value)}
+              onChange={(e) => handleSelectProductForMovement(e.target.value)}
               className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               required
             >
               <option value="">Selecione um produto...</option>
               {productList.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} (Estoque: {p.stock_quantity})
+                  {p.name} (Estoque atual: {p.stock_quantity ?? 0} {p.unit || 'UN'})
                 </option>
               ))}
             </select>
-          </div>
-
-          <div className="p-3 text-[11px] bg-muted/40 rounded-xl border border-border/60 text-muted-foreground flex items-start gap-2">
-            <ShieldAlert className="h-3.5 w-3.5 shrink-0 mt-px text-amber-500" />
-            <span>
-              Saídas por perda, avaria e vencimento exigem motivo, centro de custo e
-              aprovador. Use o botão <b className="text-foreground">Baixa</b> na barra
-              superior para registrar esses lançamentos.
-            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -939,10 +1011,94 @@ export function InventoryPage() {
             </div>
           </div>
 
+          {/* Dados Financeiros e de Rastreabilidade para Entrada */}
+          {movementType === 'ENTRY' && (
+            <div className="p-3 bg-muted/40 rounded-xl border border-border space-y-3">
+              <div className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+                <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
+                <span>Preços e Rastreabilidade da Entrada</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-foreground">
+                    Preço de Compra / Custo Unit. (R$)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={unitCost}
+                    onChange={(e) => setUnitCost(parseFloat(e.target.value) || '')}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    Atualiza o custo médio no catálogo
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-foreground">
+                    Preço de Venda Unit. no PDV (R$)
+                  </label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    value={sellingPrice}
+                    onChange={(e) => setSellingPrice(parseFloat(e.target.value) || '')}
+                  />
+                  <span className="text-[10px] text-muted-foreground">
+                    Preço visível no PDV e catálogo
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="space-y-1 sm:col-span-1">
+                  <label className="text-[11px] font-semibold text-foreground">Fornecedor</label>
+                  <select
+                    value={supplierId}
+                    onChange={(e) => setSupplierId(e.target.value)}
+                    className="w-full h-9 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">Nenhum / Não informado</option>
+                    {suppliers.map((s: any) => (
+                      <option key={s.id} value={s.id}>
+                        {s.trade_name || s.corporate_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1 sm:col-span-1">
+                  <label className="text-[11px] font-semibold text-foreground">Número do Lote</label>
+                  <Input
+                    placeholder="Ex: LT-202610-01"
+                    value={lotNumber}
+                    onChange={(e) => setLotNumber(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1 sm:col-span-1">
+                  <label className="text-[11px] font-semibold text-foreground">Data de Validade</label>
+                  <Input
+                    type="date"
+                    value={expirationDate}
+                    onChange={(e) => setExpirationDate(e.target.value)}
+                    className="h-9 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">Justificativa / Observações</label>
             <Input
-              placeholder="Ex: Quebra de frasco durante movimentação"
+              placeholder="Ex: Entrada manual com nota fiscal de compra / ajuste de contagem"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
             />
@@ -1029,6 +1185,18 @@ export function InventoryPage() {
         cancelText="Cancelar"
         variant="danger"
         isLoading={deleteBulkZeroStockMutation.isPending}
+      />
+
+      {/* Modal de Rastreabilidade e Detalhes do Produto (Origem, Lotes, Validades e Compras) */}
+      <ProductStockDetailsModal
+        isOpen={Boolean(selectedTraceabilityBalance)}
+        onClose={() => setSelectedTraceabilityBalance(null)}
+        balance={selectedTraceabilityBalance}
+        storeId={storeId}
+        onOpenMovementModal={(prodId) => {
+          handleSelectProductForMovement(prodId)
+          setIsMovementModalOpen(true)
+        }}
       />
     </div>
   )

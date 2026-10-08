@@ -2,10 +2,12 @@ import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import { productImageService } from '@/services/productImageService'
+import { supplierService } from '@/services/supplierService'
 import { useTenant } from '@/hooks/useTenant'
 import { useI18n } from '@/hooks/useI18n'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import { exportToCSV } from '@/utils/export'
+import { formatCurrency } from '@/utils/currency'
 import { generateSKU } from '@/utils/barcode'
 import { parseApiError } from '@/utils/errorHandler'
 import {
@@ -103,6 +105,7 @@ export function ProductsPage() {
     barcode: '',
     description: '',
     categoryId: '',
+    supplierId: '',
     costPrice: 0,
     sellingPrice: 0,
     unit: 'UN',
@@ -132,6 +135,14 @@ export function ProductsPage() {
     queryFn: () => productService.listCategories(storeId),
     enabled: Boolean(hasActiveStore),
   })
+
+  const { data: suppliersData } = useQuery({
+    queryKey: ['suppliers-select', storeId],
+    queryFn: () => supplierService.listSuppliers(storeId, { pageSize: 200 }),
+    enabled: Boolean(hasActiveStore),
+  })
+
+  const suppliers = Array.isArray(suppliersData) ? suppliersData : suppliersData?.data || []
 
   const { data: editingProductImages = [] } = useQuery({
     queryKey: ['product-images', editingProduct?.id],
@@ -193,6 +204,7 @@ export function ProductsPage() {
       barcode: '',
       description: '',
       categoryId: '',
+      supplierId: '',
       costPrice: 0,
       sellingPrice: 0,
       unit: 'UN',
@@ -218,6 +230,7 @@ export function ProductsPage() {
       barcode: p.barcode || '',
       description: p.description || '',
       categoryId: p.category_id || '',
+      supplierId: p.supplier_id || '',
       costPrice: Number(p.cost_price),
       sellingPrice: Number(p.selling_price),
       unit: p.unit || 'UN',
@@ -240,6 +253,7 @@ export function ProductsPage() {
       barcode: formData.barcode || null,
       description: formData.description || null,
       category_id: formData.categoryId || null,
+      supplier_id: formData.supplierId || null,
       cost_price: formData.costPrice,
       selling_price: formData.sellingPrice,
       unit: formData.unit,
@@ -451,8 +465,10 @@ export function ProductsPage() {
                       onSort={toggleSort}
                     />
                     <th className="py-3 px-4 font-semibold">Categoria</th>
-                    <th className="py-3 px-4 font-semibold text-center">Unidade</th>
-                    <th className="py-3 px-4 font-semibold text-center">Estoque Mínimo</th>
+                    <th className="py-3 px-4 font-semibold text-center">Unid.</th>
+                    <th className="py-3 px-4 font-semibold text-right">Custo (R$)</th>
+                    <th className="py-3 px-4 font-semibold text-right">Venda (R$)</th>
+                    <th className="py-3 px-4 font-semibold">Fornecedor</th>
                     <th className="py-3 px-4 font-semibold text-center">Estoque Atual</th>
                     <th className="py-3 px-4 font-semibold text-center">Status</th>
                     <th className="py-3 px-4 font-semibold text-right">Ações</th>
@@ -541,8 +557,22 @@ export function ProductsPage() {
                           </Badge>
                         </td>
 
-                        <td className="py-2.5 px-4 text-center font-mono text-muted-foreground">
-                          {p.min_stock ?? 0} {p.unit || 'UN'}
+                        <td className="py-2.5 px-4 text-right font-mono text-foreground font-medium">
+                          {formatCurrency(p.cost_price || 0)}
+                        </td>
+
+                        <td className="py-2.5 px-4 text-right font-mono text-primary font-bold">
+                          {formatCurrency(p.selling_price || 0)}
+                        </td>
+
+                        <td className="py-2.5 px-4 text-muted-foreground text-[11px]">
+                          {p.supplier_name ? (
+                            <div className="truncate max-w-[10rem] font-medium text-foreground">
+                              {p.supplier_name}
+                            </div>
+                          ) : (
+                            <span className="italic text-muted-foreground">-</span>
+                          )}
                         </td>
 
                         <td className="py-2.5 px-4 text-center">
@@ -894,6 +924,53 @@ export function ProductsPage() {
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">Fornecedor Principal</label>
+              <select
+                value={formData.supplierId}
+                onChange={(e) => setFormData({ ...formData, supplierId: e.target.value })}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-colors"
+              >
+                <option value="">Nenhum fornecedor selecionado</option>
+                {suppliers.map((s: any) => (
+                  <option key={s.id} value={s.id}>
+                    {s.trade_name || s.corporate_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">Preço de Custo (R$) *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.costPrice || ''}
+                onChange={(e) => setFormData({ ...formData, costPrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-foreground">Preço de Venda (PDV) (R$) *</label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={formData.sellingPrice || ''}
+                onChange={(e) => setFormData({ ...formData, sellingPrice: parseFloat(e.target.value) || 0 })}
+                required
+              />
+              {formData.sellingPrice > 0 && (
+                <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  Margem: {(((formData.sellingPrice - formData.costPrice) / formData.sellingPrice) * 100).toFixed(1)}% ({formatCurrency(formData.sellingPrice - formData.costPrice)})
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">

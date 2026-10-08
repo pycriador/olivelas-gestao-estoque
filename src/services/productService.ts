@@ -60,6 +60,7 @@ export const productService = {
         *,
         categories ( id, name ),
         brands ( id, name ),
+        suppliers ( id, corporate_name, trade_name ),
         stock_balances ( quantity, available_quantity ),
         product_images ( id, storage_path, public_url, is_primary, display_order )
       `,
@@ -109,6 +110,7 @@ export const productService = {
       ...item,
       category_name: item.categories?.name,
       brand_name: item.brands?.name,
+      supplier_name: item.suppliers?.trade_name || item.suppliers?.corporate_name,
       stock_quantity: item.stock_balances?.[0]?.quantity ?? 0,
       images: item.product_images || [],
     }))
@@ -315,6 +317,7 @@ export const productService = {
         *,
         categories ( id, name ),
         brands ( id, name ),
+        suppliers ( id, corporate_name, trade_name ),
         stock_balances ( quantity, available_quantity ),
         product_images ( id, storage_path, public_url, is_primary, display_order )
       `
@@ -333,6 +336,7 @@ export const productService = {
       ...data,
       category_name: data.categories?.name,
       brand_name: data.brands?.name,
+      supplier_name: data.suppliers?.trade_name || data.suppliers?.corporate_name,
       stock_quantity: data.stock_balances?.[0]?.quantity ?? 0,
       images: data.product_images || [],
     } as Product

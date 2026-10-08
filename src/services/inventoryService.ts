@@ -13,6 +13,7 @@ import type { StockMovementType } from '@/types/database.types'
 
 export interface StockBalanceListParams {
   search?: string
+  stockStatus?: 'all' | 'in' | 'out'
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   page?: number
@@ -92,13 +93,23 @@ export const inventoryService = {
           cost_price,
           selling_price,
           unit,
-          deleted_at
+          controls_batch,
+          controls_expiration,
+          supplier_id,
+          deleted_at,
+          suppliers ( id, corporate_name, trade_name )
         )
       `,
         { count: 'exact' }
       )
       .eq('store_id', storeId)
       .is('products.deleted_at', null)
+
+    if (params.stockStatus === 'in') {
+      query = query.gt('quantity', 0)
+    } else if (params.stockStatus === 'out') {
+      query = query.lte('quantity', 0)
+    }
 
     if (search?.trim()) {
       const q = search.trim()
@@ -120,6 +131,7 @@ export const inventoryService = {
 
     const list = (data || []).map((item: any) => {
       const prod = Array.isArray(item.products) ? item.products[0] : item.products
+      const supplier = Array.isArray(prod?.suppliers) ? prod?.suppliers[0] : prod?.suppliers
       const qty = Number(item.quantity)
       const costPrice = Number(prod?.cost_price) || 0
       const sellingPrice = Number(prod?.selling_price) || 0
@@ -143,6 +155,10 @@ export const inventoryService = {
         total_cost_value: totalCost,
         total_selling_value: totalSelling,
         potential_profit: totalSelling - totalCost,
+        supplier_id: prod?.supplier_id || null,
+        supplier_name: supplier?.trade_name || supplier?.corporate_name || null,
+        controls_batch: Boolean(prod?.controls_batch),
+        controls_expiration: Boolean(prod?.controls_expiration),
       }
     })
 
@@ -410,10 +426,6 @@ export const inventoryService = {
     return data as string
   },
 
-  /**
-   * @deprecated Use `applyMovement`. Mantido para compatibilidade; agora
-   * delega ao RPC em vez de escrever direto nas tabelas.
-   */
   async createManualMovement(params: {
     storeId: string
     productId: string
@@ -421,16 +433,43 @@ export const inventoryService = {
     quantity: number
     notes?: string
     batchId?: string
+    lotNumber?: string
+    expirationDate?: string
     unitCost?: number
+    sellingPrice?: number
+    supplierId?: string
   }): Promise<void> {
     const movementId = await inventoryService.applyMovement({
       productId: params.productId,
       movementType: params.movementType,
       quantity: Math.abs(params.quantity),
       batchId: params.batchId,
+      lotNumber: params.lotNumber,
+      expirationDate: params.expirationDate,
       unitCost: params.unitCost,
       notes: params.notes,
     })
+
+    // Sincronizar precos e fornecedor no catalogo do produto para refletir de imediato no PDV e Estoque
+    const productUpdates: Record<string, any> = {}
+    if (typeof params.unitCost === 'number' && params.unitCost > 0) {
+      productUpdates.cost_price = params.unitCost
+    }
+    if (typeof params.sellingPrice === 'number' && params.sellingPrice > 0) {
+      productUpdates.selling_price = params.sellingPrice
+    }
+    if (params.supplierId) {
+      productUpdates.supplier_id = params.supplierId
+    }
+
+    if (Object.keys(productUpdates).length > 0) {
+      productUpdates.updated_at = new Date().toISOString()
+      await supabase
+        .from('products')
+        .update(productUpdates)
+        .eq('id', params.productId)
+        .eq('store_id', params.storeId)
+    }
 
     auditService.logAction({
       storeId: params.storeId,
@@ -442,8 +481,128 @@ export const inventoryService = {
         movementType: params.movementType,
         quantity: Math.abs(params.quantity),
         notes: params.notes,
+        unitCost: params.unitCost,
+        sellingPrice: params.sellingPrice,
+        lotNumber: params.lotNumber,
+        expirationDate: params.expirationDate,
+        supplierId: params.supplierId,
       },
     })
+  },
+
+  /**
+   * Obtém a rastreabilidade completa de um produto:
+   * - Dados cadastrais e precos atuais
+   * - Fornecedor principal e contatos
+   * - Todos os lotes ativos com validades e precos de custo
+   * - Historico de entradas / compras recentes
+   */
+  async getProductStockTraceability(
+    storeId: string,
+    productId: string
+  ): Promise<import('@/types/inventory.types').ProductStockTraceability> {
+    // 1. Dados do produto + Fornecedor
+    const { data: prodData, error: prodErr } = await supabase
+      .from('products')
+      .select(`
+        id,
+        name,
+        sku,
+        cost_price,
+        selling_price,
+        unit,
+        controls_batch,
+        controls_expiration,
+        min_stock,
+        supplier_id,
+        suppliers (
+          id,
+          corporate_name,
+          trade_name,
+          document,
+          phone,
+          email,
+          contact_name
+        )
+      `)
+      .eq('id', productId)
+      .eq('store_id', storeId)
+      .single()
+
+    if (prodErr) throw prodErr
+
+    const supplier = Array.isArray(prodData.suppliers) ? prodData.suppliers[0] : prodData.suppliers
+
+    // 2. Lotes do produto nesta loja
+    const { data: batchesData, error: batchErr } = await supabase
+      .from('stock_batches')
+      .select('*')
+      .eq('store_id', storeId)
+      .eq('product_id', productId)
+      .order('expiration_date', { ascending: true, nullsFirst: false })
+
+    if (batchErr) throw batchErr
+
+    // 3. Entradas recentes no estoque
+    const { data: movsData, error: movsErr } = await supabase
+      .from('stock_movements')
+      .select(`
+        id,
+        created_at,
+        quantity,
+        unit_cost,
+        movement_type,
+        reference_type,
+        notes,
+        stock_batches ( lot_number, expiration_date )
+      `)
+      .eq('store_id', storeId)
+      .eq('product_id', productId)
+      .in('movement_type', ['ENTRY', 'RETURN', 'ADJUSTMENT'])
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    if (movsErr) throw movsErr
+
+    const recentEntries = (movsData || []).map((m: any) => ({
+      id: m.id,
+      created_at: m.created_at,
+      quantity: Number(m.quantity),
+      unit_cost: m.unit_cost ? Number(m.unit_cost) : null,
+      movement_type: m.movement_type,
+      reference_type: m.reference_type,
+      notes: m.notes,
+      lot_number: m.stock_batches?.lot_number || null,
+      expiration_date: m.stock_batches?.expiration_date || null,
+    }))
+
+    return {
+      product: {
+        id: prodData.id,
+        name: prodData.name,
+        sku: prodData.sku,
+        cost_price: Number(prodData.cost_price) || 0,
+        selling_price: Number(prodData.selling_price) || 0,
+        unit: prodData.unit || 'UN',
+        controls_batch: Boolean(prodData.controls_batch),
+        controls_expiration: Boolean(prodData.controls_expiration),
+        min_stock: Number(prodData.min_stock) || 0,
+      },
+      supplier: supplier || null,
+      batches: (batchesData || []).map((b: any) => ({
+        id: b.id,
+        store_id: b.store_id,
+        product_id: b.product_id,
+        lot_number: b.lot_number,
+        quantity: Number(b.quantity),
+        cost_price: b.cost_price ? Number(b.cost_price) : null,
+        manufacturing_date: b.manufacturing_date,
+        expiration_date: b.expiration_date,
+        status: b.status,
+        created_at: b.created_at,
+      })),
+      recentEntries,
+    }
   },
 
   async getCostCenters(storeId: string): Promise<CostCenter[]> {

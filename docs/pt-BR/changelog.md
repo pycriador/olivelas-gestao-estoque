@@ -12,6 +12,23 @@ classification: Confirmed
 
 # Changelog da documentação
 
+## 2026-10-08
+
+- **Sincronização Cadastral, Preços de Compra/Venda, Rastreabilidade de Fornecedores e Lotes no Estoque**:
+  - **Cadastro Completo de Produtos no Catálogo Mestre** (`ProductsPage.tsx`, `productService.ts`):
+    - Inclusão dos campos de **Preço de Custo (R$)**, **Preço de Venda (PDV) (R$)** e seleção de **Fornecedor Principal** diretamente no modal de criação e edição de produtos.
+    - Exibição de colunas de Custo, Venda e Fornecedor na tabela de listagem de produtos com cálculo de margem em tempo real.
+  - **Lançamento Enriquecido de Movimentações Manuais** (`InventoryPage.tsx`, `inventoryService.ts`):
+    - Modal de *Lançar Movimento* agora suporta informe de **Preço de Compra / Custo Unitário**, **Preço de Venda Unitário no PDV**, **Fornecedor**, **Número do Lote** e **Data de Validade** nas entradas manuais.
+    - Sincronização automática com a tabela de produtos (`products`) e lotes (`stock_batches`) para atualização imediata no PDV frente de caixa.
+  - **Rastreabilidade e Origem do Estoque** (`ProductStockDetailsModal.tsx`, `InventoryPage.tsx`, `inventoryService.ts`):
+    - Novo modal de *Origem & Lotes* acessível por linha de saldo, exibindo:
+      1. Fornecedor vinculado, dados cadastrais e contatos (telefone, e-mail, contato).
+      2. Relação de todos os lotes ativos, validades e status de expiração (dias restantes, avisos 30d/7d).
+      3. Histórico das entradas e compras com preços unitários pagos e notas.
+    - Filtro rápido de saldo no topo de Estoque (`Todos os Produtos`, `Com Estoque Ativo`, `Estoque Zerado`).
+    - Ordenação padrão por itens recentemente movimentados (`updated_at desc`).
+
 ## 2026-10-07
 
 - **Plano de Teste & Roteiro de Automação E2E com Execução em Tenant Dedicado** (`test-automation/`):
