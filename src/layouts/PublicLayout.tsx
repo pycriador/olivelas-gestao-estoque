@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Outlet, Link } from 'react-router-dom'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, LayoutDashboard, LogIn } from 'lucide-react'
 import { ThemeToggle } from '@/components/common/ThemeToggle'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { Button } from '@/components/ui/button'
@@ -77,41 +77,83 @@ export function PublicLayout() {
           </button>
 
           {mobileMenuOpen && (
-            <div className="basis-full border-t border-border/60 pt-3 md:hidden">
-              <nav className="grid grid-cols-2 gap-1 text-sm font-medium text-muted-foreground">
-                <Link to="/features" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
-                  Recursos
+            <div className="basis-full border-t border-border/60 pt-3 pb-2 md:hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <nav className="flex flex-col space-y-1 text-sm font-medium text-muted-foreground">
+                <Link
+                  to="/features"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3.5 py-3 hover:bg-muted hover:text-foreground transition-colors flex items-center justify-between"
+                >
+                  <span>Recursos</span>
                 </Link>
-                <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
-                  Planos & Preços
+                <Link
+                  to="/pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3.5 py-3 hover:bg-muted hover:text-foreground transition-colors flex items-center justify-between"
+                >
+                  <span>Planos & Preços</span>
                 </Link>
-                <Link to="/evidence" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground text-primary font-medium">
-                  Evidências & Testes
+                <Link
+                  to="/evidence"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3.5 py-3 hover:bg-muted text-primary font-semibold transition-colors flex items-center justify-between"
+                >
+                  <span>Evidências & Testes</span>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold">50 Telas</span>
                 </Link>
-                <Link to="/contact" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
-                  Contato
+                <Link
+                  to="/contact"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-xl px-3.5 py-3 hover:bg-muted hover:text-foreground transition-colors flex items-center justify-between"
+                >
+                  <span>Contato</span>
                 </Link>
-                {isAuthenticated && (
-                  <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="rounded-lg px-3 py-2.5 hover:bg-muted hover:text-foreground">
-                    Acessar Painel
-                  </Link>
-                )}
               </nav>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
-                <div className="flex items-center gap-2">
-                  <LanguageSelector />
-                  <ThemeToggle />
-                </div>
-                {!isAuthenticated && (
-                  <div className="flex items-center gap-2">
-                    <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="ghost" size="sm">Entrar</Button>
+
+              {/* Destaque Acessar Painel / Entrar na Plataforma */}
+              <div className="mt-3 pt-3 border-t border-border/60 space-y-2">
+                {isAuthenticated ? (
+                  <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block w-full">
+                    <Button
+                      variant="default"
+                      size="lg"
+                      className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/25 flex items-center justify-center gap-2"
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Acessar Painel
+                    </Button>
+                  </Link>
+                ) : (
+                  <div className="flex flex-col space-y-2">
+                    <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block w-full">
+                      <Button
+                        variant="default"
+                        size="lg"
+                        className="w-full h-12 text-sm font-bold shadow-lg shadow-primary/25 flex items-center justify-center gap-2"
+                      >
+                        <LogIn className="h-4 w-4" />
+                        Acessar Painel / Entrar
+                      </Button>
                     </Link>
-                    <Link to="/register" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="default" size="sm">Começar Grátis</Button>
+                    <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block w-full">
+                      <Button
+                        variant="outline"
+                        size="lg"
+                        className="w-full h-11 text-xs font-semibold flex items-center justify-center gap-2"
+                      >
+                        Começar Grátis
+                      </Button>
                     </Link>
                   </div>
                 )}
+
+                <div className="flex items-center justify-between pt-2 px-1">
+                  <span className="text-xs text-muted-foreground">Preferências:</span>
+                  <div className="flex items-center gap-2">
+                    <LanguageSelector />
+                    <ThemeToggle />
+                  </div>
+                </div>
               </div>
             </div>
           )}

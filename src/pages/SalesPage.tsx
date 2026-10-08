@@ -439,7 +439,7 @@ export function SalesPage() {
                   />
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-2.5">
                   {products.map((p) => {
                     const stock = Number(p.stock_quantity ?? 0)
                     const inCart = cart.find((i) => i.product.id === p.id)
@@ -463,7 +463,7 @@ export function SalesPage() {
                                 ? 'Clique para pesar / definir quantidade em gramas/kg'
                                 : undefined
                         }
-                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between group relative ${
+                        className={`p-3 sm:p-2.5 rounded-xl border text-left transition-all flex flex-col sm:justify-between group relative ${
                           isOutOfStock || atStockLimit
                             ? 'opacity-40 cursor-not-allowed bg-muted/20 border-border/40'
                             : inCart
@@ -472,33 +472,33 @@ export function SalesPage() {
                         }`}
                       >
                         {inCart && (
-                          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-md bg-primary text-primary-foreground text-[10px] font-bold font-mono flex items-center gap-0.5">
+                          <div className="absolute top-2.5 right-2.5 sm:top-1.5 sm:right-1.5 px-2 py-0.5 sm:px-1.5 sm:py-0.5 rounded-md bg-primary text-primary-foreground text-xs sm:text-[10px] font-bold font-mono flex items-center gap-0.5 shadow-xs">
                             {isWeighed ? (inCartQty >= 1 ? `${inCartQty}kg` : `${Math.round(inCartQty * 1000)}g`) : `${inCartQty}x`}
                           </div>
                         )}
 
-                        <div>
-                          <div className="font-semibold text-xs text-foreground line-clamp-1 pr-6">
+                        <div className="pr-12 sm:pr-6">
+                          <div className="font-semibold text-sm sm:text-xs text-foreground line-clamp-1">
                             {p.name}
                           </div>
-                          <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="text-[10px] text-muted-foreground font-mono truncate">
+                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                            <span className="text-[11px] sm:text-[10px] text-muted-foreground font-mono truncate">
                               {p.sku || p.barcode || 'Sem SKU'}
                             </span>
                             {isWeighed && (
-                              <Badge variant="outline" className="text-[9px] px-1 py-0 bg-primary/10 text-primary border-primary/30 font-bold shrink-0">
-                                <Scale className="h-2.5 w-2.5 mr-0.5" /> KG
+                              <Badge variant="outline" className="text-[10px] sm:text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30 font-bold shrink-0">
+                                <Scale className="h-3 w-3 sm:h-2.5 sm:w-2.5 mr-0.5" /> KG
                               </Badge>
                             )}
                           </div>
                         </div>
 
-                        <div className="flex items-center justify-between mt-2.5 pt-1.5 border-t border-border/50">
-                          <span className="font-bold text-xs text-primary font-mono">
+                        <div className="flex items-center justify-between mt-3 sm:mt-2.5 pt-2 sm:pt-1.5 border-t border-border/50">
+                          <span className="font-bold text-sm sm:text-xs text-primary font-mono">
                             {formatCurrency(p.selling_price)}{isWeighed ? '/kg' : ''}
                           </span>
                           <span
-                            className={`text-[10px] inline-flex items-center gap-0.5 ${
+                            className={`text-xs sm:text-[10px] inline-flex items-center gap-1 font-mono ${
                               stock <= 0
                                 ? 'text-danger font-semibold'
                                 : stock <= 3
@@ -506,7 +506,7 @@ export function SalesPage() {
                                   : 'text-muted-foreground'
                             }`}
                           >
-                            {stock <= 0 && <AlertTriangle className="h-2.5 w-2.5" />}
+                            {stock <= 0 && <AlertTriangle className="h-3 w-3 sm:h-2.5 sm:w-2.5" />}
                             Est: {isWeighed ? `${stock} kg` : stock}
                           </span>
                         </div>

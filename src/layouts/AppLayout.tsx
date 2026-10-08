@@ -330,7 +330,7 @@ export function AppLayout() {
             })}
           </div>
 
-          <div className="grid grid-cols-2 gap-1 pt-2 md:block md:space-y-1">
+          <div className="space-y-1 pt-2">
             {bottomNavItems.map((item) => {
               const Icon = item.icon
               const isActive = location.pathname === item.path

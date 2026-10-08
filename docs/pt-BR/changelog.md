@@ -14,6 +14,16 @@ classification: Confirmed
 
 ## 2026-10-08
 
+- **Otimizações Mobile: Layout de 1 Item por Linha no PDV e Menu com Botão 'Acessar Painel' em Destaque** (`SalesPage.tsx`, `PublicLayout.tsx`, `AppLayout.tsx`):
+  - **Catálogo PDV em 1 Item por Linha no Mobile** (`SalesPage.tsx`):
+    - Grade ajustada para `grid-cols-1` em telas móveis (`< 640px`) e `sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`.
+    - Cards com tipografia nítida, botões de toque confortáveis, badge de peso `KG`, preço em destaque e saldo visual sem apertos.
+  - **Menu de Navegação Pública & Entrada na Plataforma** (`PublicLayout.tsx`):
+    - Itens do menu móvel reestruturados em lista vertical de 1 item por linha com espaçamento amplo e feedback de toque.
+    - Botão **"Acessar Painel"** (para usuários logados) e **"Acessar Painel / Entrar"** colocado em **destaque primário full-width** com ícone e sombra (`shadow-primary/25`).
+  - **Menu Lateral do App** (`AppLayout.tsx`):
+    - Navegação inferior de atalhos ajustada para 1 item por linha contínua no mobile.
+
 - **Suporte a Produtos Pesáveis e Venda Fracionada (KG / Gramas) no PDV Frente de Caixa** (`SalesPage.tsx`, `WeightInputModal.tsx`):
   - **Identificação Automática de Itens Pesáveis**: Detecção inteligente de produtos cadastrados com unidade `KG` ou `QUILOGRAMA`. Exibição de badge `KG` e preço formatado por quilo (`R$ XX,XX/kg`) no catálogo e no carrinho.
   - **Modal Interativo de Pesagem & Gramatura** (`WeightInputModal`):
