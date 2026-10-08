@@ -48,6 +48,7 @@ Contexto (overview, ai-context)
 | [changelog.md](changelog.md) | Reference | Histórico desta árvore de docs |
 | [test-evidence.md](test-evidence.md) | Evidence | Caderno Executivo de Testes com 50 prints (Desktop & Mobile) |
 | [test-evidence.html](test-evidence.html) | Evidence | Dashboard Interativo de Evidências, Filtros e Relatório de APIs |
+| [test-automation/](../../test-automation/ROTEIRO_AUTOMACAO_TESTES_E2E.md) | Operation / QA | Roteiro Completo de Automação de Testes E2E, Runner e Resultados |
 | [api-ai-integration.md](api-ai-integration.md) | Reference | Endpoints REST, tokens HBAC e relatórios para IA externa |
 | [guides/ui-desktop.md](guides/ui-desktop.md) | Reference | Como replicar a lógica de interface **desktop** |
 | [guides/ui-mobile.md](guides/ui-mobile.md) | Reference | Como replicar a lógica de interface **mobile** |

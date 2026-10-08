@@ -1,0 +1,692 @@
+{
+  "suiteName": "Plano de Teste e Roteiro de Automação E2E - Olivelas Gestão de Estoque",
+  "executedAt": "2026-10-08T00:26:53.672Z",
+  "environment": {
+    "supabaseUrl": "https://mffrafqyjbjitlhjnlai.supabase.co",
+    "nodeVersion": "v24.15.0"
+  },
+  "summary": {
+    "totalSteps": 33,
+    "passedSteps": 33,
+    "failedSteps": 0,
+    "durationMs": 20256
+  },
+  "testStore": {
+    "id": "809ab043-acca-44a8-9d5b-3d63de7f9d35",
+    "name": "Loja QA Automação E2E",
+    "slug": "loja-qa-automacao-e2e"
+  },
+  "steps": [
+    {
+      "id": "TC-01",
+      "title": "Inicializar Loja de Teste QA Dedicada",
+      "category": "Tenant / Setup",
+      "status": "PASSED",
+      "durationMs": 453,
+      "assertions": [
+        {
+          "text": "Loja de teste criada ou localizada com sucesso",
+          "passed": true
+        },
+        {
+          "text": "Slug corresponde ao padrão do tenant",
+          "passed": true
+        },
+        {
+          "text": "Loja está com status ativo",
+          "passed": true
+        }
+      ],
+      "details": {
+        "storeId": "809ab043-acca-44a8-9d5b-3d63de7f9d35",
+        "name": "Loja QA Automação E2E",
+        "slug": "loja-qa-automacao-e2e"
+      },
+      "error": null
+    },
+    {
+      "id": "TC-02",
+      "title": "Cadastrar Fornecedor Homologado para a Loja QA",
+      "category": "Fornecedores",
+      "status": "PASSED",
+      "durationMs": 220,
+      "assertions": [
+        {
+          "text": "Fornecedor de teste registrado com ID válido",
+          "passed": true
+        },
+        {
+          "text": "Razão social cadastrada corretamente",
+          "passed": true
+        }
+      ],
+      "details": {
+        "supplierId": "2ac01f88-d1fd-4dae-8ce3-0dd1b779a676",
+        "tradeName": "Central QA Distribuição"
+      },
+      "error": null
+    },
+    {
+      "id": "TC-03",
+      "title": "Cadastrar Categorias Estruturais no Catálogo",
+      "category": "Categorias",
+      "status": "PASSED",
+      "durationMs": 768,
+      "assertions": [
+        {
+          "text": "Todas as 4 categorias foram criadas no tenant",
+          "passed": true
+        }
+      ],
+      "details": {
+        "azeites-temperos-qa": "97174a78-bdea-42b0-9d15-221a1c1b0e17",
+        "laticinios-frios-qa": "4031fce1-66ab-4093-bd11-1578efcc6c10",
+        "bebidas-vinhos-qa": "0f2c88e9-14c5-4fdb-8f76-593f0a79075c",
+        "doces-geleias-qa": "deb23bc5-c826-426f-814f-65f5857ee9e8"
+      },
+      "error": null
+    },
+    {
+      "id": "TC-04",
+      "title": "Cadastrar Produtos no Catálogo Mestre com Preços e SKUs",
+      "category": "Produtos",
+      "status": "PASSED",
+      "durationMs": 2370,
+      "assertions": [
+        {
+          "text": "4 produtos cadastrados e mapeados no banco",
+          "passed": true
+        },
+        {
+          "text": "Produto QA-AZE-001 cadastrado com preço correto",
+          "passed": true
+        },
+        {
+          "text": "Produto QA-VIN-003 ativo e publicado",
+          "passed": true
+        }
+      ],
+      "details": [
+        {
+          "id": "bc0d0805-a691-47ea-9fb1-861d18ca99c7",
+          "sku": "QA-AZE-001",
+          "name": "Azeite Extra Virgem QA Especial 500ml",
+          "price": 42.9
+        },
+        {
+          "id": "921989f8-1add-415f-8dfc-7c69cd79cbd5",
+          "sku": "QA-QUE-002",
+          "name": "Queijo Canastra Artesanal QA 500g",
+          "price": 38.5
+        },
+        {
+          "id": "3cf7d8b6-0787-4aec-8204-7e992d03c32e",
+          "sku": "QA-VIN-003",
+          "name": "Vinho Tinto Reserva QA Seleção 750ml",
+          "price": 79.9
+        },
+        {
+          "id": "0276b311-9ca4-4423-872c-3cbc62dd1c99",
+          "sku": "QA-GEL-004",
+          "name": "Geleia de Frutas Vermelhas QA 250g",
+          "price": 19.5
+        }
+      ],
+      "error": null
+    },
+    {
+      "id": "TC-05",
+      "title": "Dar Entrada de Estoque Inicial com Lotes e Validades (100 un/item)",
+      "category": "Estoque / Lotes",
+      "status": "PASSED",
+      "durationMs": 4942,
+      "assertions": [
+        {
+          "text": "Total de saldo físico registrado é exatamente 400 unidades",
+          "passed": true
+        }
+      ],
+      "details": {
+        "totalItemsWithStock": 4,
+        "totalStockUnits": 400,
+        "lotNumber": "LT-QA-202610",
+        "expirationDate": "2026-10-31"
+      },
+      "error": null
+    },
+    {
+      "id": "TC-06",
+      "title": "Executar Venda no PDV e Validar Dedução Atômica de Estoque",
+      "category": "PDV / Vendas",
+      "status": "PASSED",
+      "durationMs": 2524,
+      "assertions": [
+        {
+          "text": "Pedido criado com ID e número gerado",
+          "passed": true
+        },
+        {
+          "text": "Produto A deduzido de 100 para 98 unidades",
+          "passed": true
+        },
+        {
+          "text": "Produto B deduzido de 100 para 97 unidades",
+          "passed": true
+        },
+        {
+          "text": "Valor total do pedido bate com subtotal menos desconto",
+          "passed": true
+        }
+      ],
+      "details": {
+        "orderNumber": "VND-QA-222429",
+        "total": 196.3,
+        "itemsCount": 2,
+        "remainingStockA": 98,
+        "remainingStockB": 97
+      },
+      "error": null
+    },
+    {
+      "id": "TC-07",
+      "title": "Cancelar Pedido e Validar Estorno Automático de Estoque",
+      "category": "Pedidos / Cancelamento",
+      "status": "PASSED",
+      "durationMs": 1459,
+      "assertions": [
+        {
+          "text": "Pedido atualizado para o status CANCELLED",
+          "passed": true
+        },
+        {
+          "text": "Saldo do produto voltou ao valor original de 100 unidades",
+          "passed": true
+        }
+      ],
+      "details": {
+        "cancelledOrder": "VND-CANC-224953",
+        "restoredStock": 100
+      },
+      "error": null
+    },
+    {
+      "id": "TC-08",
+      "title": "Emitir Ordem de Compra e Confirmar Recebimento Físico",
+      "category": "Compras / Reposição",
+      "status": "PASSED",
+      "durationMs": 1177,
+      "assertions": [
+        {
+          "text": "Ordem de compra emitida e recebida com sucesso",
+          "passed": true
+        },
+        {
+          "text": "Estoque do produto D aumentado de 100 para 150",
+          "passed": true
+        }
+      ],
+      "details": {
+        "poNumber": "PO-QA-226413",
+        "supplierId": "2ac01f88-d1fd-4dae-8ce3-0dd1b779a676",
+        "itemsReceived": 50,
+        "updatedTotalStock": 150
+      },
+      "error": null
+    },
+    {
+      "id": "TC-09",
+      "title": "Acesso & Validação da Tela: Painel Geral & Métricas (Dashboard) (/dashboard)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 432,
+      "assertions": [
+        {
+          "text": "Tela Painel Geral & Métricas (Dashboard) acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/dashboard",
+        "totalOrders": 2,
+        "totalRevenue": 356.1
+      },
+      "error": null
+    },
+    {
+      "id": "TC-10",
+      "title": "Acesso & Validação da Tela: Catálogo de Produtos Mestre (/products)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 200,
+      "assertions": [
+        {
+          "text": "Tela Catálogo de Produtos Mestre acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/products",
+        "totalProducts": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-11",
+      "title": "Acesso & Validação da Tela: Categorias de Produtos (/categories)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 205,
+      "assertions": [
+        {
+          "text": "Tela Categorias de Produtos acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/categories",
+        "totalCategories": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-12",
+      "title": "Acesso & Validação da Tela: Estoque, Saldos & Movimentações (/inventory)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 949,
+      "assertions": [
+        {
+          "text": "Tela Estoque, Saldos & Movimentações acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/inventory",
+        "totalBalances": 4,
+        "totalMovements": 3
+      },
+      "error": null
+    },
+    {
+      "id": "TC-13",
+      "title": "Acesso & Validação da Tela: Frente de Caixa (PDV) (/sales)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 185,
+      "assertions": [
+        {
+          "text": "Tela Frente de Caixa (PDV) acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/sales",
+        "availableForSale": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-14",
+      "title": "Acesso & Validação da Tela: Histórico de Pedidos & Vendas (/orders)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 176,
+      "assertions": [
+        {
+          "text": "Tela Histórico de Pedidos & Vendas acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/orders",
+        "totalOrdersCount": 2
+      },
+      "error": null
+    },
+    {
+      "id": "TC-15",
+      "title": "Acesso & Validação da Tela: Gestão de Compras & Fornecedores (/purchasing)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 200,
+      "assertions": [
+        {
+          "text": "Tela Gestão de Compras & Fornecedores acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/purchasing",
+        "totalPurchaseOrders": 2
+      },
+      "error": null
+    },
+    {
+      "id": "TC-16",
+      "title": "Acesso & Validação da Tela: Gestão de Clientes (/customers)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 176,
+      "assertions": [
+        {
+          "text": "Tela Gestão de Clientes acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/customers",
+        "totalCustomers": 0
+      },
+      "error": null
+    },
+    {
+      "id": "TC-17",
+      "title": "Acesso & Validação da Tela: Gestão de Fornecedores (/suppliers)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 204,
+      "assertions": [
+        {
+          "text": "Tela Gestão de Fornecedores acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/suppliers",
+        "totalSuppliers": 1
+      },
+      "error": null
+    },
+    {
+      "id": "TC-18",
+      "title": "Acesso & Validação da Tela: Lotes, Validades & Justificativas (/expiration)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 192,
+      "assertions": [
+        {
+          "text": "Tela Lotes, Validades & Justificativas acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/expiration",
+        "totalActiveBatches": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-19",
+      "title": "Acesso & Validação da Tela: Relatório: Valorização & Rentabilidade do Estoque (/reports?tab=valuation)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 197,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Valorização & Rentabilidade do Estoque acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=valuation",
+        "totalCostValue": 11061,
+        "totalSellingValue": 18853.7,
+        "potentialProfit": 7792.700000000001
+      },
+      "error": null
+    },
+    {
+      "id": "TC-20",
+      "title": "Acesso & Validação da Tela: Relatório: Curva ABC & Mix de Produtos (/reports?tab=abc)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 211,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Curva ABC & Mix de Produtos acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=abc",
+        "itemsEvaluated": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-21",
+      "title": "Acesso & Validação da Tela: Relatório: Compras por Fornecedor (/reports?tab=purchases)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 466,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Compras por Fornecedor acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=purchases",
+        "totalPurchaseVolume": 950
+      },
+      "error": null
+    },
+    {
+      "id": "TC-22",
+      "title": "Acesso & Validação da Tela: Relatório: Vendas por Canal (PDV, Whats, Catálogo) (/reports?tab=channels)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 451,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Vendas por Canal (PDV, Whats, Catálogo) acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=channels",
+        "channelBreakdown": 2
+      },
+      "error": null
+    },
+    {
+      "id": "TC-23",
+      "title": "Acesso & Validação da Tela: Relatório: Demonstrativo Financeiro (DRE Varejo) (/reports?tab=financial)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 188,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Demonstrativo Financeiro (DRE Varejo) acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=financial",
+        "grossSales": 356.1
+      },
+      "error": null
+    },
+    {
+      "id": "TC-24",
+      "title": "Acesso & Validação da Tela: Relatório: Margens de Lucro & Markup (/reports?tab=margins)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 183,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Margens de Lucro & Markup acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=margins",
+        "productsAnalyzed": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-25",
+      "title": "Acesso & Validação da Tela: Relatório: Giro de Estoque & Demanda / Reposição (/reports?tab=demand)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 187,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Giro de Estoque & Demanda / Reposição acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=demand",
+        "replenishmentItems": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-26",
+      "title": "Acesso & Validação da Tela: Relatório: Ticket Médio & LTV de Clientes (/reports?tab=customers)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 192,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Ticket Médio & LTV de Clientes acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=customers",
+        "ordersAnalyzed": 2
+      },
+      "error": null
+    },
+    {
+      "id": "TC-27",
+      "title": "Acesso & Validação da Tela: Relatório: Investimento de Capital de Giro & GMROI (/reports?tab=investment)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 178,
+      "assertions": [
+        {
+          "text": "Tela Relatório: Investimento de Capital de Giro & GMROI acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/reports?tab=investment",
+        "categoriesEvaluated": 4
+      },
+      "error": null
+    },
+    {
+      "id": "TC-28",
+      "title": "Acesso & Validação da Tela: Equipe da Loja & Gestão de Acessos (/team)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 194,
+      "assertions": [
+        {
+          "text": "Tela Equipe da Loja & Gestão de Acessos acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/team",
+        "teamMembers": 0
+      },
+      "error": null
+    },
+    {
+      "id": "TC-29",
+      "title": "Acesso & Validação da Tela: Configurações Comerciais & Dados da Loja (/settings)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 205,
+      "assertions": [
+        {
+          "text": "Tela Configurações Comerciais & Dados da Loja acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/settings",
+        "storeName": "Loja QA Automação E2E",
+        "slug": "loja-qa-automacao-e2e"
+      },
+      "error": null
+    },
+    {
+      "id": "TC-30",
+      "title": "Acesso & Validação da Tela: Central de Notificações & Alertas (/notifications)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 169,
+      "assertions": [
+        {
+          "text": "Tela Central de Notificações & Alertas acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/notifications",
+        "notificationsCount": 0
+      },
+      "error": null
+    },
+    {
+      "id": "TC-31",
+      "title": "Acesso & Validação da Tela: Trilha de Auditoria (Logs) (/audit)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 200,
+      "assertions": [
+        {
+          "text": "Tela Trilha de Auditoria (Logs) acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/audit",
+        "auditLogsCount": 0
+      },
+      "error": null
+    },
+    {
+      "id": "TC-32",
+      "title": "Acesso & Validação da Tela: Painel de Administração Global Multi-Lojas (/global-admin)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 195,
+      "assertions": [
+        {
+          "text": "Tela Painel de Administração Global Multi-Lojas acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/global-admin",
+        "platformTotalStores": 3
+      },
+      "error": null
+    },
+    {
+      "id": "TC-33",
+      "title": "Acesso & Validação da Tela: Catálogo Público Web da Loja QA (/store/loja-qa-automacao-e2e)",
+      "category": "Navegação / Telas",
+      "status": "PASSED",
+      "durationMs": 202,
+      "assertions": [
+        {
+          "text": "Tela Catálogo Público Web da Loja QA acessada e dados validados com sucesso",
+          "passed": true
+        }
+      ],
+      "details": {
+        "route": "/store/loja-qa-automacao-e2e",
+        "publicItemsAvailable": 4
+      },
+      "error": null
+    }
+  ]
+}

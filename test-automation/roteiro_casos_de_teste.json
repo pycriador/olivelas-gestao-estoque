@@ -1,0 +1,197 @@
+{
+  "suite": "Roteiro de Automação de Testes End-to-End (E2E) - Olivelas Gestão de Estoque",
+  "version": "1.0.0",
+  "testTenant": {
+    "name": "Loja QA Automação E2E",
+    "slug": "loja-qa-automacao-e2e"
+  },
+  "testCases": [
+    {
+      "id": "TC-01",
+      "category": "Tenant / Setup",
+      "name": "Inicializar Loja de Teste QA Dedicada",
+      "route": "/stores",
+      "action": "CREATE_OR_GET_STORE",
+      "payload": {
+        "name": "Loja QA Automação E2E",
+        "slug": "loja-qa-automacao-e2e",
+        "document": "99.888.777/0001-99",
+        "email": "qa.automacao@olivelas.com.br",
+        "phone": "(11) 98888-0000",
+        "is_active": true
+      },
+      "expectedResult": {
+        "status": "ACTIVE",
+        "slug": "loja-qa-automacao-e2e"
+      }
+    },
+    {
+      "id": "TC-02",
+      "category": "Fornecedores",
+      "name": "Cadastrar Fornecedor Homologado para a Loja QA",
+      "route": "/suppliers",
+      "action": "CREATE_SUPPLIER",
+      "payload": {
+        "corporate_name": "Distribuidora Central QA Testes LTDA",
+        "trade_name": "Central QA Distribuição",
+        "document": "44.555.666/0001-77",
+        "contact_name": "Roberto Alencar (QA)",
+        "phone": "(11) 3333-4444",
+        "email": "fornecedor.qa@centralqa.com.br",
+        "status": "ACTIVE"
+      },
+      "expectedResult": {
+        "corporate_name": "Distribuidora Central QA Testes LTDA"
+      }
+    },
+    {
+      "id": "TC-03",
+      "category": "Categorias",
+      "name": "Cadastrar Categorias Estruturais no Catálogo",
+      "route": "/categories",
+      "action": "CREATE_CATEGORIES",
+      "items": [
+        { "name": "Azeites & Temperos QA", "slug": "azeites-temperos-qa" },
+        { "name": "Laticínios & Frios QA", "slug": "laticinios-frios-qa" },
+        { "name": "Bebidas & Vinhos QA", "slug": "bebidas-vinhos-qa" },
+        { "name": "Doces & Geleias QA", "slug": "doces-geleias-qa" }
+      ],
+      "expectedResult": {
+        "totalCategoriesCreated": 4
+      }
+    },
+    {
+      "id": "TC-04",
+      "category": "Produtos",
+      "name": "Cadastrar Produtos no Catálogo Mestre com Preços e SKUs",
+      "route": "/products",
+      "action": "CREATE_PRODUCTS",
+      "items": [
+        {
+          "name": "Azeite Extra Virgem QA Especial 500ml",
+          "sku": "QA-AZE-001",
+          "barcode": "7891000000011",
+          "unit": "unidade",
+          "selling_price": 42.90,
+          "cost_price": 26.50
+        },
+        {
+          "name": "Queijo Canastra Artesanal QA 500g",
+          "sku": "QA-QUE-002",
+          "barcode": "7891000000022",
+          "unit": "unidade",
+          "selling_price": 38.50,
+          "cost_price": 22.00
+        },
+        {
+          "name": "Vinho Tinto Reserva QA Seleção 750ml",
+          "sku": "QA-VIN-003",
+          "barcode": "7891000000033",
+          "unit": "garrafa",
+          "selling_price": 79.90,
+          "cost_price": 48.00
+        },
+        {
+          "name": "Geleia de Frutas Vermelhas QA 250g",
+          "sku": "QA-GEL-004",
+          "barcode": "7891000000044",
+          "unit": "pote",
+          "selling_price": 19.50,
+          "cost_price": 10.20
+        }
+      ],
+      "expectedResult": {
+        "totalProductsCreated": 4
+      }
+    },
+    {
+      "id": "TC-05",
+      "category": "Estoque / Lotes",
+      "name": "Dar Entrada de Estoque Inicial com Lotes e Validades (100 un/item)",
+      "route": "/inventory",
+      "action": "STOCK_ENTRY_BATCH",
+      "payload": {
+        "quantityPerItem": 100,
+        "lot_number": "LT-QA-202610",
+        "expiration_date": "2026-10-31"
+      },
+      "expectedResult": {
+        "totalStockPhysicalUnits": 400
+      }
+    },
+    {
+      "id": "TC-06",
+      "category": "PDV / Vendas",
+      "name": "Executar Venda no PDV e Validar Dedução Atômica de Estoque",
+      "route": "/sales",
+      "action": "CREATE_POS_ORDER",
+      "payload": {
+        "items": [
+          { "sku": "QA-AZE-001", "quantity": 2 },
+          { "sku": "QA-QUE-002", "quantity": 3 }
+        ],
+        "discount_amount": 5.00,
+        "payment_method": "PIX"
+      },
+      "expectedResult": {
+        "orderStatus": "DELIVERED",
+        "stockDeduction": {
+          "QA-AZE-001": 98,
+          "QA-QUE-002": 97
+        }
+      }
+    },
+    {
+      "id": "TC-07",
+      "category": "Pedidos / Cancelamento",
+      "name": "Cancelar Pedido e Validar Estorno Automático de Estoque",
+      "route": "/orders",
+      "action": "CANCEL_ORDER_RESTORE_STOCK",
+      "expectedResult": {
+        "orderStatus": "CANCELLED",
+        "restoredStockQuantity": 100
+      }
+    },
+    {
+      "id": "TC-08",
+      "category": "Compras / Reposição",
+      "name": "Emitir Ordem de Compra e Confirmar Recebimento Físico",
+      "route": "/purchasing",
+      "action": "ISSUE_AND_RECEIVE_PURCHASE_ORDER",
+      "payload": {
+        "sku": "QA-GEL-004",
+        "quantity_ordered": 50,
+        "unit_cost": 9.50
+      },
+      "expectedResult": {
+        "poStatus": "RECEIVED",
+        "updatedStockQuantity": 150
+      }
+    },
+    { "id": "TC-09", "category": "Navegação / Telas", "name": "Painel Geral & Métricas (Dashboard)", "route": "/dashboard" },
+    { "id": "TC-10", "category": "Navegação / Telas", "name": "Catálogo de Produtos Mestre", "route": "/products" },
+    { "id": "TC-11", "category": "Navegação / Telas", "name": "Categorias de Produtos", "route": "/categories" },
+    { "id": "TC-12", "category": "Navegação / Telas", "name": "Estoque, Saldos & Movimentações", "route": "/inventory" },
+    { "id": "TC-13", "category": "Navegação / Telas", "name": "Frente de Caixa (PDV)", "route": "/sales" },
+    { "id": "TC-14", "category": "Navegação / Telas", "name": "Histórico de Pedidos & Vendas", "route": "/orders" },
+    { "id": "TC-15", "category": "Navegação / Telas", "name": "Gestão de Compras & Fornecedores", "route": "/purchasing" },
+    { "id": "TC-16", "category": "Navegação / Telas", "name": "Gestão de Clientes", "route": "/customers" },
+    { "id": "TC-17", "category": "Navegação / Telas", "name": "Gestão de Fornecedores", "route": "/suppliers" },
+    { "id": "TC-18", "category": "Navegação / Telas", "name": "Lotes, Validades & Justificativas", "route": "/expiration" },
+    { "id": "TC-19", "category": "Relatórios", "name": "Relatório 1: Valorização & Rentabilidade do Estoque", "route": "/reports?tab=valuation" },
+    { "id": "TC-20", "category": "Relatórios", "name": "Relatório 2: Curva ABC & Mix de Produtos", "route": "/reports?tab=abc" },
+    { "id": "TC-21", "category": "Relatórios", "name": "Relatório 3: Compras por Fornecedor", "route": "/reports?tab=purchases" },
+    { "id": "TC-22", "category": "Relatórios", "name": "Relatório 4: Vendas por Canal (PDV, Whats, Catálogo)", "route": "/reports?tab=channels" },
+    { "id": "TC-23", "category": "Relatórios", "name": "Relatório 5: Demonstrativo Financeiro (DRE Varejo)", "route": "/reports?tab=financial" },
+    { "id": "TC-24", "category": "Relatórios", "name": "Relatório 6: Margens de Lucro & Markup", "route": "/reports?tab=margins" },
+    { "id": "TC-25", "category": "Relatórios", "name": "Relatório 7: Giro de Estoque & Demanda / Reposição", "route": "/reports?tab=demand" },
+    { "id": "TC-26", "category": "Relatórios", "name": "Relatório 8: Ticket Médio & LTV de Clientes", "route": "/reports?tab=customers" },
+    { "id": "TC-27", "category": "Relatórios", "name": "Relatório 9: Investimento de Capital de Giro & GMROI", "route": "/reports?tab=investment" },
+    { "id": "TC-28", "category": "Navegação / Telas", "name": "Equipe da Loja & Gestão de Acessos", "route": "/team" },
+    { "id": "TC-29", "category": "Navegação / Telas", "name": "Configurações Comerciais & Dados da Loja", "route": "/settings" },
+    { "id": "TC-30", "category": "Navegação / Telas", "name": "Central de Notificações & Alertas", "route": "/notifications" },
+    { "id": "TC-31", "category": "Navegação / Telas", "name": "Trilha de Auditoria (Logs)", "route": "/audit" },
+    { "id": "TC-32", "category": "Navegação / Telas", "name": "Painel de Administração Global Multi-Lojas", "route": "/global-admin" },
+    { "id": "TC-33", "category": "Navegação / Telas", "name": "Catálogo Público Web da Loja QA", "route": "/store/loja-qa-automacao-e2e" }
+  ]
+}
