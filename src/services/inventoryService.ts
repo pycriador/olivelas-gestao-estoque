@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase/client'
 import { checkExpirationStatus } from '@/utils/dates'
 import { auditService } from '@/services/auditService'
+import { buildAccentRegex } from '@/utils/productUtils'
 import type {
   CostCenter,
   LossReason,
@@ -78,11 +79,12 @@ export const inventoryService = {
 
     if (search?.trim()) {
       const q = search.trim()
+      const pattern = buildAccentRegex(q)
       let prodQuery = supabase
         .from('products')
         .select('id')
         .is('deleted_at', null)
-        .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
+        .or(`name.imatch.${pattern},sku.imatch.${pattern}`)
 
       if (storeId && storeId !== 'all') {
         prodQuery = prodQuery.eq('store_id', storeId)
@@ -284,11 +286,12 @@ export const inventoryService = {
 
     if (search?.trim()) {
       const q = search.trim()
+      const pattern = buildAccentRegex(q)
       let prodQuery = supabase
         .from('products')
         .select('id')
         .is('deleted_at', null)
-        .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
+        .or(`name.imatch.${pattern},sku.imatch.${pattern}`)
 
       if (storeId && storeId !== 'all') {
         prodQuery = prodQuery.eq('store_id', storeId)
@@ -300,7 +303,7 @@ export const inventoryService = {
       let batchQuery = supabase
         .from('stock_batches')
         .select('id')
-        .ilike('lot_number', `%${q}%`)
+        .or(`lot_number.imatch.${pattern}`)
 
       if (storeId && storeId !== 'all') {
         batchQuery = batchQuery.eq('store_id', storeId)
@@ -310,9 +313,9 @@ export const inventoryService = {
       const matchedBatchIds = (matchedBatches || []).map((b: any) => b.id)
 
       const orConditions = [
-        `notes.ilike.%${q}%`,
-        `reason_code.ilike.%${q}%`,
-        `cost_center_code.ilike.%${q}%`,
+        `notes.imatch.${pattern}`,
+        `reason_code.imatch.${pattern}`,
+        `cost_center_code.imatch.${pattern}`,
       ]
 
       if (matchedProductIds.length > 0) {
@@ -728,6 +731,14 @@ export const inventoryService = {
           if (prodUpdateErr) {
             console.error('Falha ao atualizar produto na importação:', prodUpdateErr)
           }
+
+          // Atualizar também o updated_at em stock_balances para colocar o registro
+          // no topo da visualização padrão de estoque (ordenada por updated_at desc)
+          await supabase
+            .from('stock_balances')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('product_id', row.productId)
+            .eq('store_id', storeId)
         }
 
         // 2. Movimentação ou ajuste de saldo

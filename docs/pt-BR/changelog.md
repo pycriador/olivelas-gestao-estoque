@@ -14,11 +14,15 @@ classification: Confirmed
 
 ## 2026-10-15
 
-- **Correção de Erro HTTP 400 na Busca de Estoque e Movimentações (`/inventory`)** (`inventoryService.ts`):
+- **Correção de Erro HTTP 400 e Busca Tolerante a Acentos em Estoque e Movimentações (`/inventory`)** (`inventoryService.ts`, `productUtils.ts`):
   - **Eliminação de `.or()` com Colunas de Relações Embutidas**:
     - O PostgREST do Supabase não suporta filtros `.or()` de primeiro nível referenciando tabelas relacionadas (como `products.name` ou `products.sku` em consultas sobre `stock_balances`).
     - Em `inventoryService.getStockBalances`, a busca agora resolve previamente os IDs dos produtos correspondentes diretamente na tabela `products` e aplica `query.in('product_id', productIds)`. Se nenhum produto for encontrado, retorna `{ data: [], total: 0 }` imediatamente sem disparar erro 400.
     - Em `inventoryService.getStockMovements`, a busca também pré-resolve `product_id` e `batch_id` para utilizar filtros válidos na tabela raiz (`notes`, `reason_code`, `cost_center_code`, `product_id.in`, `batch_id.in`).
+  - **Busca Tolerante a Acentuação (`buildAccentRegex`)**:
+    - Implementada a função `buildAccentRegex` que mapeia vogais para conjuntos fonéticos (ex.: `vitoria` localiza `Uva Vitória` e vice-versa), utilizando PostgREST `imatch` (`~*` no PostgreSQL).
+  - **Atualização de Timestamp de Saldo na Importação**:
+    - Ao importar planilhas que atualizam preços ou saldos, `stock_balances.updated_at` é atualizado para o timestamp atual, garantindo que o produto apareça imediatamente na primeira página da listagem (ordenada por `updated_at desc`).
 
 - **Correção e Suporte a Reimportação de Planilha Exportada de Estoque (`/inventory`)** (`StockImportModal.tsx`, `inventoryService.ts`, `importParser.ts`):
   - **Reconhecimento de Colunas Exportadas de Saldos**:

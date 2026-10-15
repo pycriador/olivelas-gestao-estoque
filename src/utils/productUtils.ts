@@ -24,3 +24,18 @@ export const formatProductWeight = (quantityInKg: number): string => {
   }
   return `${roundedGrams}g`
 }
+
+/**
+ * Converte um termo de busca em uma regex tolerante a acentuação (ex: 'vitoria' -> 'v[iíìîï]t[oóòôõö]r[iíìîï][aáàãâä]')
+ * permitindo buscas insensíveis a acentos via PostgREST `imatch` (~* no Postgres).
+ */
+export function buildAccentRegex(term: string): string {
+  const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return escaped
+    .replace(/[aáàãâäAÁÀÃÂÄ]/gi, '[aáàãâä]')
+    .replace(/[eéèêëEÉÈÊË]/gi, '[eéèêë]')
+    .replace(/[iíìîïIÍÌÎÏ]/gi, '[iíìîï]')
+    .replace(/[oóòôõöOÓÒÔÕÖ]/gi, '[oóòôõö]')
+    .replace(/[uúùûüUÚÙÛÜ]/gi, '[uúùûü]')
+    .replace(/[cçCÇ]/gi, '[cç]')
+}
