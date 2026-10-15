@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test:e2e": "node test-automation/executar_roteiro_e2e_browser.mjs",
+    "test:data": "node test-automation/executar_roteiro_testes.js",
+    "test": "node test-automation/executar_roteiro_e2e_browser.mjs",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

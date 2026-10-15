@@ -14,6 +14,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
 import { CustomerCombobox } from '@/components/sales/CustomerCombobox'
+import { CustomerQuickCreateModal } from '@/components/sales/CustomerQuickCreateModal'
 import {
   ShoppingBag,
   Plus,
@@ -25,6 +26,7 @@ import {
   QrCode,
   Banknote,
   Users,
+  UserPlus,
   Package,
   RotateCcw,
   AlertTriangle,
@@ -75,6 +77,7 @@ export function SalesPage() {
 
   const [cart, setCart] = React.useState<CartLine[]>([])
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>('')
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = React.useState(false)
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('PIX')
   const [discountTotal, setDiscountTotal] = React.useState<number>(0)
   const [notes, setNotes] = React.useState('')
@@ -670,16 +673,34 @@ export function SalesPage() {
 
             {/* Compact Checkout Summary & Actions Footer */}
             <div className="p-3 border-t border-border bg-surface-elevated/80 flex-shrink-0 space-y-2.5">
-              {/* Customer Selector */}
+              {/* Customer Selector & Quick Create Action */}
               <div className="space-y-1">
-                <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                  <Users className="h-3 w-3" /> Cliente
-                </label>
-                <CustomerCombobox
-                  storeId={storeId}
-                  value={selectedCustomerId}
-                  onChange={setSelectedCustomerId}
-                />
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                    <Users className="h-3 w-3" /> Cliente
+                  </label>
+                  <span className="text-[10px] text-muted-foreground">Consumidor ou Cadastrado</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <CustomerCombobox
+                    storeId={storeId}
+                    value={selectedCustomerId}
+                    onChange={setSelectedCustomerId}
+                    className="flex-1 min-w-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsCustomerModalOpen(true)}
+                    className="h-7 px-2 text-xs font-semibold shrink-0 gap-1 border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary"
+                    title="Cadastrar novo cliente"
+                    aria-label="Cadastrar novo cliente"
+                  >
+                    <UserPlus className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline text-[11px]">Novo</span>
+                  </Button>
+                </div>
               </div>
 
               {/* Payment Methods */}
@@ -747,6 +768,15 @@ export function SalesPage() {
             : undefined
         }
         onConfirm={handleConfirmWeight}
+      />
+
+      <CustomerQuickCreateModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        storeId={storeId}
+        onSuccess={(customer) => {
+          setSelectedCustomerId(customer.id)
+        }}
       />
     </div>
   )

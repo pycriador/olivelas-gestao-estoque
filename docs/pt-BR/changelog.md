@@ -12,6 +12,17 @@ classification: Confirmed
 
 # Changelog da documentação
 
+## 2026-10-15
+
+- **Cadastro Rápido de Clientes na Venda PDV e Otimização do Combobox de Clientes** (`SalesPage.tsx`, `CustomerQuickCreateModal.tsx`, `CustomerCombobox.tsx`):
+  - **Botão de Ação Direta "Novo Cliente"**:
+    - Adicionado botão com ícone `UserPlus` ao lado do seletor de clientes na lateral do checkout do PDV (`/sales`).
+    - Abre o modal rápido `CustomerQuickCreateModal` com campos essenciais: Nome Completo/Razão Social, CPF/CNPJ, Telefone/WhatsApp, E-mail e Observações.
+    - Salva no banco de dados (`customers`), invalida as consultas de clientes do cache e seleciona automaticamente o novo cliente na venda em andamento (`selectedCustomerId`).
+  - **Combobox de Clientes Aprimorado (`CustomerCombobox`)**:
+    - Resolução automática de dados do cliente por ID (`customer-by-id`) quando selecionado programaticamente ou cadastrado via modal, garantindo exibição imediata do nome e documento no campo.
+    - Container de rolagem aprimorado no dropdown (`max-h-48 overflow-y-auto custom-scrollbar overscroll-contain`) com cabeçalho fixo (`Últimos 5 clientes - role para ver`), facilitando a navegação suave sem estourar a tela.
+
 ## 2026-10-08
 
 - **Suporte a Produtos Pesáveis e Venda Fracionada (KG / Gramas) no Catálogo Público da Loja** (`CatalogPublicPage.tsx`, `productUtils.ts`):

@@ -109,23 +109,33 @@ export function CustomerCombobox({
     )
   }, [isSearching, matches, recent, debouncedTerm, value])
 
-  // Reconcilia com resets externos (ex.: limpar o carrinho zera o cliente
-  // no page pai). Feito durante o render em vez de num effect para nao
-  // disparar um segundo render.
-  //
-  // Ignora a mudanca que o proprio componente acabou de fazer: handleSelect
-  // chama onChange, o pai propaga o novo value, e sem este guarda a
-  // reconciliacao rodava logo em seguida apagando selected/term -- o nome
-  // escolhido sumia do campo. Id igual ao selecionado = o pai ecoando.
+  // Busca os dados do cliente selecionado caso value mude externamente (ex: cadastrado via modal rápido)
+  const { data: selectedCustomerData } = useQuery({
+    queryKey: ['customer-by-id', value],
+    queryFn: () => customerService.getCustomer(value),
+    enabled: Boolean(value),
+    staleTime: 60 * 1000,
+  })
+
+  // Reconcilia com resets ou seleções externas
   const [syncedValue, setSyncedValue] = React.useState(value)
   if (value !== syncedValue) {
     setSyncedValue(value)
-    const pickedByThisInput = selected !== null && selected.id === value
-    if (!pickedByThisInput) {
+    if (!value) {
       setSelected(null)
       setTerm('')
     }
   }
+
+  React.useEffect(() => {
+    if (value && selectedCustomerData) {
+      setSelected(selectedCustomerData)
+      setTerm(customerLabel(selectedCustomerData))
+    } else if (!value) {
+      setSelected(null)
+      setTerm('')
+    }
+  }, [value, selectedCustomerData])
 
   const handleSelect = (customer: Customer) => {
     setSelected(customer)
@@ -185,10 +195,11 @@ export function CustomerCombobox({
 
       {isOpen && !disabled && (
         <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-popover shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-          <div className="max-h-60 overflow-y-auto custom-scrollbar">
+          <div className="max-h-48 overflow-y-auto custom-scrollbar overscroll-contain">
             {!isSearching && suggestions.length > 0 && (
-              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 bg-muted/40">
-                Cadastros mais recentes
+              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 bg-muted/40 sticky top-0 z-10 backdrop-blur-xs flex items-center justify-between">
+                <span>Últimos {suggestions.length} clientes</span>
+                <span className="text-[9px] font-normal lowercase">role para ver</span>
               </div>
             )}
             {isSearching && suggestions.length > 0 && (
