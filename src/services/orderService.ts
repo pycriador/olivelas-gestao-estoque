@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
+import { buildAccentRegex } from '@/utils/productUtils'
 import type { Order } from '@/types/order.types'
 import type { OrderChannel, OrderStatus, PaymentMethod } from '@/types/database.types'
 
@@ -66,8 +67,52 @@ export const orderService = {
       )
       .eq('store_id', storeId)
 
-    if (search) {
-      query = query.or(`order_number.ilike.%${search}%,customer_name.ilike.%${search}%`)
+    if (search?.trim()) {
+      const q = search.trim()
+      const pattern = buildAccentRegex(q)
+
+      // 1. Clientes com nome, documento ou telefone compatíveis
+      const { data: matchedCustomers } = await supabase
+        .from('customers')
+        .select('id')
+        .eq('store_id', storeId)
+        .or(`name.imatch.${pattern},document.imatch.${pattern},phone.imatch.${pattern}`)
+
+      const matchedCustomerIds = (matchedCustomers || []).map((c: any) => c.id)
+
+      // 2. Produtos com nome ou SKU compatíveis nos itens do pedido
+      const { data: matchedProducts } = await supabase
+        .from('products')
+        .select('id')
+        .eq('store_id', storeId)
+        .or(`name.imatch.${pattern},sku.imatch.${pattern}`)
+
+      const matchedProductIds = (matchedProducts || []).map((p: any) => p.id)
+
+      let productOrderIds: string[] = []
+      if (matchedProductIds.length > 0) {
+        const { data: matchedItems } = await supabase
+          .from('order_items')
+          .select('order_id')
+          .eq('store_id', storeId)
+          .in('product_id', matchedProductIds)
+        productOrderIds = (matchedItems || []).map((i: any) => i.order_id)
+      }
+
+      const orConditions: string[] = [
+        `order_number.imatch.${pattern}`,
+        `notes.imatch.${pattern}`,
+      ]
+
+      if (matchedCustomerIds.length > 0) {
+        orConditions.push(`customer_id.in.(${matchedCustomerIds.join(',')})`)
+      }
+
+      if (productOrderIds.length > 0) {
+        orConditions.push(`id.in.(${productOrderIds.join(',')})`)
+      }
+
+      query = query.or(orConditions.join(','))
     }
 
     if (status && status !== 'ALL') {

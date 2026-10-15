@@ -14,6 +14,13 @@ classification: Confirmed
 
 ## 2026-10-15
 
+- **Correção de Erro HTTP 400 na Busca de Pedidos e Vendas (`/orders`)** (`orderService.ts`):
+  - **Eliminação de Referência Inválida à Coluna Inexistente `customer_name` em `orders`**:
+    - A tabela `orders` possui relação via `customer_id` e não possui a coluna `customer_name`. O filtro `.or('order_number.ilike...,customer_name.ilike...')` gerava erro `400 (Bad Request)` em qualquer busca textual.
+  - **Busca Multidimensional e Tolerante a Acentos**:
+    - A busca agora pré-resolve clientes compatíveis na tabela `customers` (por nome, documento ou telefone) e produtos compatíveis na tabela `products` (por nome ou SKU) através da função `buildAccentRegex`.
+    - Localiza os pedidos tanto pelo número do pedido (`order_number`), observações (`notes`), cliente vinculado (`customer_id.in`) quanto pelos itens contidos no pedido (`order_items.product_id.in`), permitindo pesquisar por exemplo `"uva"`, `"PED-906"`, ou o nome de um cliente sem erros.
+
 - **Correção de Erro HTTP 400 e Busca Tolerante a Acentos em Estoque e Movimentações (`/inventory`)** (`inventoryService.ts`, `productUtils.ts`):
   - **Eliminação de `.or()` com Colunas de Relações Embutidas**:
     - O PostgREST do Supabase não suporta filtros `.or()` de primeiro nível referenciando tabelas relacionadas (como `products.name` ou `products.sku` em consultas sobre `stock_balances`).
