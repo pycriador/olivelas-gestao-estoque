@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import { WeightInputModal } from '@/components/sales/WeightInputModal'
 import { isWeighedProduct, formatProductWeight } from '@/utils/productUtils'
+import { toast } from 'sonner'
 import type { PaymentMethod } from '@/types/database.types'
 import type { Product } from '@/types/product.types'
 import type { POSStockFilter } from '@/services/productService'
@@ -78,7 +79,7 @@ export function SalesPage() {
   const categoryFilter = filters.category || ''
 
   const location = useLocation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
 
   const [cart, setCart] = React.useState<CartLine[]>([])
@@ -133,21 +134,29 @@ export function SalesPage() {
     // Carrega os itens no carrinho
     const rawItems = rawOrder.items || []
     if (rawItems.length > 0) {
-      const initialCart: CartLine[] = rawItems.map((it: any) => ({
-        product: it.product || {
-          id: it.productId || it.product_id,
-          name: it.productName || it.product_name || 'Produto',
-          sku: it.productSku || it.product_sku || '',
-          selling_price: it.unitPrice || it.unit_price,
-          unit: it.unit || 'UN',
-        },
-        quantity: Number(it.quantity),
-        unitPrice: Number(it.unitPrice || it.unit_price),
-        discount: Number(it.discount || 0),
-      }))
+      const initialCart: CartLine[] = rawItems.map((it: any) => {
+        const prod = it.product
+        const currentSellingPrice =
+          typeof prod?.selling_price === 'number' && prod.selling_price > 0
+            ? Number(prod.selling_price)
+            : Number(it.unitPrice || it.unit_price || 0)
+
+        return {
+          product: prod || {
+            id: it.productId || it.product_id,
+            name: it.productName || it.product_name || 'Produto',
+            sku: it.productSku || it.product_sku || '',
+            selling_price: currentSellingPrice,
+            unit: it.unit || 'UN',
+          },
+          quantity: Number(it.quantity),
+          unitPrice: currentSellingPrice,
+          discount: Number(it.discount || 0),
+        }
+      })
       setCart(initialCart)
 
-      // Atualiza com os saldos e dados mais recentes dos produtos se storeId existir
+      // Atualiza com os saldos e preços vigentes dos produtos no estoque
       if (storeId) {
         const itemIds = rawItems.map((i: any) => i.productId || i.product_id).filter(Boolean)
         productService
@@ -157,7 +166,18 @@ export function SalesPage() {
             setCart((prevCart) =>
               prevCart.map((line) => {
                 const fresh = freshMap.get(line.product.id)
-                return fresh ? { ...line, product: fresh } : line
+                if (fresh) {
+                  const updatedPrice =
+                    typeof fresh.selling_price === 'number' && fresh.selling_price > 0
+                      ? Number(fresh.selling_price)
+                      : line.unitPrice
+                  return {
+                    ...line,
+                    product: fresh,
+                    unitPrice: updatedPrice,
+                  }
+                }
+                return line
               })
             )
           })
@@ -170,7 +190,8 @@ export function SalesPage() {
     clearCart()
     setEditingOrderInfo(null)
     setLoadedEditOrderId(null)
-    navigate('/sales', { replace: true, state: {} })
+    setSearchParams({}, { replace: true })
+    navigate('/orders', { replace: true })
   }
 
   // Categorias: alimentam o filtro do grid do PDV.
@@ -357,6 +378,8 @@ export function SalesPage() {
         discountAmount: discountTotal,
         paymentMethod,
         notes: notes || undefined,
+        replaceOrderId: editingOrderInfo?.id,
+        orderNumber: editingOrderInfo?.orderNumber,
       }),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
@@ -365,11 +388,20 @@ export function SalesPage() {
       // O grid do PDV le o saldo; sem invalidar, continuaria mostrando a
       // quantidade antiga ate a proxima revalidacao.
       queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
-      setSuccessOrderNumber(order.order_number)
+
+      const wasEditing = Boolean(editingOrderInfo)
       clearCart()
       setEditingOrderInfo(null)
       setLoadedEditOrderId(null)
-      navigate('/sales', { replace: true, state: {} })
+      setSearchParams({}, { replace: true })
+
+      if (wasEditing) {
+        toast.success(`Pedido #${order.order_number} atualizado com sucesso!`)
+        navigate('/orders')
+      } else {
+        setSuccessOrderNumber(order.order_number)
+        navigate('/sales', { replace: true, state: {} })
+      }
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })

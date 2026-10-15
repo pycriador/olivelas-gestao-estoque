@@ -50,8 +50,12 @@ classification: Confirmed
     - Adicionado botão de ação em destaque **"Editar Pedido no PDV"** no modal de detalhes do pedido (`/orders`).
     - Modal de confirmação inteligente detalhando o estorno atômico de estoque e envio dos itens e do cliente para a tela de Venda.
     - Se o pedido estiver ativo, estorna o estoque atômico de volta para a loja (`restore_sale_stock`) e redireciona para `/sales?editOrder=:id`.
+  - **Sincronização com Preço Vigente do Estoque e Reutilização do Número do Pedido**:
+    - **Sincronização Automática com Preço Vigente**: Ao carregar os itens do pedido em edição no PDV, o sistema atualiza automaticamente os preços unitários (`unitPrice`) com o valor atual de venda do produto no catálogo/estoque (`fresh.selling_price`), garantindo que alterações de preço feitas no estoque reflitam imediatamente no pedido revisado.
+    - **Atualização In-Place sem Duplicata**: Na finalização da edição, o sistema reaproveita o número do pedido original (`orderNumber`) e substitui o registro anterior (`replaceOrderId`), eliminando duplicatas com status cancelado e garantindo histórico limpo.
+    - **Navegação Direta e Feedback**: Redireciona de volta para `/orders` com notificação de sucesso e carrinho limpo ao finalizar ou descartar a edição.
   - **Experiência de Edição Completa no PDV (`/sales`)**:
-    - Pré-carregamento imediato dos itens no carrinho (com suporte total a itens pesáveis `KG` ou unitários `UN`, preços originais e descontos).
+    - Pré-carregamento imediato dos itens no carrinho (com suporte total a itens pesáveis `KG` ou unitários `UN`, preços vigentes e descontos).
     - Pré-seleção automática do cliente vinculado no combobox, com possibilidade de alterar para outro cliente ou cadastrar novo via modal rápido.
     - Exibição de banner de alerta contextual (*"Editando pedido PED-XXXXXX. Altere os itens e o cliente à vontade"*), com botão para descartar edição.
     - Inclusão dos produtos do pedido no mapa de saldos (`stockByProduct`) com atualização em lote via `productService.getProductsByIds`.

@@ -20,6 +20,8 @@ export interface CreateOrderPayload {
   shippingAmount?: number
   notes?: string
   paymentMethod?: PaymentMethod
+  replaceOrderId?: string
+  orderNumber?: string
 }
 
 export interface OrderListParams {
@@ -157,7 +159,24 @@ export const orderService = {
   },
 
   async createOrder(payload: CreateOrderPayload): Promise<Order> {
-    const orderNumber = `PED-${Date.now().toString().slice(-6)}`
+    let orderNumber = payload.orderNumber || `PED-${Date.now().toString().slice(-6)}`
+
+    // Se estamos editando/substituindo um pedido previamente cancelado
+    if (payload.replaceOrderId) {
+      // Remove o registro do pedido cancelado anterior para recriá-lo com o mesmo número
+      const { error: delErr } = await supabase
+        .from('orders')
+        .delete()
+        .eq('id', payload.replaceOrderId)
+        .eq('store_id', payload.storeId)
+
+      if (delErr) {
+        console.warn('Aviso ao substituir pedido cancelado na edição:', delErr)
+        if (delErr.message?.includes('duplicate') || delErr.message?.includes('violates')) {
+          orderNumber = `PED-${Date.now().toString().slice(-6)}`
+        }
+      }
+    }
 
     // Tudo em uma transacao no servidor: pedido, itens, pagamento, baixa de
     // estoque e auditoria. A RPC trava a linha de saldo de cada produto
