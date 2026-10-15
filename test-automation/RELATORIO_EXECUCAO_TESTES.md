@@ -2,8 +2,8 @@
 
 **Plataforma:** Olivelas Gestão de Estoque  
 **Loja de Teste:** `Loja QA Automação E2E` (ID: `809ab043-acca-44a8-9d5b-3d63de7f9d35`, Slug: `loja-qa-automacao-e2e`)  
-**Data/Hora de Execução:** `15/10/2026, 13:10:00`  
-**Duração Total:** `25.76 segundos`  
+**Data/Hora de Execução:** `15/10/2026, 13:14:50`  
+**Duração Total:** `27.39 segundos`  
 **Taxa de Sucesso:** `100.0%`  
 
 ---
@@ -22,39 +22,39 @@
 
 | ID | Caso de Teste / Módulo | Categoria | Duração | Status |
 | :--- | :--- | :--- | :---: | :---: |
-| **TC-01** | Inicializar Loja de Teste QA Dedicada | *Tenant / Setup* | `1045ms` | **✅ Aprovado** |
-| **TC-02** | Cadastrar Fornecedor Homologado para a Loja QA | *Fornecedores* | `235ms` | **✅ Aprovado** |
-| **TC-03** | Cadastrar Categorias Estruturais no Catálogo | *Categorias* | `1341ms` | **✅ Aprovado** |
-| **TC-04** | Cadastrar Produtos no Catálogo Mestre com Preços e SKUs | *Produtos* | `8090ms` | **✅ Aprovado** |
-| **TC-05** | Dar Entrada de Estoque Inicial com Lotes e Validades (100 un/item) | *Estoque / Lotes* | `5053ms` | **✅ Aprovado** |
-| **TC-06** | Executar Venda no PDV e Validar Dedução Atômica de Estoque | *PDV / Vendas* | `2160ms` | **✅ Aprovado** |
-| **TC-07** | Cancelar Pedido e Validar Estorno Automático de Estoque | *Pedidos / Cancelamento* | `1817ms` | **✅ Aprovado** |
-| **TC-08** | Emitir Ordem de Compra e Confirmar Recebimento Físico | *Compras / Reposição* | `1087ms` | **✅ Aprovado** |
-| **TC-09** | Acesso & Validação da Tela: Painel Geral & Métricas (Dashboard) (/dashboard) | *Navegação / Telas* | `200ms` | **✅ Aprovado** |
-| **TC-10** | Acesso & Validação da Tela: Catálogo de Produtos Mestre (/products) | *Navegação / Telas* | `211ms` | **✅ Aprovado** |
-| **TC-11** | Acesso & Validação da Tela: Categorias de Produtos (/categories) | *Navegação / Telas* | `161ms` | **✅ Aprovado** |
-| **TC-12** | Acesso & Validação da Tela: Estoque, Saldos & Movimentações (/inventory) | *Navegação / Telas* | `366ms` | **✅ Aprovado** |
-| **TC-13** | Acesso & Validação da Tela: Frente de Caixa (PDV) (/sales) | *Navegação / Telas* | `172ms` | **✅ Aprovado** |
-| **TC-14** | Acesso & Validação da Tela: Histórico de Pedidos & Vendas (/orders) | *Navegação / Telas* | `208ms` | **✅ Aprovado** |
-| **TC-15** | Acesso & Validação da Tela: Gestão de Compras & Fornecedores (/purchasing) | *Navegação / Telas* | `186ms` | **✅ Aprovado** |
-| **TC-16** | Acesso & Validação da Tela: Gestão de Clientes (/customers) | *Navegação / Telas* | `363ms` | **✅ Aprovado** |
-| **TC-17** | Acesso & Validação da Tela: Gestão de Fornecedores (/suppliers) | *Navegação / Telas* | `214ms` | **✅ Aprovado** |
-| **TC-18** | Acesso & Validação da Tela: Lotes, Validades & Justificativas (/expiration) | *Navegação / Telas* | `176ms` | **✅ Aprovado** |
-| **TC-19** | Acesso & Validação da Tela: Relatório: Valorização & Rentabilidade do Estoque (/reports?tab=valuation) | *Navegação / Telas* | `173ms` | **✅ Aprovado** |
-| **TC-20** | Acesso & Validação da Tela: Relatório: Curva ABC & Mix de Produtos (/reports?tab=abc) | *Navegação / Telas* | `169ms` | **✅ Aprovado** |
-| **TC-21** | Acesso & Validação da Tela: Relatório: Compras por Fornecedor (/reports?tab=purchases) | *Navegação / Telas* | `162ms` | **✅ Aprovado** |
-| **TC-22** | Acesso & Validação da Tela: Relatório: Vendas por Canal (PDV, Whats, Catálogo) (/reports?tab=channels) | *Navegação / Telas* | `166ms` | **✅ Aprovado** |
-| **TC-23** | Acesso & Validação da Tela: Relatório: Demonstrativo Financeiro (DRE Varejo) (/reports?tab=financial) | *Navegação / Telas* | `168ms` | **✅ Aprovado** |
-| **TC-24** | Acesso & Validação da Tela: Relatório: Margens de Lucro & Markup (/reports?tab=margins) | *Navegação / Telas* | `173ms` | **✅ Aprovado** |
-| **TC-25** | Acesso & Validação da Tela: Relatório: Giro de Estoque & Demanda / Reposição (/reports?tab=demand) | *Navegação / Telas* | `170ms` | **✅ Aprovado** |
-| **TC-26** | Acesso & Validação da Tela: Relatório: Ticket Médio & LTV de Clientes (/reports?tab=customers) | *Navegação / Telas* | `177ms` | **✅ Aprovado** |
-| **TC-27** | Acesso & Validação da Tela: Relatório: Investimento de Capital de Giro & GMROI (/reports?tab=investment) | *Navegação / Telas* | `175ms` | **✅ Aprovado** |
-| **TC-28** | Acesso & Validação da Tela: Equipe da Loja & Gestão de Acessos (/team) | *Navegação / Telas* | `166ms` | **✅ Aprovado** |
-| **TC-29** | Acesso & Validação da Tela: Configurações Comerciais & Dados da Loja (/settings) | *Navegação / Telas* | `210ms` | **✅ Aprovado** |
-| **TC-30** | Acesso & Validação da Tela: Central de Notificações & Alertas (/notifications) | *Navegação / Telas* | `176ms` | **✅ Aprovado** |
-| **TC-31** | Acesso & Validação da Tela: Trilha de Auditoria (Logs) (/audit) | *Navegação / Telas* | `188ms` | **✅ Aprovado** |
-| **TC-32** | Acesso & Validação da Tela: Painel de Administração Global Multi-Lojas (/global-admin) | *Navegação / Telas* | `187ms` | **✅ Aprovado** |
-| **TC-33** | Acesso & Validação da Tela: Catálogo Público Web da Loja QA (/store/loja-qa-automacao-e2e) | *Navegação / Telas* | `212ms` | **✅ Aprovado** |
+| **TC-01** | Inicializar Loja de Teste QA Dedicada | *Tenant / Setup* | `1064ms` | **✅ Aprovado** |
+| **TC-02** | Cadastrar Fornecedor Homologado para a Loja QA | *Fornecedores* | `432ms` | **✅ Aprovado** |
+| **TC-03** | Cadastrar Categorias Estruturais no Catálogo | *Categorias* | `1441ms` | **✅ Aprovado** |
+| **TC-04** | Cadastrar Produtos no Catálogo Mestre com Preços e SKUs | *Produtos* | `2917ms` | **✅ Aprovado** |
+| **TC-05** | Dar Entrada de Estoque Inicial com Lotes e Validades (100 un/item) | *Estoque / Lotes* | `5811ms` | **✅ Aprovado** |
+| **TC-06** | Executar Venda no PDV e Validar Dedução Atômica de Estoque | *PDV / Vendas* | `6527ms` | **✅ Aprovado** |
+| **TC-07** | Cancelar Pedido e Validar Estorno Automático de Estoque | *Pedidos / Cancelamento* | `2138ms` | **✅ Aprovado** |
+| **TC-08** | Emitir Ordem de Compra e Confirmar Recebimento Físico | *Compras / Reposição* | `1320ms` | **✅ Aprovado** |
+| **TC-09** | Acesso & Validação da Tela: Painel Geral & Métricas (Dashboard) (/dashboard) | *Navegação / Telas* | `164ms` | **✅ Aprovado** |
+| **TC-10** | Acesso & Validação da Tela: Catálogo de Produtos Mestre (/products) | *Navegação / Telas* | `453ms` | **✅ Aprovado** |
+| **TC-11** | Acesso & Validação da Tela: Categorias de Produtos (/categories) | *Navegação / Telas* | `421ms` | **✅ Aprovado** |
+| **TC-12** | Acesso & Validação da Tela: Estoque, Saldos & Movimentações (/inventory) | *Navegação / Telas* | `344ms` | **✅ Aprovado** |
+| **TC-13** | Acesso & Validação da Tela: Frente de Caixa (PDV) (/sales) | *Navegação / Telas* | `171ms` | **✅ Aprovado** |
+| **TC-14** | Acesso & Validação da Tela: Histórico de Pedidos & Vendas (/orders) | *Navegação / Telas* | `184ms` | **✅ Aprovado** |
+| **TC-15** | Acesso & Validação da Tela: Gestão de Compras & Fornecedores (/purchasing) | *Navegação / Telas* | `425ms` | **✅ Aprovado** |
+| **TC-16** | Acesso & Validação da Tela: Gestão de Clientes (/customers) | *Navegação / Telas* | `169ms` | **✅ Aprovado** |
+| **TC-17** | Acesso & Validação da Tela: Gestão de Fornecedores (/suppliers) | *Navegação / Telas* | `168ms` | **✅ Aprovado** |
+| **TC-18** | Acesso & Validação da Tela: Lotes, Validades & Justificativas (/expiration) | *Navegação / Telas* | `173ms` | **✅ Aprovado** |
+| **TC-19** | Acesso & Validação da Tela: Relatório: Valorização & Rentabilidade do Estoque (/reports?tab=valuation) | *Navegação / Telas* | `423ms` | **✅ Aprovado** |
+| **TC-20** | Acesso & Validação da Tela: Relatório: Curva ABC & Mix de Produtos (/reports?tab=abc) | *Navegação / Telas* | `179ms` | **✅ Aprovado** |
+| **TC-21** | Acesso & Validação da Tela: Relatório: Compras por Fornecedor (/reports?tab=purchases) | *Navegação / Telas* | `174ms` | **✅ Aprovado** |
+| **TC-22** | Acesso & Validação da Tela: Relatório: Vendas por Canal (PDV, Whats, Catálogo) (/reports?tab=channels) | *Navegação / Telas* | `159ms` | **✅ Aprovado** |
+| **TC-23** | Acesso & Validação da Tela: Relatório: Demonstrativo Financeiro (DRE Varejo) (/reports?tab=financial) | *Navegação / Telas* | `172ms` | **✅ Aprovado** |
+| **TC-24** | Acesso & Validação da Tela: Relatório: Margens de Lucro & Markup (/reports?tab=margins) | *Navegação / Telas* | `337ms` | **✅ Aprovado** |
+| **TC-25** | Acesso & Validação da Tela: Relatório: Giro de Estoque & Demanda / Reposição (/reports?tab=demand) | *Navegação / Telas* | `167ms` | **✅ Aprovado** |
+| **TC-26** | Acesso & Validação da Tela: Relatório: Ticket Médio & LTV de Clientes (/reports?tab=customers) | *Navegação / Telas* | `173ms` | **✅ Aprovado** |
+| **TC-27** | Acesso & Validação da Tela: Relatório: Investimento de Capital de Giro & GMROI (/reports?tab=investment) | *Navegação / Telas* | `208ms` | **✅ Aprovado** |
+| **TC-28** | Acesso & Validação da Tela: Equipe da Loja & Gestão de Acessos (/team) | *Navegação / Telas* | `211ms` | **✅ Aprovado** |
+| **TC-29** | Acesso & Validação da Tela: Configurações Comerciais & Dados da Loja (/settings) | *Navegação / Telas* | `176ms` | **✅ Aprovado** |
+| **TC-30** | Acesso & Validação da Tela: Central de Notificações & Alertas (/notifications) | *Navegação / Telas* | `158ms` | **✅ Aprovado** |
+| **TC-31** | Acesso & Validação da Tela: Trilha de Auditoria (Logs) (/audit) | *Navegação / Telas* | `174ms` | **✅ Aprovado** |
+| **TC-32** | Acesso & Validação da Tela: Painel de Administração Global Multi-Lojas (/global-admin) | *Navegação / Telas* | `161ms` | **✅ Aprovado** |
+| **TC-33** | Acesso & Validação da Tela: Catálogo Público Web da Loja QA (/store/loja-qa-automacao-e2e) | *Navegação / Telas* | `192ms` | **✅ Aprovado** |
 
 ---
 
@@ -63,7 +63,7 @@
 ### TC-01 — Inicializar Loja de Teste QA Dedicada
 - **Status:** ✅ Sucesso
 - **Categoria:** Tenant / Setup
-- **Tempo de Execução:** 1045 ms
+- **Tempo de Execução:** 1064 ms
 - **Asserções Verificadas:**
   - [x] Loja de teste criada ou localizada com sucesso
   - [x] Slug corresponde ao padrão do tenant
@@ -80,7 +80,7 @@
 ### TC-02 — Cadastrar Fornecedor Homologado para a Loja QA
 - **Status:** ✅ Sucesso
 - **Categoria:** Fornecedores
-- **Tempo de Execução:** 235 ms
+- **Tempo de Execução:** 432 ms
 - **Asserções Verificadas:**
   - [x] Fornecedor de teste registrado com ID válido
   - [x] Razão social cadastrada corretamente
@@ -95,7 +95,7 @@
 ### TC-03 — Cadastrar Categorias Estruturais no Catálogo
 - **Status:** ✅ Sucesso
 - **Categoria:** Categorias
-- **Tempo de Execução:** 1341 ms
+- **Tempo de Execução:** 1441 ms
 - **Asserções Verificadas:**
   - [x] Todas as 4 categorias foram criadas no tenant
 - **Dados Produzidos / Verificados:**
@@ -111,7 +111,7 @@
 ### TC-04 — Cadastrar Produtos no Catálogo Mestre com Preços e SKUs
 - **Status:** ✅ Sucesso
 - **Categoria:** Produtos
-- **Tempo de Execução:** 8090 ms
+- **Tempo de Execução:** 2917 ms
 - **Asserções Verificadas:**
   - [x] 4 produtos cadastrados e mapeados no banco
   - [x] Produto QA-AZE-001 cadastrado com preço correto
@@ -149,7 +149,7 @@
 ### TC-05 — Dar Entrada de Estoque Inicial com Lotes e Validades (100 un/item)
 - **Status:** ✅ Sucesso
 - **Categoria:** Estoque / Lotes
-- **Tempo de Execução:** 5053 ms
+- **Tempo de Execução:** 5811 ms
 - **Asserções Verificadas:**
   - [x] Total de saldo físico registrado é exatamente 400 unidades
 - **Dados Produzidos / Verificados:**
@@ -165,7 +165,7 @@
 ### TC-06 — Executar Venda no PDV e Validar Dedução Atômica de Estoque
 - **Status:** ✅ Sucesso
 - **Categoria:** PDV / Vendas
-- **Tempo de Execução:** 2160 ms
+- **Tempo de Execução:** 6527 ms
 - **Asserções Verificadas:**
   - [x] Pedido criado com ID e número gerado
   - [x] Produto A deduzido de 100 para 98 unidades
@@ -174,7 +174,7 @@
 - **Dados Produzidos / Verificados:**
 ```json
 {
-  "orderNumber": "VND-QA-616571",
+  "orderNumber": "VND-QA-901811",
   "total": 196.3,
   "itemsCount": 2,
   "remainingStockA": 98,
@@ -185,14 +185,14 @@
 ### TC-07 — Cancelar Pedido e Validar Estorno Automático de Estoque
 - **Status:** ✅ Sucesso
 - **Categoria:** Pedidos / Cancelamento
-- **Tempo de Execução:** 1817 ms
+- **Tempo de Execução:** 2138 ms
 - **Asserções Verificadas:**
   - [x] Pedido atualizado para o status CANCELLED
   - [x] Saldo do produto voltou ao valor original de 100 unidades
 - **Dados Produzidos / Verificados:**
 ```json
 {
-  "cancelledOrder": "VND-CANC-618731",
+  "cancelledOrder": "VND-CANC-908338",
   "restoredStock": 100
 }
 ```
@@ -200,14 +200,14 @@
 ### TC-08 — Emitir Ordem de Compra e Confirmar Recebimento Físico
 - **Status:** ✅ Sucesso
 - **Categoria:** Compras / Reposição
-- **Tempo de Execução:** 1087 ms
+- **Tempo de Execução:** 1320 ms
 - **Asserções Verificadas:**
   - [x] Ordem de compra emitida e recebida com sucesso
   - [x] Estoque do produto D aumentado de 100 para 150
 - **Dados Produzidos / Verificados:**
 ```json
 {
-  "poNumber": "PO-QA-620548",
+  "poNumber": "PO-QA-910476",
   "supplierId": "2ac01f88-d1fd-4dae-8ce3-0dd1b779a676",
   "itemsReceived": 50,
   "updatedTotalStock": 150
@@ -217,22 +217,22 @@
 ### TC-09 — Acesso & Validação da Tela: Painel Geral & Métricas (Dashboard) (/dashboard)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 200 ms
+- **Tempo de Execução:** 164 ms
 - **Asserções Verificadas:**
   - [x] Tela Painel Geral & Métricas (Dashboard) acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/dashboard",
-  "totalOrders": 22,
-  "totalRevenue": 3917.1000000000017
+  "totalOrders": 24,
+  "totalRevenue": 4273.200000000002
 }
 ```
 
 ### TC-10 — Acesso & Validação da Tela: Catálogo de Produtos Mestre (/products)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 211 ms
+- **Tempo de Execução:** 453 ms
 - **Asserções Verificadas:**
   - [x] Tela Catálogo de Produtos Mestre acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -246,7 +246,7 @@
 ### TC-11 — Acesso & Validação da Tela: Categorias de Produtos (/categories)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 161 ms
+- **Tempo de Execução:** 421 ms
 - **Asserções Verificadas:**
   - [x] Tela Categorias de Produtos acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -260,7 +260,7 @@
 ### TC-12 — Acesso & Validação da Tela: Estoque, Saldos & Movimentações (/inventory)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 366 ms
+- **Tempo de Execução:** 344 ms
 - **Asserções Verificadas:**
   - [x] Tela Estoque, Saldos & Movimentações acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -268,14 +268,14 @@
 {
   "route": "/inventory",
   "totalBalances": 4,
-  "totalMovements": 33
+  "totalMovements": 36
 }
 ```
 
 ### TC-13 — Acesso & Validação da Tela: Frente de Caixa (PDV) (/sales)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 172 ms
+- **Tempo de Execução:** 171 ms
 - **Asserções Verificadas:**
   - [x] Tela Frente de Caixa (PDV) acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -289,35 +289,35 @@
 ### TC-14 — Acesso & Validação da Tela: Histórico de Pedidos & Vendas (/orders)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 208 ms
+- **Tempo de Execução:** 184 ms
 - **Asserções Verificadas:**
   - [x] Tela Histórico de Pedidos & Vendas acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/orders",
-  "totalOrdersCount": 22
+  "totalOrdersCount": 24
 }
 ```
 
 ### TC-15 — Acesso & Validação da Tela: Gestão de Compras & Fornecedores (/purchasing)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 186 ms
+- **Tempo de Execução:** 425 ms
 - **Asserções Verificadas:**
   - [x] Tela Gestão de Compras & Fornecedores acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/purchasing",
-  "totalPurchaseOrders": 12
+  "totalPurchaseOrders": 13
 }
 ```
 
 ### TC-16 — Acesso & Validação da Tela: Gestão de Clientes (/customers)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 363 ms
+- **Tempo de Execução:** 169 ms
 - **Asserções Verificadas:**
   - [x] Tela Gestão de Clientes acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -331,7 +331,7 @@
 ### TC-17 — Acesso & Validação da Tela: Gestão de Fornecedores (/suppliers)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 214 ms
+- **Tempo de Execução:** 168 ms
 - **Asserções Verificadas:**
   - [x] Tela Gestão de Fornecedores acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -345,7 +345,7 @@
 ### TC-18 — Acesso & Validação da Tela: Lotes, Validades & Justificativas (/expiration)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 176 ms
+- **Tempo de Execução:** 173 ms
 - **Asserções Verificadas:**
   - [x] Tela Lotes, Validades & Justificativas acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -359,7 +359,7 @@
 ### TC-19 — Acesso & Validação da Tela: Relatório: Valorização & Rentabilidade do Estoque (/reports?tab=valuation)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 173 ms
+- **Tempo de Execução:** 423 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Valorização & Rentabilidade do Estoque acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -375,7 +375,7 @@
 ### TC-20 — Acesso & Validação da Tela: Relatório: Curva ABC & Mix de Produtos (/reports?tab=abc)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 169 ms
+- **Tempo de Execução:** 179 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Curva ABC & Mix de Produtos acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -389,49 +389,49 @@
 ### TC-21 — Acesso & Validação da Tela: Relatório: Compras por Fornecedor (/reports?tab=purchases)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 162 ms
+- **Tempo de Execução:** 174 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Compras por Fornecedor acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/reports?tab=purchases",
-  "totalPurchaseVolume": 5700
+  "totalPurchaseVolume": 6175
 }
 ```
 
 ### TC-22 — Acesso & Validação da Tela: Relatório: Vendas por Canal (PDV, Whats, Catálogo) (/reports?tab=channels)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 166 ms
+- **Tempo de Execução:** 159 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Vendas por Canal (PDV, Whats, Catálogo) acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/reports?tab=channels",
-  "channelBreakdown": 22
+  "channelBreakdown": 24
 }
 ```
 
 ### TC-23 — Acesso & Validação da Tela: Relatório: Demonstrativo Financeiro (DRE Varejo) (/reports?tab=financial)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 168 ms
+- **Tempo de Execução:** 172 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Demonstrativo Financeiro (DRE Varejo) acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/reports?tab=financial",
-  "grossSales": 3917.1000000000017
+  "grossSales": 4273.200000000002
 }
 ```
 
 ### TC-24 — Acesso & Validação da Tela: Relatório: Margens de Lucro & Markup (/reports?tab=margins)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 173 ms
+- **Tempo de Execução:** 337 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Margens de Lucro & Markup acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -445,7 +445,7 @@
 ### TC-25 — Acesso & Validação da Tela: Relatório: Giro de Estoque & Demanda / Reposição (/reports?tab=demand)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 170 ms
+- **Tempo de Execução:** 167 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Giro de Estoque & Demanda / Reposição acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -459,21 +459,21 @@
 ### TC-26 — Acesso & Validação da Tela: Relatório: Ticket Médio & LTV de Clientes (/reports?tab=customers)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 177 ms
+- **Tempo de Execução:** 173 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Ticket Médio & LTV de Clientes acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
 ```json
 {
   "route": "/reports?tab=customers",
-  "ordersAnalyzed": 22
+  "ordersAnalyzed": 24
 }
 ```
 
 ### TC-27 — Acesso & Validação da Tela: Relatório: Investimento de Capital de Giro & GMROI (/reports?tab=investment)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 175 ms
+- **Tempo de Execução:** 208 ms
 - **Asserções Verificadas:**
   - [x] Tela Relatório: Investimento de Capital de Giro & GMROI acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -487,7 +487,7 @@
 ### TC-28 — Acesso & Validação da Tela: Equipe da Loja & Gestão de Acessos (/team)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 166 ms
+- **Tempo de Execução:** 211 ms
 - **Asserções Verificadas:**
   - [x] Tela Equipe da Loja & Gestão de Acessos acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -501,7 +501,7 @@
 ### TC-29 — Acesso & Validação da Tela: Configurações Comerciais & Dados da Loja (/settings)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 210 ms
+- **Tempo de Execução:** 176 ms
 - **Asserções Verificadas:**
   - [x] Tela Configurações Comerciais & Dados da Loja acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -516,7 +516,7 @@
 ### TC-30 — Acesso & Validação da Tela: Central de Notificações & Alertas (/notifications)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 176 ms
+- **Tempo de Execução:** 158 ms
 - **Asserções Verificadas:**
   - [x] Tela Central de Notificações & Alertas acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -530,7 +530,7 @@
 ### TC-31 — Acesso & Validação da Tela: Trilha de Auditoria (Logs) (/audit)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 188 ms
+- **Tempo de Execução:** 174 ms
 - **Asserções Verificadas:**
   - [x] Tela Trilha de Auditoria (Logs) acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -544,7 +544,7 @@
 ### TC-32 — Acesso & Validação da Tela: Painel de Administração Global Multi-Lojas (/global-admin)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 187 ms
+- **Tempo de Execução:** 161 ms
 - **Asserções Verificadas:**
   - [x] Tela Painel de Administração Global Multi-Lojas acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**
@@ -558,7 +558,7 @@
 ### TC-33 — Acesso & Validação da Tela: Catálogo Público Web da Loja QA (/store/loja-qa-automacao-e2e)
 - **Status:** ✅ Sucesso
 - **Categoria:** Navegação / Telas
-- **Tempo de Execução:** 212 ms
+- **Tempo de Execução:** 192 ms
 - **Asserções Verificadas:**
   - [x] Tela Catálogo Público Web da Loja QA acessada e dados validados com sucesso
 - **Dados Produzidos / Verificados:**

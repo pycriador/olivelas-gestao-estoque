@@ -33,7 +33,8 @@ classification: Confirmed
     - Salva no banco de dados (`customers`), invalida as consultas de clientes do cache e seleciona automaticamente o novo cliente na venda em andamento (`selectedCustomerId`).
   - **Combobox de Clientes Aprimorado (`CustomerCombobox`)**:
     - Resolução automática de dados do cliente por ID (`customer-by-id`) quando selecionado programaticamente ou cadastrado via modal, garantindo exibição imediata do nome e documento no campo.
-    - Container de rolagem aprimorado no dropdown (`max-h-48 overflow-y-auto custom-scrollbar overscroll-contain`) com cabeçalho fixo (`Últimos 5 clientes - role para ver`), facilitando a navegação suave sem estourar a tela.
+    - Amostra ajustada para os **3 últimos clientes** cadastrados, garantindo que os elementos caibam com perfeição na visualização do operador sem cortes visuais.
+    - Posicionamento dinâmico inteligente (abre para cima quando posicionado próximo ao rodapé do painel de checkout), garantindo visibilidade total dos itens e do botão "Consumidor Final".
 
 ## 2026-10-08
 

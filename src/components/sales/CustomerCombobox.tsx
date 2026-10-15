@@ -13,7 +13,7 @@ interface CustomerComboboxProps {
   className?: string
 }
 
-const RECENT_SAMPLE_SIZE = 5
+const RECENT_SAMPLE_SIZE = 3
 const SEARCH_DEBOUNCE_MS = 250
 
 function customerLabel(customer: Customer): string {
@@ -31,8 +31,8 @@ function customerSubtitle(customer: Customer): string {
  * Campo de cliente do PDV.
  *
  * Digitavel de verdade (o operator digita nome, CPF/CNPJ, telefone ou
- * e-mail) e, ao abrir sem digitacao, sugere os 5 clientes mais recentes
- * cadastrados na plataforma para não obrigar digitar do zero.
+ * e-mail) e, ao abrir sem digitacao, sugere os 3 clientes mais recentes
+ * cadastrados na plataforma para caber perfeitamente na visualização.
  *
  * Sem primitive de combobox no projeto, entao segue o mesmo padrao
  * hand-rolled do store switcher em AppLayout.tsx.
@@ -45,11 +45,21 @@ export function CustomerCombobox({
   className = '',
 }: CustomerComboboxProps) {
   const [isOpen, setIsOpen] = React.useState(false)
+  const [openUpwards, setOpenUpwards] = React.useState(false)
   const [term, setTerm] = React.useState('')
   const [debouncedTerm, setDebouncedTerm] = React.useState('')
   const [selected, setSelected] = React.useState<Customer | null>(null)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const inputRef = React.useRef<HTMLInputElement>(null)
+
+  React.useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      // Se houver menos de 220px abaixo do input, abre para cima para garantir visibilidade total
+      setOpenUpwards(spaceBelow < 220)
+    }
+  }, [isOpen])
 
   React.useEffect(() => {
     const timer = setTimeout(() => setDebouncedTerm(term.trim()), SEARCH_DEBOUNCE_MS)
@@ -194,16 +204,19 @@ export function CustomerCombobox({
       </div>
 
       {isOpen && !disabled && (
-        <div className="absolute left-0 right-0 top-full mt-1 z-50 rounded-lg border border-border bg-popover shadow-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className={`absolute left-0 right-0 z-50 rounded-lg border border-border bg-popover shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 ${
+            openUpwards ? 'bottom-full mb-1' : 'top-full mt-1'
+          }`}
+        >
           <div className="max-h-48 overflow-y-auto custom-scrollbar overscroll-contain">
             {!isSearching && suggestions.length > 0 && (
               <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 bg-muted/40 sticky top-0 z-10 backdrop-blur-xs flex items-center justify-between">
                 <span>Últimos {suggestions.length} clientes</span>
-                <span className="text-[9px] font-normal lowercase">role para ver</span>
               </div>
             )}
             {isSearching && suggestions.length > 0 && (
-              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 bg-muted/40">
+              <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-border/60 bg-muted/40 sticky top-0 z-10 backdrop-blur-xs">
                 {suggestions.length} resultado{suggestions.length === 1 ? '' : 's'}
               </div>
             )}
@@ -227,7 +240,7 @@ export function CustomerCombobox({
                 key={c.id}
                 type="button"
                 onClick={() => handleSelect(c)}
-                className="w-full text-left px-3 py-2 hover:bg-muted/60 transition-colors flex items-start gap-2"
+                className="w-full text-left px-3 py-2 hover:bg-muted/60 transition-colors flex items-start gap-2 cursor-pointer"
               >
                 <Check
                   className={`h-3 w-3 mt-0.5 shrink-0 ${
@@ -254,7 +267,7 @@ export function CustomerCombobox({
               handleClear()
               setIsOpen(false)
             }}
-            className="w-full text-left px-3 py-2 border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors text-[11px] text-muted-foreground"
+            className="w-full text-left px-3 py-2 border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors text-[11px] text-muted-foreground cursor-pointer"
           >
             Consumidor Final (sem cadastro)
           </button>
