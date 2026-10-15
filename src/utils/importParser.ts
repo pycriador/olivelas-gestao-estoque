@@ -541,25 +541,87 @@ export function downloadTemplateJSON(): void {
 
 /** Alias de colunas aceitas no import de estoque → chave canônica. */
 export const STOCK_COLUMN_ALIASES: Record<string, string> = {
+  // SKU / Identificação
   sku: 'sku',
   codigo: 'sku',
   'codigo do item': 'sku',
   'codigo item': 'sku',
   product_id: 'product_id',
+  produto: 'product_name',
+  'nome do produto': 'product_name',
+  nome: 'product_name',
+  item: 'product_name',
+  unidade: 'unit',
+  un: 'unit',
+  unit: 'unit',
+
+  // Tipo de movimento
   movement_type: 'movement_type',
   tipo: 'movement_type',
   'tipo de movimento': 'movement_type',
+  'tipo movimento': 'movement_type',
+  operacao: 'movement_type',
+
+  // Quantidade / Saldos
   quantity: 'quantity',
   quantidade: 'quantity',
+  qtd: 'quantity',
+  'saldo fisico': 'quantity',
+  saldo_fisico: 'quantity',
+  saldo: 'quantity',
+  'saldo atual': 'quantity',
+  saldo_atual: 'quantity',
+  disponivel: 'quantity',
+  'saldo disponivel': 'quantity',
+  estoque: 'quantity',
+  'estoque atual': 'quantity',
+  fisico: 'quantity',
+
+  // Custo / Preço de Compra
+  unit_cost: 'unit_cost',
+  'custo unitario': 'unit_cost',
+  'custo unit': 'unit_cost',
+  custo: 'unit_cost',
+  'preco de custo': 'unit_cost',
+  cost_price: 'unit_cost',
+  'preco de compra / custo unit. (r$)': 'unit_cost',
+  'preco de compra / custo unit (r$)': 'unit_cost',
+  'preco de compra custo unit r': 'unit_cost',
+  'preco de compra': 'unit_cost',
+  'compra unit': 'unit_cost',
+  'custo unit. (r$)': 'unit_cost',
+  'custo unitario (r$)': 'unit_cost',
+
+  // Preço de Venda
+  selling_price: 'selling_price',
+  'preco de venda unit. (r$)': 'selling_price',
+  'preco de venda unit (r$)': 'selling_price',
+  'preco de venda unit r': 'selling_price',
+  'preco de venda': 'selling_price',
+  'preco venda': 'selling_price',
+  venda: 'selling_price',
+  'valor de venda': 'selling_price',
+
+  // Estoque Mínimo
+  min_stock: 'min_stock',
+  'estoque minimo': 'min_stock',
+  'estoque_minimo': 'min_stock',
+  minimo: 'min_stock',
+
+  // Lote / Validade
   lot_number: 'lot_number',
   lote: 'lot_number',
+  'numero do lote': 'lot_number',
+  'numero lote': 'lot_number',
   expiration_date: 'expiration_date',
   validade: 'expiration_date',
   'data de validade': 'expiration_date',
+  'data validade': 'expiration_date',
   manufacturing_date: 'manufacturing_date',
   fabricacao: 'manufacturing_date',
-  unit_cost: 'unit_cost',
-  'custo unitario': 'unit_cost',
+  'data de fabricacao': 'manufacturing_date',
+
+  // Motivo / Centro de Custo / Aprovador
   reason_code: 'reason_code',
   motivo: 'reason_code',
   cost_center_code: 'cost_center_code',
@@ -579,14 +641,35 @@ export function normalizeStockRow(
 ): Record<string, string> {
   const out: Record<string, string> = {}
   for (const [key, value] of Object.entries(row)) {
+    if (value === undefined || value === null || String(value).trim() === '') continue
+
+    const valStr = String(value).trim()
+
+    // 1. Chave limpa sem acentos e em minúsculas
     const normalizedKey = key
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .trim()
       .toLowerCase()
-    const canonical = STOCK_COLUMN_ALIASES[normalizedKey]
-    if (canonical && value !== undefined && value !== null && String(value).trim() !== '') {
-      out[canonical] = String(value).trim()
+
+    // 2. Chave limpa apenas com caracteres alfanuméricos
+    const cleanedKey = normalizedKey.replace(/[^a-z0-9]+/g, ' ').trim()
+
+    const canonical =
+      STOCK_COLUMN_ALIASES[normalizedKey] ||
+      STOCK_COLUMN_ALIASES[cleanedKey] ||
+      STOCK_COLUMN_ALIASES[key.trim().toLowerCase()]
+
+    if (canonical) {
+      // Prioridade para Saldo Físico / quantity sobre Disponível
+      const isHigherPriority =
+        !out[canonical] ||
+        normalizedKey.includes('saldo fisico') ||
+        normalizedKey === 'quantity' ||
+        normalizedKey === 'quantidade'
+      if (isHigherPriority) {
+        out[canonical] = valStr
+      }
     }
   }
   return out

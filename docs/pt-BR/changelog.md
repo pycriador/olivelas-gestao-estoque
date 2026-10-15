@@ -14,6 +14,20 @@ classification: Confirmed
 
 ## 2026-10-15
 
+- **Correção e Suporte a Reimportação de Planilha Exportada de Estoque (`/inventory`)** (`StockImportModal.tsx`, `inventoryService.ts`, `importParser.ts`):
+  - **Reconhecimento de Colunas Exportadas de Saldos**:
+    - Adicionados aliases canônicos em `importParser.ts` para cabeçalhos gerados na exportação: `Saldo Físico`, `Disponível`, `Preço de Compra / Custo Unit. (R$)`, `Preço de Venda Unit. (R$)`, `Estoque Mínimo`, `Produto`, `Unidade`.
+    - Normalização resiliente com `parseImportNumber`, suportando decimais com vírgula ou ponto, símbolos monetários (`R$`) e formatos numéricos diversos.
+  - **Tratamento Inteligente de Importação de Saldos vs. Movimentações Avulsas**:
+    - Quando o arquivo não possui coluna `movement_type` (como planilhas exportadas de saldos), o sistema classifica os registros como `isBalanceImport = true` e tipo base `ADJUSTMENT`.
+    - Não exige campos obrigatórios de baixas avulsas (`reason_code`, `cost_center_code`, `approver_email`) para importações de saldos físicos.
+    - Validação de quantidade ajustada para aceitar saldo zero (`quantity >= 0`), eliminando o erro falso de `quantidade inválida`.
+    - Fallback de localização de produto por SKU, ID e Nome do Produto (`product_name`).
+  - **Atualização Atômica de Preços, Estoque Mínimo e Verificação de Delta de Saldo**:
+    - Em `inventoryService.importMovementsBulk`, sincroniza automaticamente `cost_price`, `selling_price` e `min_stock` na tabela `products` para refletir de imediato no PDV e catálogo.
+    - Compara a quantidade informada com o saldo atual (`Math.abs(targetQty - currentQty) > 0.0001`): se o usuário alterou apenas o preço ou custo sem mexer na quantidade física, não chama o RPC de movimento com delta zero (evitando o erro `A quantidade informada nao altera o saldo atual`), atualizando os preços com sucesso total.
+    - Suporta ajuste de saldo para zero com auditoria e sem disparar restrições de quantidade estrita.
+
 - **Edição de Pedidos via Reabertura no PDV (`/orders` → `/sales`)** (`OrdersPage.tsx`, `SalesPage.tsx`, `orderService.ts`, `productService.ts`):
   - **Ação "Editar no PDV" na Área de Detalhes do Pedido**:
     - Adicionado botão de ação em destaque **"Editar Pedido no PDV"** no modal de detalhes do pedido (`/orders`).

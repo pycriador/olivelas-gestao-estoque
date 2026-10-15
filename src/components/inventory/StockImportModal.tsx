@@ -20,6 +20,7 @@ import {
   downloadStockTemplateJSON,
   normalizeStockRow,
   parseCSVContent,
+  parseImportNumber,
   parseJSONContent,
 } from '@/utils/importParser'
 import type { StockMovementInput } from '@/types/inventory.types'
@@ -60,6 +61,9 @@ interface ResolvedRow extends StockMovementInput {
   lotLabel: string
   costCenterCode: string
   approverLabel: string
+  sellingPrice?: number | null
+  minStock?: number | null
+  isBalanceImport?: boolean
 }
 
 export interface StockImportModalProps {
@@ -105,6 +109,7 @@ export function StockImportModal({ isOpen, onClose }: StockImportModalProps) {
     const products = productsData?.data || []
     const bySku = new Map(products.map((p) => [p.sku.toLowerCase(), p]))
     const byId = new Map(products.map((p) => [p.id, p]))
+    const byName = new Map(products.map((p) => [p.name.trim().toLowerCase(), p]))
     const centersByCode = new Map(costCenters.map((c) => [c.code.toLowerCase(), c]))
     const approversByEmail = new Map(
       members
@@ -115,26 +120,45 @@ export function StockImportModal({ isOpen, onClose }: StockImportModalProps) {
     return parsedItems.map((raw, index) => {
       const row = normalizeStockRow(raw)
       const sku = row.sku || ''
-      const product = row.product_id ? byId.get(row.product_id) : bySku.get(sku.toLowerCase())
-      const typeKey = (row.movement_type || 'ENTRY').toUpperCase()
-      const movementType = MOVEMENT_TYPES[typeKey] || 'ENTRY'
+      const productName = row.product_name || ''
+      const product = row.product_id
+        ? byId.get(row.product_id)
+        : sku
+        ? bySku.get(sku.toLowerCase())
+        : productName
+        ? byName.get(productName.trim().toLowerCase())
+        : undefined
+
+      const hasMovementType = Boolean(row.movement_type)
+      const typeKey = (row.movement_type || (hasMovementType ? 'ENTRY' : 'ADJUSTMENT')).toUpperCase()
+      const movementType = MOVEMENT_TYPES[typeKey] || (hasMovementType ? 'ENTRY' : 'ADJUSTMENT')
+      const isBalanceImport = !hasMovementType
+
       const costCenter = row.cost_center_code
         ? centersByCode.get(row.cost_center_code.toLowerCase())
         : undefined
       const approverEmail = (row.approver_email || '').toLowerCase()
       const approvedBy = approversByEmail.get(approverEmail) || null
 
+      const parsedQty = parseImportNumber(row.quantity, 0)
+      const parsedUnitCost = row.unit_cost !== undefined ? parseImportNumber(row.unit_cost, 0) : null
+      const parsedSellingPrice = row.selling_price !== undefined ? parseImportNumber(row.selling_price, 0) : null
+      const parsedMinStock = row.min_stock !== undefined ? parseImportNumber(row.min_stock, 0) : null
+
       return {
         rowNumber: index + 1,
         productId: product?.id || '',
-        sku,
-        productLabel: product ? `${product.sku} — ${product.name}` : '',
+        sku: product?.sku || sku,
+        productLabel: product ? `${product.sku} — ${product.name}` : (sku || productName || ''),
         movementType,
-        quantity: parseFloat(row.quantity || '0') || 0,
+        quantity: parsedQty,
         batchId: null,
         lotNumber: row.lot_number || null,
         expirationDate: row.expiration_date || null,
-        unitCost: row.unit_cost ? parseFloat(row.unit_cost) : null,
+        unitCost: parsedUnitCost,
+        sellingPrice: parsedSellingPrice,
+        minStock: parsedMinStock,
+        isBalanceImport,
         reasonCode: row.reason_code || null,
         reasonDetail: null,
         costCenterId: costCenter?.id || null,
@@ -149,15 +173,27 @@ export function StockImportModal({ isOpen, onClose }: StockImportModalProps) {
     })
   }, [parsedItems, productsData, costCenters, members])
 
-  const isExit = (row: ResolvedRow) => EXIT_TYPES.includes(row.movementType)
+  const isExit = (row: ResolvedRow) => !row.isBalanceImport && EXIT_TYPES.includes(row.movementType)
 
   const problems = React.useMemo(
     () =>
       resolved
         .map((row, index) => {
-          if (!row.productId) return { index, text: `L${row.rowNumber}: SKU "${row.sku}" não encontrado` }
-          if (!row.quantity || row.quantity <= 0)
-            return { index, text: `L${row.rowNumber}: quantidade inválida` }
+          if (!row.productId) {
+            return {
+              index,
+              text: `L${row.rowNumber}: SKU ou Produto "${row.sku || row.productLabel || '—'}" não encontrado`,
+            }
+          }
+          if (row.isBalanceImport) {
+            if (isNaN(row.quantity) || row.quantity < 0) {
+              return { index, text: `L${row.rowNumber}: quantidade inválida` }
+            }
+          } else {
+            if (isNaN(row.quantity) || row.quantity <= 0) {
+              return { index, text: `L${row.rowNumber}: quantidade inválida` }
+            }
+          }
           if (isExit(row) && !row.reasonCode)
             return { index, text: `L${row.rowNumber}: saída sem motivo (reason_code)` }
           if (isExit(row) && !row.costCenterId)
@@ -439,7 +475,7 @@ export function StockImportModal({ isOpen, onClose }: StockImportModalProps) {
                       {row.productLabel || <span className="text-danger">SKU não encontrado</span>}
                     </div>
                     <div className="col-span-2 text-muted-foreground truncate">
-                      {row.movementType}
+                      {row.isBalanceImport ? 'SALDO / AJUSTE' : row.movementType}
                     </div>
                     <div className="col-span-1 text-right font-bold text-foreground">
                       {row.quantity}
@@ -448,7 +484,15 @@ export function StockImportModal({ isOpen, onClose }: StockImportModalProps) {
                       {row.lotLabel}
                     </div>
                     <div className="col-span-2 text-muted-foreground truncate">
-                      {isExit(row) ? (
+                      {row.isBalanceImport ? (
+                        row.unitCost != null || row.sellingPrice != null ? (
+                          <span title={`Custo: R$ ${(row.unitCost ?? 0).toFixed(2)} | Venda: R$ ${(row.sellingPrice ?? 0).toFixed(2)}`}>
+                            Custo: R$ {(row.unitCost ?? 0).toFixed(2)} | Venda: R$ {(row.sellingPrice ?? 0).toFixed(2)}
+                          </span>
+                        ) : (
+                          <span className="italic">—</span>
+                        )
+                      ) : isExit(row) ? (
                         <>
                           {row.reasonCode || <span className="text-danger">sem motivo</span>}
                           {row.costCenterCode && (
@@ -460,7 +504,13 @@ export function StockImportModal({ isOpen, onClose }: StockImportModalProps) {
                       )}
                     </div>
                     <div className="col-span-2 text-muted-foreground truncate">
-                      {isExit(row) ? (
+                      {row.isBalanceImport ? (
+                        row.minStock != null ? (
+                          <span>Mín: {row.minStock}</span>
+                        ) : (
+                          <span className="italic">—</span>
+                        )
+                      ) : isExit(row) ? (
                         row.approverLabel || <span className="text-danger">sem aprovador</span>
                       ) : (
                         <span className="italic">—</span>

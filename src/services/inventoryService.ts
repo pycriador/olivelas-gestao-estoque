@@ -628,19 +628,102 @@ export const inventoryService = {
   },
 
   /**
-   * Importacao em lote de movimentacoes. Cada linha e lancada individualmente
-   * pelo RPC, de modo que uma linha invalida nao derruba as demais.
+   * Importacao em lote de movimentacoes e saldos. Suporta movimentações avulsas
+   * e reimportação de planilhas de saldos com atualização de preços e estoque mínimo.
    */
   async importMovementsBulk(
     storeId: string,
-    rows: StockMovementInput[]
+    rows: (StockMovementInput & {
+      sellingPrice?: number | null
+      minStock?: number | null
+      isBalanceImport?: boolean
+    })[]
   ): Promise<{ successCount: number; errorCount: number; errors: string[] }> {
     const errors: string[] = []
     let successCount = 0
 
+    const { data: authData } = await supabase.auth.getUser()
+    const currentUserId = authData?.user?.id || null
+
     for (const [index, row] of rows.entries()) {
       try {
-        await inventoryService.applyMovement(row)
+        // 1. Sincronizar preços e estoque mínimo na tabela products se informados
+        const productUpdates: Record<string, any> = {}
+        if (typeof row.unitCost === 'number' && !isNaN(row.unitCost) && row.unitCost >= 0) {
+          productUpdates.cost_price = row.unitCost
+        }
+        if (typeof row.sellingPrice === 'number' && !isNaN(row.sellingPrice) && row.sellingPrice >= 0) {
+          productUpdates.selling_price = row.sellingPrice
+        }
+        if (typeof row.minStock === 'number' && !isNaN(row.minStock) && row.minStock >= 0) {
+          productUpdates.min_stock = row.minStock
+        }
+
+        if (Object.keys(productUpdates).length > 0) {
+          productUpdates.updated_at = new Date().toISOString()
+          const { error: prodUpdateErr } = await supabase
+            .from('products')
+            .update(productUpdates)
+            .eq('id', row.productId)
+            .eq('store_id', storeId)
+
+          if (prodUpdateErr) {
+            console.error('Falha ao atualizar produto na importação:', prodUpdateErr)
+          }
+        }
+
+        // 2. Movimentação ou ajuste de saldo
+        if (row.isBalanceImport || row.movementType === 'ADJUSTMENT') {
+          // Consultar saldo físico atual
+          const { data: balanceRecord } = await supabase
+            .from('stock_balances')
+            .select('id, quantity')
+            .eq('store_id', storeId)
+            .eq('product_id', row.productId)
+            .maybeSingle()
+
+          const currentQty = balanceRecord ? Number(balanceRecord.quantity || 0) : 0
+          const targetQty = Number(row.quantity)
+
+          if (Math.abs(targetQty - currentQty) > 0.0001) {
+            if (targetQty > 0) {
+              await inventoryService.applyMovement({
+                ...row,
+                movementType: 'ADJUSTMENT',
+                quantity: targetQty,
+              })
+            } else {
+              // Ajuste para saldo 0 (zerado)
+              if (balanceRecord) {
+                await supabase
+                  .from('stock_balances')
+                  .update({ quantity: 0, updated_at: new Date().toISOString() })
+                  .eq('id', balanceRecord.id)
+              } else {
+                await supabase
+                  .from('stock_balances')
+                  .insert({ store_id: storeId, product_id: row.productId, quantity: 0, reserved_quantity: 0 })
+              }
+
+              // Registrar histórico de auditoria do movimento
+              await supabase.from('stock_movements').insert({
+                store_id: storeId,
+                product_id: row.productId,
+                movement_type: 'ADJUSTMENT',
+                quantity: currentQty,
+                previous_quantity: currentQty,
+                new_quantity: 0,
+                unit_cost: row.unitCost ?? null,
+                notes: row.notes || 'Ajuste de saldo zerado via importação',
+                user_id: currentUserId,
+              })
+            }
+          }
+          // Se Math.abs(targetQty - currentQty) <= 0.0001: saldo não mudou, produto já foi atualizado
+        } else {
+          await inventoryService.applyMovement(row)
+        }
+
         successCount += 1
       } catch (err: any) {
         errors.push(`Linha ${index + 1}: ${err?.message || 'falha ao lançar a movimentação'}`)
