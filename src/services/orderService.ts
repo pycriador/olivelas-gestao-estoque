@@ -58,7 +58,7 @@ export const orderService = {
           quantity,
           unit_price,
           total_price,
-          products ( name, sku )
+          products ( * )
         ),
         payments ( id, method, amount, status )
       `,
@@ -98,6 +98,7 @@ export const orderService = {
       customer_email: o.customers?.email || o.customer_email,
       items: (o.order_items || []).map((oi: any) => ({
         ...oi,
+        product: oi.products,
         product_name: oi.products?.name || 'Produto',
         product_sku: oi.products?.sku || '',
       })),
@@ -184,5 +185,47 @@ export const orderService = {
       entityId: orderId,
       afterData: { status },
     })
+  },
+
+  async getOrder(orderId: string): Promise<Order | null> {
+    const { data, error } = await supabase
+      .from('orders')
+      .select(`
+        *,
+        customers ( id, name, phone, email, document ),
+        order_items (
+          id,
+          order_id,
+          store_id,
+          product_id,
+          batch_id,
+          quantity,
+          unit_price,
+          unit_cost,
+          discount,
+          total_price,
+          products ( * )
+        ),
+        payments ( id, method, amount, status )
+      `)
+      .eq('id', orderId)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!data) return null
+
+    return {
+      ...data,
+      customer_name: data.customers?.name || data.customer_name || 'Consumidor Final',
+      customer_phone: data.customers?.phone || data.customer_phone,
+      customer_email: data.customers?.email || data.customer_email,
+      items: (data.order_items || []).map((oi: any) => ({
+        ...oi,
+        product: oi.products,
+        product_name: oi.products?.name || 'Produto',
+        product_sku: oi.products?.sku || '',
+      })),
+      payments: data.payments || [],
+    } as unknown as Order
   },
 }

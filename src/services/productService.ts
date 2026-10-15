@@ -342,6 +342,28 @@ export const productService = {
     } as Product
   },
 
+  async getProductsByIds(storeId: string, ids: string[]): Promise<Product[]> {
+    if (!ids.length) return []
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        categories ( name ),
+        stock_balances ( quantity, available_quantity )
+      `)
+      .eq('store_id', storeId)
+      .in('id', ids)
+      .is('deleted_at', null)
+
+    if (error) throw error
+
+    return (data || []).map((row: any) => ({
+      ...row,
+      category_name: row.categories?.name,
+      stock_quantity: Number(row.stock_balances?.[0]?.available_quantity ?? row.stock_balances?.[0]?.quantity ?? 0),
+    })) as Product[]
+  },
+
   async createProduct(
     storeId: string,
     productData: Partial<Product>

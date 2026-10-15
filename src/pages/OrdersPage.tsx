@@ -17,6 +17,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { useNavigate } from 'react-router-dom'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import {
   ShoppingCart,
@@ -28,6 +29,8 @@ import {
   Store,
   Globe,
   AlertCircle,
+  AlertTriangle,
+  Edit3,
 } from 'lucide-react'
 import type { Order } from '@/types/order.types'
 import type { OrderStatus } from '@/types/database.types'
@@ -36,6 +39,7 @@ export function OrdersPage() {
   const { storeId, hasActiveStore } = useTenant()
   const { t } = useI18n()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const {
     page,
@@ -62,6 +66,52 @@ export function OrdersPage() {
   const [cancellingOrder, setCancellingOrder] = React.useState<Order | null>(null)
   const [cancelReason, setCancelReason] = React.useState('')
   const [cancelError, setCancelError] = React.useState<string | null>(null)
+
+  const [orderToEdit, setOrderToEdit] = React.useState<Order | null>(null)
+  const [isEditingLoading, setIsEditingLoading] = React.useState(false)
+  const [editError, setEditError] = React.useState<string | null>(null)
+
+  const handleConfirmEditInPos = async (order: Order) => {
+    setIsEditingLoading(true)
+    setEditError(null)
+    try {
+      if (order.status !== 'CANCELLED') {
+        await orderService.cancelOrder(order.id, `Reabertura para edição no PDV (${order.order_number})`)
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['orders', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
+
+      const editData = {
+        id: order.id,
+        orderNumber: order.order_number,
+        customerId: order.customer_id,
+        customerName: order.customer_name,
+        discountAmount: order.discount_amount,
+        notes: order.notes,
+        paymentMethod: order.payments?.[0]?.method || 'PIX',
+        items: order.items?.map((it: any) => ({
+          productId: it.product_id,
+          quantity: it.quantity,
+          unitPrice: it.unit_price,
+          discount: it.discount || 0,
+          product: it.product,
+        })),
+      }
+
+      setOrderToEdit(null)
+      setViewingOrder(null)
+
+      navigate(`/sales?editOrder=${order.id}`, {
+        state: { editOrder: editData },
+      })
+    } catch (err) {
+      setEditError(parseApiError(err))
+    } finally {
+      setIsEditingLoading(false)
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['orders', storeId, { search, selectedStatus, selectedChannel, page, pageSize, sortBy, sortOrder }],
@@ -395,6 +445,28 @@ export function OrdersPage() {
               </div>
             </div>
 
+            {/* Action Bar: Editar Pedido no PDV */}
+            <div className="pt-3 border-t border-border flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-primary/5 p-3 rounded-xl border border-primary/20">
+              <div className="space-y-0.5">
+                <span className="font-semibold text-foreground text-xs block">
+                  Editar Pedido no PDV
+                </span>
+                <span className="text-[11px] text-muted-foreground block">
+                  Reabra este pedido na tela de Venda para alterar itens (produtos, quantidades) e o cliente.
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => setOrderToEdit(viewingOrder)}
+                className="h-9 px-3.5 text-xs font-semibold gap-1.5 shrink-0 bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs cursor-pointer"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Editar no PDV
+              </Button>
+            </div>
+
             {/* Change Status Controls */}
             {viewingOrder.status !== 'CANCELLED' && (
               <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-border">
@@ -480,6 +552,84 @@ export function OrdersPage() {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Edit Order in POS Confirmation Modal */}
+      <Modal
+        isOpen={Boolean(orderToEdit)}
+        onClose={() => {
+          if (!isEditingLoading) {
+            setOrderToEdit(null)
+            setEditError(null)
+          }
+        }}
+        title={`Editar Pedido ${orderToEdit?.order_number}`}
+        description="Reabrir pedido para alteração de produtos, quantidades e cliente no PDV"
+        maxWidth="md"
+      >
+        {orderToEdit && (
+          <div className="space-y-3.5 pt-1">
+            {editError && (
+              <div className="p-2.5 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
+                {editError}
+              </div>
+            )}
+
+            <div className="p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl text-xs text-foreground flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <p className="font-semibold text-amber-600 dark:text-amber-400">
+                  Estorno de estoque e reabertura no PDV
+                </p>
+                <p className="text-muted-foreground leading-relaxed">
+                  {orderToEdit.status !== 'CANCELLED'
+                    ? `Ao confirmar, o pedido ${orderToEdit.order_number} terá seu estoque estornado de forma atômica e seus itens e cliente serão enviados para a tela de Venda (/sales), onde você poderá ajustar itens, pesos, quantidades e cliente.`
+                    : `Os itens e o cliente do pedido ${orderToEdit.order_number} serão carregados no PDV (/sales) para nova edição e finalização.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-muted/40 rounded-xl border border-border/60 text-xs space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Cliente:</span>
+                <span className="font-semibold text-foreground">{orderToEdit.customer_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Itens:</span>
+                <span className="font-semibold text-foreground">
+                  {orderToEdit.items?.length || 0} produto(s)
+                </span>
+              </div>
+              <div className="flex justify-between pt-1 border-t border-border/50">
+                <span className="text-muted-foreground">Total Original:</span>
+                <span className="font-bold font-mono text-primary">
+                  {formatCurrency(orderToEdit.total_amount)}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto h-9 text-xs"
+                onClick={() => setOrderToEdit(null)}
+                disabled={isEditingLoading}
+              >
+                Voltar
+              </Button>
+              <Button
+                type="button"
+                className="w-full sm:w-auto h-9 text-xs font-semibold shadow-xs gap-1.5"
+                isLoading={isEditingLoading}
+                onClick={() => handleConfirmEditInPos(orderToEdit)}
+              >
+                <ShoppingCart className="h-3.5 w-3.5" />
+                Confirmar e Abrir no PDV
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   )

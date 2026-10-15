@@ -1,4 +1,5 @@
 import type { OrderChannel, OrderStatus, PaymentMethod, PaymentStatus } from './database.types'
+import type { Product } from './product.types'
 
 export interface Order {
   id: string
@@ -40,6 +41,7 @@ export interface OrderItem {
   total_price: number
   product_name?: string
   product_sku?: string
+  product?: Product
 }
 
 export interface Payment {

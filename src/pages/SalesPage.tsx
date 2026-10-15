@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import { orderService } from '@/services/orderService'
@@ -32,6 +33,7 @@ import {
   AlertTriangle,
   EyeOff,
   Scale,
+  Edit3,
 } from 'lucide-react'
 import { WeightInputModal } from '@/components/sales/WeightInputModal'
 import { isWeighedProduct, formatProductWeight } from '@/utils/productUtils'
@@ -75,6 +77,10 @@ export function SalesPage() {
   const stockView = (filters.stock as POSStockFilter) || 'in'
   const categoryFilter = filters.category || ''
 
+  const location = useLocation()
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+
   const [cart, setCart] = React.useState<CartLine[]>([])
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>('')
   const [isCustomerModalOpen, setIsCustomerModalOpen] = React.useState(false)
@@ -85,6 +91,87 @@ export function SalesPage() {
   const [successOrderNumber, setSuccessOrderNumber] = React.useState<string | null>(null)
   const [weighedProduct, setWeighedProduct] = React.useState<Product | null>(null)
   const [weighedInitialQty, setWeighedInitialQty] = React.useState<number>(0.15)
+
+  const [editingOrderInfo, setEditingOrderInfo] = React.useState<{
+    id: string
+    orderNumber: string
+  } | null>(null)
+  const [loadedEditOrderId, setLoadedEditOrderId] = React.useState<string | null>(null)
+
+  const editOrderIdParam = searchParams.get('editOrder')
+
+  // Se veio parâmetro editOrder pela URL sem state, busca o pedido via getOrder
+  const { data: fetchedEditOrder } = useQuery({
+    queryKey: ['order-for-edit', editOrderIdParam],
+    queryFn: () => orderService.getOrder(editOrderIdParam!),
+    enabled: Boolean(editOrderIdParam) && !(location.state as any)?.editOrder,
+  })
+
+  // Carrega os dados do pedido a ser editado
+  React.useEffect(() => {
+    const rawOrder = (location.state as any)?.editOrder || fetchedEditOrder
+    if (!rawOrder || !rawOrder.id || rawOrder.id === loadedEditOrderId) return
+
+    setLoadedEditOrderId(rawOrder.id)
+    setEditingOrderInfo({
+      id: rawOrder.id,
+      orderNumber: rawOrder.orderNumber || rawOrder.order_number,
+    })
+
+    // Pré-seleciona cliente
+    setSelectedCustomerId(rawOrder.customerId || rawOrder.customer_id || '')
+
+    // Descontos, observações e forma de pagamento
+    setDiscountTotal(Number(rawOrder.discountAmount ?? rawOrder.discount_amount ?? 0))
+    setNotes(rawOrder.notes || `Ref. Edição do pedido ${rawOrder.orderNumber || rawOrder.order_number}`)
+    if (rawOrder.paymentMethod) {
+      setPaymentMethod(rawOrder.paymentMethod)
+    } else if (rawOrder.payments?.[0]?.method) {
+      setPaymentMethod(rawOrder.payments[0].method)
+    }
+
+    // Carrega os itens no carrinho
+    const rawItems = rawOrder.items || []
+    if (rawItems.length > 0) {
+      const initialCart: CartLine[] = rawItems.map((it: any) => ({
+        product: it.product || {
+          id: it.productId || it.product_id,
+          name: it.productName || it.product_name || 'Produto',
+          sku: it.productSku || it.product_sku || '',
+          selling_price: it.unitPrice || it.unit_price,
+          unit: it.unit || 'UN',
+        },
+        quantity: Number(it.quantity),
+        unitPrice: Number(it.unitPrice || it.unit_price),
+        discount: Number(it.discount || 0),
+      }))
+      setCart(initialCart)
+
+      // Atualiza com os saldos e dados mais recentes dos produtos se storeId existir
+      if (storeId) {
+        const itemIds = rawItems.map((i: any) => i.productId || i.product_id).filter(Boolean)
+        productService
+          .getProductsByIds(storeId, itemIds)
+          .then((freshProducts) => {
+            const freshMap = new Map(freshProducts.map((p) => [p.id, p]))
+            setCart((prevCart) =>
+              prevCart.map((line) => {
+                const fresh = freshMap.get(line.product.id)
+                return fresh ? { ...line, product: fresh } : line
+              })
+            )
+          })
+          .catch(() => {})
+      }
+    }
+  }, [location.state, fetchedEditOrder, loadedEditOrderId, storeId])
+
+  const handleDiscardEdit = () => {
+    clearCart()
+    setEditingOrderInfo(null)
+    setLoadedEditOrderId(null)
+    navigate('/sales', { replace: true, state: {} })
+  }
 
   // Categorias: alimentam o filtro do grid do PDV.
   const { data: categories = [] } = useQuery({
@@ -132,8 +219,13 @@ export function SalesPage() {
   const stockByProduct = React.useMemo(() => {
     const map = new Map<string, number>()
     for (const p of products) map.set(p.id, Number(p.stock_quantity ?? 0))
+    for (const item of cart) {
+      if (!map.has(item.product.id)) {
+        map.set(item.product.id, Number(item.product.stock_quantity ?? 0))
+      }
+    }
     return map
-  }, [products])
+  }, [products, cart])
 
   // Add to cart
   const addToCart = (product: Product) => {
@@ -275,6 +367,9 @@ export function SalesPage() {
       queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
       setSuccessOrderNumber(order.order_number)
       clearCart()
+      setEditingOrderInfo(null)
+      setLoadedEditOrderId(null)
+      navigate('/sales', { replace: true, state: {} })
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
@@ -319,6 +414,26 @@ export function SalesPage() {
           icon={<Search className="h-3.5 w-3.5" />}
         />
       </PageHeader>
+
+      {editingOrderInfo && (
+        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 animate-in zoom-in-95 flex-shrink-0 flex-wrap">
+          <div className="flex items-center gap-2 text-xs text-foreground font-medium">
+            <Edit3 className="h-4 w-4 text-amber-500 shrink-0" />
+            <span>
+              Editando pedido <b>{editingOrderInfo.orderNumber}</b>. Altere os produtos, quantidades ou cliente e finalize a venda.
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleDiscardEdit}
+            className="h-7 text-xs border-border text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+          >
+            Descartar Edição
+          </Button>
+        </div>
+      )}
 
       {successOrderNumber && (
         <div className="p-3 rounded-xl bg-success/15 border border-success/30 flex items-center justify-between animate-in zoom-in-95 flex-shrink-0">
@@ -750,7 +865,7 @@ export function SalesPage() {
                 isLoading={saleMutation.isPending}
                 onClick={handleCheckout}
               >
-                Finalizar Venda
+                {editingOrderInfo ? 'Finalizar Pedido Editado' : 'Finalizar Venda'}
               </Button>
             </div>
           </Card>
