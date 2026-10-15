@@ -74,6 +74,29 @@ export const inventoryService = {
       pageSize = 20,
     } = params
 
+    let productIds: string[] | null = null
+
+    if (search?.trim()) {
+      const q = search.trim()
+      let prodQuery = supabase
+        .from('products')
+        .select('id')
+        .is('deleted_at', null)
+        .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
+
+      if (storeId && storeId !== 'all') {
+        prodQuery = prodQuery.eq('store_id', storeId)
+      }
+
+      const { data: matched, error: matchErr } = await prodQuery
+      if (matchErr) throw matchErr
+      productIds = (matched || []).map((p: any) => p.id)
+
+      if (productIds.length === 0) {
+        return { data: [], total: 0 }
+      }
+    }
+
     let query = supabase
       .from('stock_balances')
       .select(
@@ -111,9 +134,8 @@ export const inventoryService = {
       query = query.lte('quantity', 0)
     }
 
-    if (search?.trim()) {
-      const q = search.trim()
-      query = query.or(`products.name.ilike.%${q}%,products.sku.ilike.%${q}%`)
+    if (productIds) {
+      query = query.in('product_id', productIds)
     }
 
     const orderCol = ['quantity', 'reserved_quantity', 'available_quantity', 'updated_at'].includes(sortBy)
@@ -262,10 +284,46 @@ export const inventoryService = {
 
     if (search?.trim()) {
       const q = search.trim()
-      query = query.or(
-        `notes.ilike.%${q}%,products.name.ilike.%${q}%,products.sku.ilike.%${q}%,` +
-          `reason_code.ilike.%${q}%,cost_center_code.ilike.%${q}%,lot_number.ilike.%${q}%`
-      )
+      let prodQuery = supabase
+        .from('products')
+        .select('id')
+        .is('deleted_at', null)
+        .or(`name.ilike.%${q}%,sku.ilike.%${q}%`)
+
+      if (storeId && storeId !== 'all') {
+        prodQuery = prodQuery.eq('store_id', storeId)
+      }
+
+      const { data: matchedProds } = await prodQuery
+      const matchedProductIds = (matchedProds || []).map((p: any) => p.id)
+
+      let batchQuery = supabase
+        .from('stock_batches')
+        .select('id')
+        .ilike('lot_number', `%${q}%`)
+
+      if (storeId && storeId !== 'all') {
+        batchQuery = batchQuery.eq('store_id', storeId)
+      }
+
+      const { data: matchedBatches } = await batchQuery
+      const matchedBatchIds = (matchedBatches || []).map((b: any) => b.id)
+
+      const orConditions = [
+        `notes.ilike.%${q}%`,
+        `reason_code.ilike.%${q}%`,
+        `cost_center_code.ilike.%${q}%`,
+      ]
+
+      if (matchedProductIds.length > 0) {
+        orConditions.push(`product_id.in.(${matchedProductIds.join(',')})`)
+      }
+
+      if (matchedBatchIds.length > 0) {
+        orConditions.push(`batch_id.in.(${matchedBatchIds.join(',')})`)
+      }
+
+      query = query.or(orConditions.join(','))
     }
 
     const orderCol = ['created_at', 'quantity', 'movement_type'].includes(sortBy)

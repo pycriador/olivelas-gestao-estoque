@@ -14,6 +14,12 @@ classification: Confirmed
 
 ## 2026-10-15
 
+- **Correção de Erro HTTP 400 na Busca de Estoque e Movimentações (`/inventory`)** (`inventoryService.ts`):
+  - **Eliminação de `.or()` com Colunas de Relações Embutidas**:
+    - O PostgREST do Supabase não suporta filtros `.or()` de primeiro nível referenciando tabelas relacionadas (como `products.name` ou `products.sku` em consultas sobre `stock_balances`).
+    - Em `inventoryService.getStockBalances`, a busca agora resolve previamente os IDs dos produtos correspondentes diretamente na tabela `products` e aplica `query.in('product_id', productIds)`. Se nenhum produto for encontrado, retorna `{ data: [], total: 0 }` imediatamente sem disparar erro 400.
+    - Em `inventoryService.getStockMovements`, a busca também pré-resolve `product_id` e `batch_id` para utilizar filtros válidos na tabela raiz (`notes`, `reason_code`, `cost_center_code`, `product_id.in`, `batch_id.in`).
+
 - **Correção e Suporte a Reimportação de Planilha Exportada de Estoque (`/inventory`)** (`StockImportModal.tsx`, `inventoryService.ts`, `importParser.ts`):
   - **Reconhecimento de Colunas Exportadas de Saldos**:
     - Adicionados aliases canônicos em `importParser.ts` para cabeçalhos gerados na exportação: `Saldo Físico`, `Disponível`, `Preço de Compra / Custo Unit. (R$)`, `Preço de Venda Unit. (R$)`, `Estoque Mínimo`, `Produto`, `Unidade`.
