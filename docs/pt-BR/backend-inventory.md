@@ -31,6 +31,10 @@ Ordem incremental observada (arquivos datados):
 12. `20260927000012_fix_cancelled_order_hard_delete.sql`
 13. `20260927000013_global_admin_profile_policies.sql`
 14. `20260927000014_global_admin_delete_auth_user.sql`
+15. `20260927000015_revoke_internal_helpers_from_authenticated.sql`
+16. `20260927000016_close_authenticated_default_on_new_functions.sql`
+17. `20261002000017_api_tokens.sql`
+18. `20261015000018_fix_restore_stock_after_delete_cancelled_orders.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 

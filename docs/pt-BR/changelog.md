@@ -14,6 +14,15 @@ classification: Confirmed
 
 ## 2026-10-15
 
+- **Correção de Erro HTTP 400 na Exclusão Definitiva de Pedidos (`/global-admin?tab=delete`)** (`GlobalDeletePanel.tsx`, migration `20261015000018_fix_restore_stock_after_delete_cancelled_orders.sql`):
+  - **Bypass de Restauração de Estoque em Pedidos Cancelados**:
+    - Pedidos com status `CANCELLED` já tiveram seu estoque estornado previamente no momento do cancelamento (`restore_sale_stock`).
+    - A migration 15 havia regredido a função `restore_stock_after_delete` omitindo o bypass da migration 12, fazendo com que a exclusão de pedidos cancelados tentasse reverter novamente o saldo e disparasse erro `400 (P0001: o saldo do produto mudou depois deste registro)`.
+    - Migration 18 restabelece a salvaguarda em `restore_stock_after_delete` e adiciona validação direta em `global_admin_delete` (`COALESCE(status, '') <> 'CANCELLED'`), garantindo exclusão limpa sem erros.
+  - **Otimizações no Painel de Exclusão (`GlobalDeletePanel.tsx`)**:
+    - Ajuste automático de paginação: quando o operador exclui o último item de uma página (ex.: página 3), o painel transiciona automaticamente para a página anterior válida (`page - 1`), impedindo visualização de páginas órfãs vazias.
+    - Mensagem de erro inteligível no frontend caso o operador tente excluir um pedido não-cancelado cujos produtos já tenham sofrido movimentações subsequentes no estoque.
+
 - **Correção de Erro HTTP 400 na Busca de Pedidos e Vendas (`/orders`)** (`orderService.ts`):
   - **Eliminação de Referência Inválida à Coluna Inexistente `customer_name` em `orders`**:
     - A tabela `orders` possui relação via `customer_id` e não possui a coluna `customer_name`. O filtro `.or('order_number.ilike...,customer_name.ilike...')` gerava erro `400 (Bad Request)` em qualquer busca textual.

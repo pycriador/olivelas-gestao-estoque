@@ -84,7 +84,7 @@ Detalhe fino: abrir o arquivo `20260925000002_rls_policies.sql`. Não copiar USI
 
 ## Estoque
 
-Baixas de venda: RPC atômica 09. Restore no cancelamento: `restore_sale_stock`. Movimentos manuais: `apply_stock_movement`. Hard delete de pedido: `restore_stock_after_delete` (10, ajustada em 12 para não reverter uma segunda vez a venda de um pedido já cancelado; acesso restrito a global admin desde a migration 15).
+Baixas de venda: RPC atômica 09. Restore no cancelamento: `restore_sale_stock`. Movimentos manuais: `apply_stock_movement`. Hard delete de pedido: `restore_stock_after_delete` (10, ajustada em 12, reforçada com guarda restrita a global admin na 15, e corrigida na migration 18 para garantir que pedidos já cancelados nunca falhem nem tentem reverter estoque duplicado).
 
 ## Dados no browser
 

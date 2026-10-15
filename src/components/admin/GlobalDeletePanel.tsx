@@ -87,6 +87,9 @@ export function GlobalDeletePanel() {
       setTarget(null)
       setError('')
       setSuccess(summary)
+      if (rows.length === 1 && page > 1) {
+        setPage(page - 1)
+      }
       // A exclusao mexe em pedidos/estoque/lojas: invalida o que faz sentido.
       queryClient.invalidateQueries({ queryKey: ['global-delete-entities'] })
       queryClient.invalidateQueries({ queryKey: ['audit-logs'] })
@@ -95,7 +98,14 @@ export function GlobalDeletePanel() {
     },
     onError: (err) => {
       // Erro vem do servidor (ex.: registro com historico comercial).
-      setError(parseApiError(err))
+      const msg = parseApiError(err)
+      if (msg.includes('saldo do produto mudou')) {
+        setError(
+          'Não foi possível excluir: o saldo dos itens deste pedido foi movimentado posteriormente. Para preservar a consistência física do estoque, a reversão automática foi bloqueada.'
+        )
+      } else {
+        setError(msg)
+      }
     },
   })
 
@@ -104,6 +114,13 @@ export function GlobalDeletePanel() {
   const totalPages = Math.ceil(totalItems / pageSize) || 1
   const entityLabel =
     GLOBAL_DELETE_ENTITIES.find((e) => e.value === entity)?.label || 'Registro'
+
+  // Se a pagina atual ficou alem do total disponivel (ex: apos deletar o ultimo item da pagina), volta para a ultima pagina valida
+  React.useEffect(() => {
+    if (!isLoading && totalPages >= 1 && page > totalPages) {
+      setPage(totalPages)
+    }
+  }, [isLoading, page, totalPages, setPage])
 
   const switchEntity = (value: string) => {
     setFilter('entity', value)
