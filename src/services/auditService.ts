@@ -69,15 +69,18 @@ export const auditService = {
       query = query.eq('store_id', storeId)
     }
 
-    if (search) {
-      query = query.or(`action.ilike.%${search}%,entity.ilike.%${search}%,entity_id.ilike.%${search}%`)
+    if (search && search.trim()) {
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        query = query.or(`action.ilike.%${cleanTerm}%,entity.ilike.%${cleanTerm}%,entity_id.ilike.%${cleanTerm}%`)
+      }
     }
 
-    if (action && action !== 'ALL') {
+    if (action && action !== 'ALL' && action !== 'all') {
       query = query.eq('action', action)
     }
 
-    if (entity && entity !== 'ALL') {
+    if (entity && entity !== 'ALL' && entity !== 'all') {
       query = query.eq('entity', entity)
     }
 

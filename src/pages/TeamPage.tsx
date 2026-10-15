@@ -195,13 +195,14 @@ export function TeamPage() {
 
   // Filtered members list
   const filteredMembers = members.filter((m) => {
-    const matchSearch =
-      !search ||
-      m.email.toLowerCase().includes(search.toLowerCase()) ||
-      (m.fullName && m.fullName.toLowerCase().includes(search.toLowerCase()))
-    const matchRole = roleFilter === 'ALL' || m.role === roleFilter
+    const q = search.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const normEmail = (m.email || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const normName = (m.fullName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    const matchSearch = !q || normEmail.includes(q) || normName.includes(q)
+    const matchRole = roleFilter === 'ALL' || roleFilter === 'all' || m.role === roleFilter
     const matchStatus =
       statusFilter === 'ALL' ||
+      statusFilter === 'all' ||
       (statusFilter === 'ACTIVE' && m.isActive) ||
       (statusFilter === 'INACTIVE' && !m.isActive)
     return matchSearch && matchRole && matchStatus

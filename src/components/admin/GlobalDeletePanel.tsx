@@ -125,6 +125,7 @@ export function GlobalDeletePanel() {
   const switchEntity = (value: string) => {
     setFilter('entity', value)
     setPage(1)
+    setSearch('')
     setError('')
     setSuccess('')
   }

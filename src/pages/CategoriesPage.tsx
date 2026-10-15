@@ -57,11 +57,13 @@ export function CategoriesPage() {
   })
 
   const filtered = React.useMemo(() => {
-    const term = search.trim().toLowerCase()
+    const term = search.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     if (!term) return categories
-    return categories.filter(
-      (c) => c.name.toLowerCase().includes(term) || c.slug.includes(term)
-    )
+    return categories.filter((c) => {
+      const normName = c.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      const normSlug = c.slug.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      return normName.includes(term) || normSlug.includes(term)
+    })
   }, [categories, search])
 
   const totalItems = filtered.length

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
+import { buildAccentRegex } from '@/utils/productUtils'
 import type { PurchaseOrder } from '@/types/purchasing.types'
 
 export interface CreatePurchaseOrderPayload {
@@ -64,15 +65,36 @@ export const purchasingService = {
       )
       .eq('store_id', storeId)
 
-    if (search) {
-      query = query.or(`order_number.ilike.%${search}%`)
+    if (search && search.trim()) {
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        const pattern = buildAccentRegex(cleanTerm)
+        const orClauses: string[] = [
+          `order_number.imatch.${pattern}`,
+          `notes.imatch.${pattern}`,
+        ]
+
+        // Resolver fornecedores compativeis
+        const { data: matchedSuppliers } = await supabase
+          .from('suppliers')
+          .select('id')
+          .eq('store_id', storeId)
+          .or(`corporate_name.imatch.${pattern},trade_name.imatch.${pattern}`)
+
+        if (matchedSuppliers && matchedSuppliers.length > 0) {
+          const sIds = matchedSuppliers.map((s: any) => s.id).join(',')
+          orClauses.push(`supplier_id.in.(${sIds})`)
+        }
+
+        query = query.or(orClauses.join(','))
+      }
     }
 
-    if (supplierId && supplierId !== 'ALL') {
+    if (supplierId && supplierId !== 'ALL' && supplierId !== 'all') {
       query = query.eq('supplier_id', supplierId)
     }
 
-    if (status && status !== 'ALL') {
+    if (status && status !== 'ALL' && status !== 'all') {
       query = query.eq('status', status)
     }
 

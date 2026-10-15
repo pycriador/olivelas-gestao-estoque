@@ -76,11 +76,9 @@ export function GlobalAdminDashboardPage() {
   const statusFilter = filters.status || 'ALL'
 
   const selectTab = (tab: GlobalAdminTab) => {
-    setSearchParams((previous) => {
-      const next = new URLSearchParams(previous)
+    setSearchParams(() => {
+      const next = new URLSearchParams()
       next.set('tab', tab)
-      next.delete('page')
-      next.delete('search')
       return next
     }, { replace: true })
   }

@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
 import { categoryService } from '@/services/categoryService'
 import { normalizeProductRow, type NormalizedProductImportItem } from '@/utils/importParser'
+import { buildAccentRegex } from '@/utils/productUtils'
 import type { Product, Category } from '@/types/product.types'
 
 export interface ProductFilters {
@@ -69,8 +70,12 @@ export const productService = {
       .eq('store_id', storeId)
       .is('deleted_at', null)
 
-    if (search) {
-      query = query.or(`name.ilike.%${search}%,sku.ilike.%${search}%,barcode.ilike.%${search}%`)
+    if (search && search.trim()) {
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        const pattern = buildAccentRegex(cleanTerm)
+        query = query.or(`name.imatch.${pattern},sku.imatch.${pattern},barcode.imatch.${pattern}`)
+      }
     }
 
     if (categoryId) {
@@ -145,23 +150,25 @@ export const productService = {
     // `.or()` nao aceita caminho de recurso embutido, entao a busca por
     // nome/SKU/codigo de barras e resolvida em uma consulta leve de ids
     // antes da paginacao.
-    if (search && search.trim().length >= 2) {
-      const { data: matched, error: matchErr } = await supabase
-        .from('products')
-        .select('id')
-        .eq('store_id', storeId)
-        .is('deleted_at', null)
-        .eq('is_active', true)
-        .or(
-          `name.ilike.%${search.trim()}%,sku.ilike.%${search.trim()}%,barcode.ilike.%${search.trim()}%`
-        )
+    if (search && search.trim()) {
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        const pattern = buildAccentRegex(cleanTerm)
+        const { data: matched, error: matchErr } = await supabase
+          .from('products')
+          .select('id')
+          .eq('store_id', storeId)
+          .is('deleted_at', null)
+          .eq('is_active', true)
+          .or(`name.imatch.${pattern},sku.imatch.${pattern},barcode.imatch.${pattern}`)
 
-      if (matchErr) throw matchErr
-      productIds = (matched || []).map((p: any) => p.id)
+        if (matchErr) throw matchErr
+        productIds = (matched || []).map((p: any) => p.id)
 
-      // Nada casou: encerrar aqui evita a segunda query e devolve
-      // paginacao coerente (total 0) em vez da pagina 1 inteira.
-      if (productIds.length === 0) return { data: [], total: 0 }
+        // Nada casou: encerrar aqui evita a segunda query e devolve
+        // paginacao coerente (total 0) em vez da pagina 1 inteira.
+        if (productIds.length === 0) return { data: [], total: 0 }
+      }
     }
 
     let query = supabase
@@ -268,8 +275,11 @@ export const productService = {
       .is('deleted_at', null)
 
     if (search && search.trim()) {
-      const term = search.trim()
-      query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%,barcode.ilike.%${term}%`)
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        const pattern = buildAccentRegex(cleanTerm)
+        query = query.or(`name.imatch.${pattern},sku.imatch.${pattern},barcode.imatch.${pattern}`)
+      }
     }
 
     if (categoryId) query = query.eq('category_id', categoryId)

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase/client'
+import { buildAccentRegex } from '@/utils/productUtils'
 
 /**
  * Entidades que o Admin Global pode excluir definitivamente.
@@ -48,8 +49,8 @@ const ENTITY_SPECS: Record<GlobalDeleteEntity, EntitySpec> = {
     labelFallback: 'Pedido',
   },
   stock_movements: {
-    select: 'id, store_id, movement_type, quantity, product_id, created_at',
-    searchColumns: ['movement_type'],
+    select: 'id, store_id, movement_type, quantity, product_id, created_at, notes, reason_code',
+    searchColumns: ['movement_type', 'notes', 'reason_code'],
     labelColumn: 'movement_type',
     detailColumns: ['quantity'],
     labelFallback: 'Movimentação',
@@ -62,22 +63,22 @@ const ENTITY_SPECS: Record<GlobalDeleteEntity, EntitySpec> = {
     labelFallback: 'Produto',
   },
   customers: {
-    select: 'id, store_id, name, document, created_at',
-    searchColumns: ['name', 'document'],
+    select: 'id, store_id, name, document, phone, email, created_at',
+    searchColumns: ['name', 'document', 'phone', 'email'],
     labelColumn: 'name',
     detailColumns: ['document'],
     labelFallback: 'Cliente',
   },
   suppliers: {
-    select: 'id, store_id, name, document, created_at',
-    searchColumns: ['name', 'document'],
-    labelColumn: 'name',
-    detailColumns: ['document'],
+    select: 'id, store_id, corporate_name, trade_name, document, contact_name, created_at',
+    searchColumns: ['corporate_name', 'trade_name', 'document', 'contact_name'],
+    labelColumn: 'trade_name',
+    detailColumns: ['corporate_name', 'document'],
     labelFallback: 'Fornecedor',
   },
   purchase_orders: {
-    select: 'id, store_id, order_number, status, total_amount, created_at',
-    searchColumns: ['order_number'],
+    select: 'id, store_id, order_number, status, total_amount, created_at, notes',
+    searchColumns: ['order_number', 'notes'],
     labelColumn: 'order_number',
     detailColumns: ['status', 'total_amount'],
     labelFallback: 'Compra',
@@ -118,9 +119,10 @@ export const globalAdminService = {
     }
 
     if (search && search.trim()) {
-      const term = search.trim().replace(/[%,()]/g, ' ')
-      if (term) {
-        query = query.or(spec.searchColumns.map((c) => `${c}.ilike.%${term}%`).join(','))
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        const pattern = buildAccentRegex(cleanTerm)
+        query = query.or(spec.searchColumns.map((c) => `${c}.imatch.${pattern}`).join(','))
       }
     }
 
@@ -135,7 +137,11 @@ export const globalAdminService = {
 
     const rows: GlobalEntityRow[] = (data || []).map((row: any) => {
       const storeName = row.stores?.name || 'Loja'
-      const rawLabel = row[spec.labelColumn]
+      const rawLabel =
+        entity === 'suppliers'
+          ? (row.trade_name || row.corporate_name)
+          : row[spec.labelColumn]
+
       // store_users lista por user_id, que nao e legivel: cai no rotulo fixo.
       const label =
         entity === 'store_users'

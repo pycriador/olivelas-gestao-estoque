@@ -149,11 +149,11 @@ export function StoresPage() {
     let result = allDisplayRows
 
     if (search.trim()) {
-      const q = search.toLowerCase().trim()
+      const q = search.toLowerCase().trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       result = result.filter(
         (s) =>
-          s.name.toLowerCase().includes(q) ||
-          s.slug.toLowerCase().includes(q) ||
+          (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q) ||
+          (s.slug || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q) ||
           (s.document && s.document.toLowerCase().includes(q)) ||
           (s.email && s.email.toLowerCase().includes(q))
       )

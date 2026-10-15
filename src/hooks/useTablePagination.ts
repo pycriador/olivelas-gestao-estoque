@@ -80,10 +80,10 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
   const setSearch = React.useCallback(
     (newSearch: string) => {
       updateParams((params) => {
-        if (!newSearch.trim()) {
+        if (!newSearch) {
           params.delete('search')
         } else {
-          params.set('search', newSearch.trim())
+          params.set('search', newSearch)
         }
         params.delete('page') // reset to page 1 on search change
       })
@@ -116,10 +116,17 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
   const setFilter = React.useCallback(
     (key: string, value: string | null | undefined) => {
       updateParams((params) => {
-        if (!value || value === 'ALL' || value === '') {
+        const valStr = value !== null && value !== undefined ? String(value).trim() : ''
+        if (
+          !valStr ||
+          valStr.toUpperCase() === 'ALL' ||
+          valStr.toLowerCase() === 'all' ||
+          valStr.toLowerCase() === 'todos' ||
+          valStr.toUpperCase() === 'TODOS'
+        ) {
           params.delete(key)
         } else {
-          params.set(key, value)
+          params.set(key, valStr)
         }
         params.delete('page') // reset to page 1 on filter change
       })

@@ -14,6 +14,28 @@ classification: Confirmed
 
 ## 2026-10-15
 
+- **Revisão e Correção Abrangente de Filtros e Buscas na Plataforma** (`useTablePagination.ts`, `globalAdminService.ts`, `productService.ts`, `customerService.ts`, `supplierService.ts`, `purchasingService.ts`, `auditService.ts`, `CategoriesPage.tsx`, `TeamPage.tsx`, `StoresPage.tsx`, `GlobalAdminDashboardPage.tsx`, `GlobalDeletePanel.tsx`):
+  - **Correção de Digitação e Reset de Filtro em `useTablePagination.ts`**:
+    - Removido `.trim()` em tempo real no `setSearch`, permitindo digitar espaços entre palavras sem que sejam apagados a cada renderização.
+    - Normalizada a limpeza de chaves de filtro em `setFilter`: valores `'ALL'`, `'all'`, `'TODOS'`, `'todos'` ou strings vazias removem o parâmetro da URL de forma uniforme, sem deixar parâmetros obsoletos residuais.
+  - **Correção da Tabela `suppliers` no Painel de Exclusão Global (`/global-admin?tab=delete`)**:
+    - Corrigida referência indevida a `name` na tabela `suppliers` (que possui `corporate_name` e `trade_name`), evitando o erro SQL `42703 (column suppliers.name does not exist)` que quebrava o carregamento da entidade de fornecedores.
+    - Adicionado suporte a busca tolerante a acentos via `buildAccentRegex` e `.imatch` em todas as entidades do painel de exclusão global.
+    - Limpeza automática da busca ao alternar entre entidades e retorno suave de página caso o usuário exclua registros restantes da página atual.
+    - Isolamento de filtros por aba no `GlobalAdminDashboardPage.tsx`: alternar entre abas limpa os parâmetros de filtro que pertenciam apenas à aba anterior (ex: `status=ACTIVE` de lojas não contamina `tab=delete` ou `tab=users`).
+  - **Sanitização de Sintaxe PostgREST e Busca Tolerante a Acentos em Produtos (`/products`, `/sales`, `/store/:slug`)**:
+    - Sanitização de caracteres delimitadores de árvore lógica do PostgREST (`%`, `,`, `(`, `)`) evitando erros `PGRST100 (syntax error)`.
+    - Busca com `buildAccentRegex` e `.imatch` no catálogo de produtos, no PDV e no catálogo público de e-commerce.
+  - **Sanitização e Acentuação em Clientes (`/customers`) e Fornecedores (`/suppliers`)**:
+    - Busca tolerante a acentos e caracteres especiais em nomes corporativos, nomes fantasia, documentos, telefones e e-mails de clientes e fornecedores.
+  - **Expansão de Busca em Ordens de Compra (`/purchasing`)**:
+    - A busca agora pré-localiza fornecedores compatíveis (`corporate_name`, `trade_name`) e busca em conjunto por número do pedido e observações.
+    - Aceita filtros de status ou fornecedor `'ALL'` ou `'all'` sem quebrar a listagem.
+  - **Sanitização em Logs de Auditoria (`/audit`)**:
+    - Sanitização de caracteres no campo de busca de logs de auditoria e normalização de filtro de ação `'ALL'`.
+  - **Busca em Memória Resiliente a Acentos em Categorias, Equipe e Lojas**:
+    - `CategoriesPage.tsx`, `TeamPage.tsx` e `StoresPage.tsx` atualizados para normalizar strings com decomposição NFD (`normalize('NFD')`), permitindo encontrar termos sem se preocupar com maiúsculas/minúsculas ou acentuação gráfica.
+
 - **Correção de Erro HTTP 400 na Exclusão Definitiva de Pedidos (`/global-admin?tab=delete`)** (`GlobalDeletePanel.tsx`, migration `20261015000018_fix_restore_stock_after_delete_cancelled_orders.sql`):
   - **Bypass de Restauração de Estoque em Pedidos Cancelados**:
     - Pedidos com status `CANCELLED` já tiveram seu estoque estornado previamente no momento do cancelamento (`restore_sale_stock`).

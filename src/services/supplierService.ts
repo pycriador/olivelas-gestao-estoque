@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
+import { buildAccentRegex } from '@/utils/productUtils'
 import type { Supplier } from '@/types/supplier.types'
 
 export interface SupplierListParams {
@@ -31,8 +32,12 @@ export const supplierService = {
       .eq('store_id', storeId)
       .is('deleted_at', null)
 
-    if (search) {
-      query = query.or(`corporate_name.ilike.%${search}%,trade_name.ilike.%${search}%,document.ilike.%${search}%,contact_name.ilike.%${search}%`)
+    if (search && search.trim()) {
+      const cleanTerm = search.trim().replace(/[%,()]/g, ' ')
+      if (cleanTerm) {
+        const pattern = buildAccentRegex(cleanTerm)
+        query = query.or(`corporate_name.imatch.${pattern},trade_name.imatch.${pattern},document.imatch.${pattern},contact_name.imatch.${pattern}`)
+      }
     }
 
     if (status && status !== 'ALL') {
