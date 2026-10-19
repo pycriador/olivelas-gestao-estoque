@@ -376,8 +376,16 @@ export function SalesPage() {
 
   // Sale mutation
   const saleMutation = useMutation({
-    mutationFn: () =>
-      orderService.createOrder({
+    mutationFn: () => {
+      const stateEdit = (location.state as { editOrder?: any })?.editOrder
+      const effectiveReplaceId =
+        editingOrderInfo?.id || editOrderIdParam || stateEdit?.id || fetchedEditOrder?.id
+      const effectiveOrderNumber =
+        editingOrderInfo?.orderNumber ||
+        stateEdit?.orderNumber ||
+        fetchedEditOrder?.order_number
+
+      return orderService.createOrder({
         storeId,
         customerId: selectedCustomerId || undefined,
         channel: 'IN_STORE',
@@ -391,9 +399,10 @@ export function SalesPage() {
         discountAmount: discountTotal,
         paymentMethod,
         notes: notes || undefined,
-        replaceOrderId: editingOrderInfo?.id,
-        orderNumber: editingOrderInfo?.orderNumber,
-      }),
+        replaceOrderId: effectiveReplaceId || undefined,
+        orderNumber: effectiveOrderNumber || undefined,
+      })
+    },
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['orders', storeId] })
@@ -404,7 +413,7 @@ export function SalesPage() {
       // quantidade antiga ate a proxima revalidacao.
       queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
 
-      const wasEditing = Boolean(editingOrderInfo)
+      const wasEditing = Boolean(editingOrderInfo || editOrderIdParam)
       clearCart()
       setEditingOrderInfo(null)
       setLoadedEditOrderId(null)
@@ -422,7 +431,7 @@ export function SalesPage() {
   })
 
   const handleCheckout = () => {
-    if (cart.length === 0) return
+    if (cart.length === 0 || saleMutation.isPending) return
     setErrorMsg(null)
 
     // Guarda de cliente: o saldo pode ter mudado desde que o item entrou

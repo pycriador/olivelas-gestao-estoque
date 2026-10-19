@@ -114,6 +114,10 @@ export const globalAdminService = {
       .from(entity)
       .select(`${spec.select}, stores ( id, name )`, { count: 'exact' })
 
+    if (entity === 'orders') {
+      query = query.not('order_number', 'like', '%-SUB-%')
+    }
+
     if (storeId && storeId !== 'all' && storeId !== 'global') {
       query = query.eq('store_id', storeId)
     }

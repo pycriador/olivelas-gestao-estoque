@@ -76,7 +76,14 @@ export function OrdersPage() {
     setEditError(null)
     try {
       if (order.status !== 'CANCELLED') {
-        await orderService.cancelOrder(order.id, `Reabertura para edição no PDV (${order.order_number})`)
+        try {
+          await orderService.cancelOrder(order.id, `Reabertura para edição no PDV (${order.order_number})`)
+        } catch (cancelErr: any) {
+          const msg = String(cancelErr?.message || '')
+          if (!msg.toLowerCase().includes('já foi cancelado')) {
+            throw cancelErr
+          }
+        }
       }
 
       queryClient.invalidateQueries({ queryKey: ['orders', storeId] })

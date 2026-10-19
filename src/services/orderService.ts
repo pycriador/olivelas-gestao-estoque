@@ -170,59 +170,78 @@ export const orderService = {
       resolvedCustomerId = genericCustomer.id
     }
 
-    // Se estamos editando/substituindo um pedido existente
-    if (payload.replaceOrderId) {
-      const { data: existingOrder } = await supabase
+    // Se estamos editando/substituindo um pedido existente ou reutilizando um orderNumber
+    if (payload.replaceOrderId || payload.orderNumber) {
+      const orFilters: string[] = []
+      if (payload.replaceOrderId) {
+        orFilters.push(`id.eq.${payload.replaceOrderId}`)
+      }
+      if (orderNumber) {
+        orFilters.push(`order_number.eq.${orderNumber}`)
+      }
+
+      const { data: conflictingOrders } = await supabase
         .from('orders')
         .select('id, status, order_number')
-        .eq('id', payload.replaceOrderId)
         .eq('store_id', payload.storeId)
-        .maybeSingle()
+        .or(orFilters.join(','))
 
-      // Garante que o estoque do pedido substituído foi estornado caso ainda não esteja CANCELLED
-      if (existingOrder && existingOrder.status !== 'CANCELLED') {
-        await this.cancelOrder(
-          payload.replaceOrderId,
-          `Substituição por edição no PDV (${existingOrder.order_number || orderNumber})`
-        )
-      }
+      for (const existingOrder of conflictingOrders || []) {
+        // Garante que o estoque do pedido substituído foi estornado caso ainda não esteja CANCELLED
+        if (existingOrder.status !== 'CANCELLED') {
+          try {
+            await this.cancelOrder(
+              existingOrder.id,
+              `Substituição por edição no PDV (${existingOrder.order_number || orderNumber})`
+            )
+          } catch (cancelErr: any) {
+            const msg = String(cancelErr?.message || '')
+            if (!msg.toLowerCase().includes('já foi cancelado')) {
+              throw cancelErr
+            }
+          }
+        }
 
-      // 1. Tenta remover diretamente o registro do pedido cancelado substituído
-      const { data: deletedRows, error: delErr } = await supabase
-        .from('orders')
-        .delete()
-        .eq('id', payload.replaceOrderId)
-        .eq('store_id', payload.storeId)
-        .select('id')
+        // 1. Tenta remover diretamente o registro do pedido cancelado substituído
+        const { data: deletedRows, error: delErr } = await supabase
+          .from('orders')
+          .delete()
+          .eq('id', existingOrder.id)
+          .eq('store_id', payload.storeId)
+          .select('id')
 
-      let wasDeleted = !delErr && Array.isArray(deletedRows) && deletedRows.length > 0
+        const wasDeleted = !delErr && Array.isArray(deletedRows) && deletedRows.length > 0
 
-      // 2. Se o RLS bloqueou o DELETE direto (0 linhas afetadas), tenta via RPC global_admin_delete
-      if (!wasDeleted) {
-        const { error: rpcDelErr } = await supabase.rpc('global_admin_delete', {
-          p_entity: 'orders',
-          p_id: payload.replaceOrderId,
-        })
-        if (!rpcDelErr) {
-          wasDeleted = true
+        // 2. Se o registro antigo ainda existir no banco (ex: RLS sem policy DELETE aplicada no ambiente),
+        // renomeia o order_number do pedido cancelado antigo para liberar o número original
+        // sem violar a constraint uq_order_store_number.
+        if (!wasDeleted) {
+          const archivedOrderNumber = `${existingOrder.order_number}-SUB-${Date.now().toString().slice(-4)}-${existingOrder.id.slice(0, 4)}`
+          await supabase
+            .from('orders')
+            .update({
+              order_number: archivedOrderNumber,
+              notes: `[SUBSTITUÍDO NA EDIÇÃO] ${payload.notes || ''}`.trim(),
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existingOrder.id)
+            .eq('store_id', payload.storeId)
         }
       }
+    }
 
-      // 3. Se o registro antigo ainda existir no banco (ex: operador sem permissão de hard delete
-      // ou policy DELETE ainda não aplicada), renomeia o order_number do pedido cancelado antigo
-      // para liberar o número original sem violar a constraint uq_order_store_number.
-      if (!wasDeleted) {
-        const archivedOrderNumber = `${orderNumber}-SUB-${Date.now().toString().slice(-4)}`
-        await supabase
-          .from('orders')
-          .update({
-            order_number: archivedOrderNumber,
-            notes: `[SUBSTITUÍDO NA EDIÇÃO] ${payload.notes || ''}`.trim(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', payload.replaceOrderId)
-          .eq('store_id', payload.storeId)
-      }
+    // Verificação preventiva (pre-flight) de unicidade de (store_id, order_number) antes de chamar a RPC:
+    // se por qualquer restrição de permissão ainda houver um registro ocupando este order_number na loja,
+    // gera um número único imediatamente para nunca disparar erro 23505 ("Registro duplicado").
+    const { data: stillOccupying } = await supabase
+      .from('orders')
+      .select('id')
+      .eq('store_id', payload.storeId)
+      .eq('order_number', orderNumber)
+      .limit(1)
+
+    if (stillOccupying && stillOccupying.length > 0) {
+      orderNumber = `PED-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 90 + 10)}`
     }
 
     const rpcItems = payload.items.map((item) => ({
@@ -255,26 +274,30 @@ export const orderService = {
     })
 
     // Fallback de segurança caso ainda ocorra colisão de número de pedido (23505 / uq_order_store_number)
-    if (
-      error &&
-      (error.code === '23505' ||
-        error.message?.includes('duplicate') ||
-        error.message?.includes('uq_order_store_number'))
-    ) {
-      orderNumber = `PED-${Date.now().toString().slice(-6)}`
-      const retry = await supabase.rpc('create_order_with_stock', {
-        p_store_id: payload.storeId,
-        p_customer_id: resolvedCustomerId,
-        p_channel: payload.channel,
-        p_order_number: orderNumber,
-        p_items: rpcItems,
-        p_discount_amount: payload.discountAmount || 0,
-        p_shipping_amount: payload.shippingAmount || 0,
-        p_notes: payload.notes || null,
-        p_payment_method: payload.paymentMethod || null,
-      })
-      orderId = retry.data
-      error = retry.error
+    if (error) {
+      const errBlob = `${error.code || ''} ${error.message || ''} ${(error as any).details || ''} ${(error as any).hint || ''}`.toLowerCase()
+      if (
+        errBlob.includes('23505') ||
+        errBlob.includes('duplicate') ||
+        errBlob.includes('unique') ||
+        errBlob.includes('uq_order_store_number') ||
+        errBlob.includes('duplicad')
+      ) {
+        orderNumber = `PED-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 90 + 10)}`
+        const retry = await supabase.rpc('create_order_with_stock', {
+          p_store_id: payload.storeId,
+          p_customer_id: resolvedCustomerId,
+          p_channel: payload.channel,
+          p_order_number: orderNumber,
+          p_items: rpcItems,
+          p_discount_amount: payload.discountAmount || 0,
+          p_shipping_amount: payload.shippingAmount || 0,
+          p_notes: payload.notes || null,
+          p_payment_method: payload.paymentMethod || null,
+        })
+        orderId = retry.data
+        error = retry.error
+      }
     }
 
     if (error) throw error
