@@ -111,7 +111,7 @@ export function SalesPage() {
   // Carrega os dados do pedido a ser editado
   React.useEffect(() => {
     const rawOrder = (location.state as any)?.editOrder || fetchedEditOrder
-    if (!rawOrder || !rawOrder.id || rawOrder.id === loadedEditOrderId) return
+    if (!storeId || !rawOrder || !rawOrder.id || rawOrder.id === loadedEditOrderId) return
 
     setLoadedEditOrderId(rawOrder.id)
     setEditingOrderInfo({
@@ -140,16 +140,22 @@ export function SalesPage() {
           typeof prod?.selling_price === 'number' && prod.selling_price > 0
             ? Number(prod.selling_price)
             : Number(it.unitPrice || it.unit_price || 0)
+        const itemQty = Number(it.quantity || 1)
+        const initialStock = Math.max(Number(prod?.stock_quantity ?? 0), itemQty)
 
         return {
-          product: prod || {
-            id: it.productId || it.product_id,
-            name: it.productName || it.product_name || 'Produto',
-            sku: it.productSku || it.product_sku || '',
-            selling_price: currentSellingPrice,
-            unit: it.unit || 'UN',
-          },
-          quantity: Number(it.quantity),
+          product: {
+            ...(prod || {
+              id: it.productId || it.product_id,
+              name: it.productName || it.product_name || 'Produto',
+              sku: it.productSku || it.product_sku || '',
+              selling_price: currentSellingPrice,
+              cost_price: Number(it.unitCost ?? it.unit_cost ?? 0),
+              unit: it.unit || 'UN',
+            }),
+            stock_quantity: initialStock,
+          } as Product,
+          quantity: itemQty,
           unitPrice: currentSellingPrice,
           discount: Number(it.discount || 0),
         }
@@ -157,32 +163,37 @@ export function SalesPage() {
       setCart(initialCart)
 
       // Atualiza com os saldos e preços vigentes dos produtos no estoque
-      if (storeId) {
-        const itemIds = rawItems.map((i: any) => i.productId || i.product_id).filter(Boolean)
-        productService
-          .getProductsByIds(storeId, itemIds)
-          .then((freshProducts) => {
-            const freshMap = new Map(freshProducts.map((p) => [p.id, p]))
-            setCart((prevCart) =>
-              prevCart.map((line) => {
-                const fresh = freshMap.get(line.product.id)
-                if (fresh) {
-                  const updatedPrice =
-                    typeof fresh.selling_price === 'number' && fresh.selling_price > 0
-                      ? Number(fresh.selling_price)
-                      : line.unitPrice
-                  return {
-                    ...line,
-                    product: fresh,
-                    unitPrice: updatedPrice,
-                  }
+      const itemIds = rawItems.map((i: any) => i.productId || i.product_id).filter(Boolean)
+      productService
+        .getProductsByIds(storeId, itemIds)
+        .then((freshProducts) => {
+          const freshMap = new Map(freshProducts.map((p) => [p.id, p]))
+          setCart((prevCart) =>
+            prevCart.map((line) => {
+              const fresh = freshMap.get(line.product.id)
+              if (fresh) {
+                const updatedPrice =
+                  typeof fresh.selling_price === 'number' && fresh.selling_price > 0
+                    ? Number(fresh.selling_price)
+                    : line.unitPrice
+                const effectiveStock = Math.max(
+                  Number(fresh.stock_quantity ?? 0),
+                  line.quantity
+                )
+                return {
+                  ...line,
+                  product: {
+                    ...fresh,
+                    stock_quantity: effectiveStock,
+                  },
+                  unitPrice: updatedPrice,
                 }
-                return line
-              })
-            )
-          })
-          .catch(() => {})
-      }
+              }
+              return line
+            })
+          )
+        })
+        .catch(() => {})
     }
   }, [location.state, fetchedEditOrder, loadedEditOrderId, storeId])
 
@@ -241,8 +252,10 @@ export function SalesPage() {
     const map = new Map<string, number>()
     for (const p of products) map.set(p.id, Number(p.stock_quantity ?? 0))
     for (const item of cart) {
-      if (!map.has(item.product.id)) {
-        map.set(item.product.id, Number(item.product.stock_quantity ?? 0))
+      const cartStock = Number(item.product.stock_quantity ?? 0)
+      const existing = map.get(item.product.id)
+      if (existing === undefined || cartStock > existing) {
+        map.set(item.product.id, cartStock)
       }
     }
     return map
@@ -372,7 +385,7 @@ export function SalesPage() {
           productId: i.product.id,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
-          unitCost: Number(i.product.cost_price),
+          unitCost: Number(i.product.cost_price || 0),
           discount: i.discount,
         })),
         discountAmount: discountTotal,
@@ -385,6 +398,8 @@ export function SalesPage() {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['orders', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['customers', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['customers-recent'] })
       // O grid do PDV le o saldo; sem invalidar, continuaria mostrando a
       // quantidade antiga ate a proxima revalidacao.
       queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
@@ -824,9 +839,9 @@ export function SalesPage() {
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Cliente
+                    <Users className="h-3 w-3" /> Cliente <span className="text-primary">*</span>
                   </label>
-                  <span className="text-[10px] text-muted-foreground">Consumidor ou Cadastrado</span>
+                  <span className="text-[10px] text-muted-foreground">Obrigatório (Genérico se vazio)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CustomerCombobox

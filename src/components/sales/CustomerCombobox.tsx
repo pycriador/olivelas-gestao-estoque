@@ -183,7 +183,7 @@ export function CustomerCombobox({
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
           disabled={disabled}
-          placeholder="Consumidor Final (sem cadastro)"
+          placeholder="Cliente Genérico (padrão se não informado)"
           autoComplete="off"
           role="combobox"
           aria-expanded={isOpen}
@@ -230,8 +230,8 @@ export function CustomerCombobox({
             {!isLoading && suggestions.length === 0 && (
               <div className="px-3 py-3 text-[11px] text-muted-foreground">
                 {isSearching
-                  ? 'Nenhum cadastro encontrado. A venda seguirá como Consumidor Final.'
-                  : 'Nenhum cliente cadastrado ainda.'}
+                  ? 'Nenhum cadastro encontrado. O pedido usará Cliente Genérico.'
+                  : 'Nenhum cliente cadastrado ainda. O pedido criará Cliente Genérico.'}
               </div>
             )}
 
@@ -269,7 +269,7 @@ export function CustomerCombobox({
             }}
             className="w-full text-left px-3 py-2 border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors text-[11px] text-muted-foreground cursor-pointer"
           >
-            Consumidor Final (sem cadastro)
+            Cliente Genérico (padrão sem identificação)
           </button>
         </div>
       )}

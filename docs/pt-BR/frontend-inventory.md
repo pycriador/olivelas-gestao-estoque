@@ -153,8 +153,8 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `productImageService` | listagem, upload biblioteca/produto, attach, primary, reorder, remove |
 | `storageService` | `uploadProductImage`, `deleteProductImage`, `uploadStoreLogo` |
 | `inventoryService` | saldos, valorização financeira, movimentos, lotes, `applyMovement` (RPC), centros de custo, motivos de perda, import, disposições de lote, baixa em lote (`writeoffBulkStock`), remoção de estoque zerado |
-| `orderService` | `listOrders`, `createOrder` (RPC), `cancelOrder` (RPC `restore_sale_stock`), `updateOrderStatus` |
-| `customerService` | list/get/create/update/`softDeleteCustomer` |
+| `orderService` | `listOrders`, `createOrder` (RPC com resolução automática de `Cliente Genérico` e substituição resiliente em edições), `cancelOrder` (RPC `restore_sale_stock`), `updateOrderStatus` |
+| `customerService` | list/get/create/update/`softDeleteCustomer`, `getOrCreateGenericCustomer` |
 | `supplierService` | list/create/update/`softDeleteSupplier` |
 | `purchasingService` | list/create/`receivePurchaseOrder` (RPC), cálculo de lucratividade e sincronização de custos/preços com catálogo |
 | `userService` | usuários plataforma, membros da loja, convite, papéis, delete via RPC |

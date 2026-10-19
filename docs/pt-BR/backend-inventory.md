@@ -35,6 +35,7 @@ Ordem incremental observada (arquivos datados):
 16. `20260927000016_close_authenticated_default_on_new_functions.sql`
 17. `20261002000017_api_tokens.sql`
 18. `20261015000018_fix_restore_stock_after_delete_cancelled_orders.sql`
+19. `20261019000019_allow_delete_cancelled_orders_on_edit.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 

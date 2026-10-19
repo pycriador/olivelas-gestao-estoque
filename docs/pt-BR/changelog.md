@@ -12,6 +12,24 @@ classification: Confirmed
 
 # Changelog da documentação
 
+## 2026-10-19
+
+- **Associação Obrigatória de Cliente com Fallback Automático para "Cliente Genérico" no PDV (`/sales`)** (`customerService.ts`, `orderService.ts`, `CustomerCombobox.tsx`, `SalesPage.tsx`):
+  - **Resolução e Criação Automática (`customerService.getOrCreateGenericCustomer`)**:
+    - Todo pedido criado no PDV exige vínculo com um registro válido de cliente (`customer_id`).
+    - Caso o operador não informe nenhum cliente no seletor do PDV, `orderService.createOrder` localiza automaticamente o cadastro `"Cliente Genérico"` (ou `"Consumidor Final"`) da loja ativa — reativando-o caso esteja inativo — ou cria o registro `"Cliente Genérico"` automaticamente antes de invocar a RPC `create_order_with_stock`.
+  - **Atualização Visual no Checkout e Combobox (`CustomerCombobox.tsx`, `SalesPage.tsx`)**:
+    - Indicadores visuais no seletor e rodapé de checkout informando que o cliente é obrigatório e que `"Cliente Genérico"` é associado por padrão quando nenhum cliente específico é selecionado.
+
+- **Correção do Salvamento na Edição de Vendas (`/orders` → `/sales?editOrder=:id`)** (`orderService.ts`, `SalesPage.tsx`, migration `20261019000019_allow_delete_cancelled_orders_on_edit.sql`):
+  - **Causa Raiz 1 — Bloqueio Silencioso de RLS `DELETE` e Violação de Constraint `uq_order_store_number` (`23505`)**:
+    - A tabela `public.orders` não possuía política RLS para `DELETE`, fazendo com que `supabase.from('orders').delete().eq('id', replaceOrderId)` afetasse `0` linhas silenciosamente e a chamada subsequente a `create_order_with_stock` falhasse com erro de chave duplicada (`uq_order_store_number`) ao reutilizar o mesmo `order_number`.
+    - Criada a migration `20261019000019_allow_delete_cancelled_orders_on_edit.sql` adicionando a política `"Orders delete cancelled: tenant staff"` para permitir exclusão de pedidos já cancelados (`status = 'CANCELLED'`) pela equipe da loja (`STORE_ADMIN`, `SELLER`, `FINANCE`) ou `is_global_admin()`.
+    - Adicionada proteção multicamada em `orderService.createOrder`: garante o cancelamento prévio e restauração de estoque se necessário, verifica se a exclusão direta removeu o registro (`deletedRows`), aciona fallback via `global_admin_delete` ou libera o `order_number` original renomeando o registro cancelado substituído (`-SUB-`, ocultado de `listOrders`), além de retry automático caso ocorra colisão `23505`.
+  - **Causa Raiz 2 — Falso Positivo de `"Estoque insuficiente"` ao Carregar Pedido para Edição (`SalesPage.tsx`)**:
+    - Os itens vindos do relacionamento `orders -> order_items -> products(*)` não contêm a coluna calculada `stock_quantity` (que vem de `stock_balances`), fazendo com que `stockByProduct` avaliasse `0` se `storeId` ainda não estivesse disponível no primeiro ciclo ou se o cache de `products-pos` estivesse obsoleto (`keepPreviousData`).
+    - O carregamento de `editOrder` agora aguarda `storeId` estar definido, inicializa `stock_quantity` de cada item do carrinho de edição com `Math.max(Number(prod?.stock_quantity ?? 0), itemQty)` e consolida `stockByProduct` preservando o maior saldo entre a listagem e o carrinho reaberto.
+
 ## 2026-10-15
 
 - **Revisão e Correção Abrangente de Filtros e Buscas na Plataforma** (`useTablePagination.ts`, `globalAdminService.ts`, `productService.ts`, `customerService.ts`, `supplierService.ts`, `purchasingService.ts`, `auditService.ts`, `CategoriesPage.tsx`, `TeamPage.tsx`, `StoresPage.tsx`, `GlobalAdminDashboardPage.tsx`, `GlobalDeletePanel.tsx`):

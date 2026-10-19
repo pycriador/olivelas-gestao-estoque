@@ -172,4 +172,44 @@ export const customerService = {
       entityId: id,
     })
   },
+
+  /**
+   * Obtém ou cria automaticamente o "Cliente Genérico" da loja ativa.
+   * Usado no PDV (/sales) quando o operador não informa um cliente específico,
+   * garantindo que todo pedido possua um cadastro de cliente vinculado.
+   */
+  async getOrCreateGenericCustomer(storeId: string): Promise<Customer> {
+    const { data: existing, error: searchErr } = await supabase
+      .from('customers')
+      .select('*')
+      .eq('store_id', storeId)
+      .is('deleted_at', null)
+      .in('name', ['Cliente Genérico', 'Consumidor Final'])
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (!searchErr && existing) {
+      if (existing.status !== 'ACTIVE') {
+        const { data: activated } = await supabase
+          .from('customers')
+          .update({
+            status: 'ACTIVE',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existing.id)
+          .eq('store_id', storeId)
+          .select()
+          .single()
+        if (activated) return activated as Customer
+      }
+      return existing as Customer
+    }
+
+    return this.createCustomer(storeId, {
+      name: 'Cliente Genérico',
+      notes: 'Cadastro genérico padrão para registro de pedidos sem cliente identificado no PDV',
+      status: 'ACTIVE',
+    })
+  },
 }

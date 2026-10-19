@@ -73,6 +73,7 @@ Qualquer “esconder botão” é UX. Operações indevidas devem falhar no RLS/
 - **Produtos SELECT:** membro **ou** produto publicado no catálogo (`is_published_catalog` e loja ativa — ver SQL exato).
 - **Imagens de produto SELECT:** policy `"Product images select: all"` (leitura ampla no SQL).
 - **Pedidos INSERT:** staff **ou** checkout público (condição na policy; o catálogo atual usa WhatsApp).
+- **Pedidos DELETE (migration 19):** policy `"Orders delete cancelled: tenant staff"` permite que staff da loja (`STORE_ADMIN`, `SELLER`, `FINANCE`) ou `is_global_admin()` removam pedidos exclusivamente quando `status = 'CANCELLED'`, viabilizando substituição limpa ao editar pedidos no PDV.
 - **Catálogos:** SELECT público; modify store admin.
 - **Notificações:** destinatário ou staff da loja.
 

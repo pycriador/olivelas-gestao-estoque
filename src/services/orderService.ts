@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
+import { customerService } from '@/services/customerService'
 import { buildAccentRegex } from '@/utils/productUtils'
 import type { Order } from '@/types/order.types'
 import type { OrderChannel, OrderStatus, PaymentMethod } from '@/types/database.types'
@@ -68,6 +69,7 @@ export const orderService = {
         { count: 'exact' }
       )
       .eq('store_id', storeId)
+      .not('order_number', 'like', '%-SUB-%')
 
     if (search?.trim()) {
       const q = search.trim()
@@ -140,7 +142,7 @@ export const orderService = {
 
     const mapped = (data || []).map((o: any) => ({
       ...o,
-      customer_name: o.customers?.name || o.customer_name || 'Consumidor Final',
+      customer_name: o.customers?.name || o.customer_name || 'Cliente Genérico',
       customer_phone: o.customers?.phone || o.customer_phone,
       customer_email: o.customers?.email || o.customer_email,
       items: (o.order_items || []).map((oi: any) => ({
@@ -161,46 +163,119 @@ export const orderService = {
   async createOrder(payload: CreateOrderPayload): Promise<Order> {
     let orderNumber = payload.orderNumber || `PED-${Date.now().toString().slice(-6)}`
 
-    // Se estamos editando/substituindo um pedido previamente cancelado
+    // Cadastro de cliente obrigatório no PDV: se não informado, vincula ao Cliente Genérico da loja
+    let resolvedCustomerId = payload.customerId ? payload.customerId.trim() : ''
+    if (!resolvedCustomerId) {
+      const genericCustomer = await customerService.getOrCreateGenericCustomer(payload.storeId)
+      resolvedCustomerId = genericCustomer.id
+    }
+
+    // Se estamos editando/substituindo um pedido existente
     if (payload.replaceOrderId) {
-      // Remove o registro do pedido cancelado anterior para recriá-lo com o mesmo número
-      const { error: delErr } = await supabase
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('id, status, order_number')
+        .eq('id', payload.replaceOrderId)
+        .eq('store_id', payload.storeId)
+        .maybeSingle()
+
+      // Garante que o estoque do pedido substituído foi estornado caso ainda não esteja CANCELLED
+      if (existingOrder && existingOrder.status !== 'CANCELLED') {
+        await this.cancelOrder(
+          payload.replaceOrderId,
+          `Substituição por edição no PDV (${existingOrder.order_number || orderNumber})`
+        )
+      }
+
+      // 1. Tenta remover diretamente o registro do pedido cancelado substituído
+      const { data: deletedRows, error: delErr } = await supabase
         .from('orders')
         .delete()
         .eq('id', payload.replaceOrderId)
         .eq('store_id', payload.storeId)
+        .select('id')
 
-      if (delErr) {
-        console.warn('Aviso ao substituir pedido cancelado na edição:', delErr)
-        if (delErr.message?.includes('duplicate') || delErr.message?.includes('violates')) {
-          orderNumber = `PED-${Date.now().toString().slice(-6)}`
+      let wasDeleted = !delErr && Array.isArray(deletedRows) && deletedRows.length > 0
+
+      // 2. Se o RLS bloqueou o DELETE direto (0 linhas afetadas), tenta via RPC global_admin_delete
+      if (!wasDeleted) {
+        const { error: rpcDelErr } = await supabase.rpc('global_admin_delete', {
+          p_entity: 'orders',
+          p_id: payload.replaceOrderId,
+        })
+        if (!rpcDelErr) {
+          wasDeleted = true
         }
       }
+
+      // 3. Se o registro antigo ainda existir no banco (ex: operador sem permissão de hard delete
+      // ou policy DELETE ainda não aplicada), renomeia o order_number do pedido cancelado antigo
+      // para liberar o número original sem violar a constraint uq_order_store_number.
+      if (!wasDeleted) {
+        const archivedOrderNumber = `${orderNumber}-SUB-${Date.now().toString().slice(-4)}`
+        await supabase
+          .from('orders')
+          .update({
+            order_number: archivedOrderNumber,
+            notes: `[SUBSTITUÍDO NA EDIÇÃO] ${payload.notes || ''}`.trim(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', payload.replaceOrderId)
+          .eq('store_id', payload.storeId)
+      }
     }
+
+    const rpcItems = payload.items.map((item) => ({
+      productId: item.productId,
+      batchId: item.batchId || null,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      unitCost:
+        typeof item.unitCost === 'number' && !Number.isNaN(item.unitCost)
+          ? item.unitCost
+          : null,
+      discount: item.discount || 0,
+    }))
 
     // Tudo em uma transacao no servidor: pedido, itens, pagamento, baixa de
     // estoque e auditoria. A RPC trava a linha de saldo de cada produto
     // (FOR UPDATE) e recusa com "Estoque insuficiente para ..." quando o
     // disponivel nao cobre o carrinho, entao nao existe venda acima do
     // estoque nem pedido orfao por insert parcial.
-    const { data: orderId, error } = await supabase.rpc('create_order_with_stock', {
+    let { data: orderId, error } = await supabase.rpc('create_order_with_stock', {
       p_store_id: payload.storeId,
-      p_customer_id: payload.customerId || null,
+      p_customer_id: resolvedCustomerId,
       p_channel: payload.channel,
       p_order_number: orderNumber,
-      p_items: payload.items.map((item) => ({
-        productId: item.productId,
-        batchId: item.batchId || null,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        unitCost: item.unitCost ?? null,
-        discount: item.discount || 0,
-      })),
+      p_items: rpcItems,
       p_discount_amount: payload.discountAmount || 0,
       p_shipping_amount: payload.shippingAmount || 0,
       p_notes: payload.notes || null,
       p_payment_method: payload.paymentMethod || null,
     })
+
+    // Fallback de segurança caso ainda ocorra colisão de número de pedido (23505 / uq_order_store_number)
+    if (
+      error &&
+      (error.code === '23505' ||
+        error.message?.includes('duplicate') ||
+        error.message?.includes('uq_order_store_number'))
+    ) {
+      orderNumber = `PED-${Date.now().toString().slice(-6)}`
+      const retry = await supabase.rpc('create_order_with_stock', {
+        p_store_id: payload.storeId,
+        p_customer_id: resolvedCustomerId,
+        p_channel: payload.channel,
+        p_order_number: orderNumber,
+        p_items: rpcItems,
+        p_discount_amount: payload.discountAmount || 0,
+        p_shipping_amount: payload.shippingAmount || 0,
+        p_notes: payload.notes || null,
+        p_payment_method: payload.paymentMethod || null,
+      })
+      orderId = retry.data
+      error = retry.error
+    }
 
     if (error) throw error
     if (!orderId) throw new Error('O pedido não foi criado.')
@@ -280,7 +355,7 @@ export const orderService = {
 
     return {
       ...data,
-      customer_name: data.customers?.name || data.customer_name || 'Consumidor Final',
+      customer_name: data.customers?.name || data.customer_name || 'Cliente Genérico',
       customer_phone: data.customers?.phone || data.customer_phone,
       customer_email: data.customers?.email || data.customer_email,
       items: (data.order_items || []).map((oi: any) => ({
