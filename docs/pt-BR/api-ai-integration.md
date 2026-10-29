@@ -89,6 +89,37 @@ Todos os endpoints utilizam a convenção PostgREST. Para filtrar por loja, incl
 ### 4.8. Fornecedores
 `GET /suppliers?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,trade_name,corporate_name,document,phone,email,status`
 
+### 4.9. Categorias, Centros de Custo & Motivos de Perda
+- `GET /categories?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,name`
+- `GET /cost_centers?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,code,name,is_active`
+- `GET /loss_reasons?select=code,label,default_cost_center_code,requires_approval`
+
+### 4.10. Logs de Auditoria & Notificações (`audit:read`)
+- `GET /audit_logs?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,action,entity,entity_id,created_at&order=created_at.desc&limit=50`
+- `GET /notifications?store_id=eq.f8fdfd0e-a13a-44a6-ba98-53e61be300db&select=id,title,type,is_read,created_at&order=created_at.desc&limit=50`
+
+---
+
+## 4B. Endpoints REST de Escrita e Operações (POST / PATCH)
+
+Para retornar o registro criado ou atualizado na resposta, inclua o cabeçalho `Prefer: return=representation`.
+
+| Escopo HBAC | Método & Endpoint | Payload / Parâmetros | Comportamento no Banco |
+| :--- | :--- | :--- | :--- |
+| `products:write` | `POST /products` | `{"store_id": "<uuid>", "name": "...", "sku": "...", "unit": "UN", "min_stock": 5, "max_stock": 1000, "cost_price": 10.0, "selling_price": 18.5, "is_active": true}` | Cadastra novo item no catálogo da filial |
+| `products:write` | `PATCH /products?id=eq.<id>&store_id=eq.<uuid>` | `{"selling_price": 19.9, "min_stock": 10}` | Atualiza dados mestres do produto |
+| `products:delete` | `PATCH /products?id=eq.<id>&store_id=eq.<uuid>` | `{"is_active": false}` | Desativa o produto no catálogo (soft-delete) |
+| `inventory:write` | `POST /stock_movements` | `{"store_id": "<uuid>", "product_id": "<uuid>", "movement_type": "ENTRY", "quantity": 10, "unit_cost": 15.0, "notes": "Entrada via API"}` | Trigger `trg_api_stock_movement_sync` preenche `previous_quantity`/`new_quantity` e soma no saldo de `stock_balances` |
+| `inventory:adjust` | `POST /stock_movements` | `{"store_id": "<uuid>", "product_id": "<uuid>", "movement_type": "LOSS", "quantity": 2, "reason_code": "AVARIA", "notes": "Baixa via API"}` | Trigger deduz automaticamente do saldo físico em `stock_balances` (impedindo saldo negativo) |
+| `customers:write` | `POST /customers` | `{"store_id": "<uuid>", "name": "...", "document": "...", "phone": "...", "email": "...", "status": "ACTIVE"}` | Cadastra novo cliente no CRM da filial |
+| `customers:write` | `PATCH /customers?id=eq.<id>&store_id=eq.<uuid>` | `{"phone": "...", "status": "ACTIVE"}` | Atualiza dados cadastrais do cliente |
+| `orders:write` | `POST /orders` | `{"store_id": "<uuid>", "customer_id": "<uuid>", "order_number": "PED-1001", "channel": "API", "status": "PENDING", "subtotal": 50.0, "discount_amount": 0, "total_amount": 50.0}` | Emite novo pedido de venda (`channel` aceita `API`, `IN_STORE`, `WHATSAPP`, `CATALOG`, `ECOMMERCE`) |
+| `orders:write` | `POST /order_items` | `{"store_id": "<uuid>", "order_id": "<uuid>", "product_id": "<uuid>", "quantity": 2, "unit_price": 25.0, "discount": 0, "total_price": 50.0}` | Vincula itens ao pedido emitido |
+| `orders:cancel` | `PATCH /orders?id=eq.<id>&store_id=eq.<uuid>` | `{"status": "CANCELLED", "cancellation_reason": "Cancelamento via API"}` | Cancela o pedido de venda |
+| `purchases:write` | `POST /suppliers` | `{"store_id": "<uuid>", "corporate_name": "...", "trade_name": "...", "document": "...", "status": "ACTIVE"}` | Cadastra fornecedor na filial |
+| `purchases:write` | `POST /purchase_orders` | `{"store_id": "<uuid>", "supplier_id": "<uuid>", "order_number": "OC-1001", "status": "DRAFT", "subtotal": 350.0, "total_amount": 350.0}` | Cria ordem de compra |
+| `purchases:write` | `PATCH /purchase_orders?id=eq.<id>&store_id=eq.<uuid>` | `{"status": "ISSUED", "notes": "..."}` | Atualiza ordem de compra |
+
 ---
 
 ## 5. Catálogo de Relatórios Disponíveis via API para IA Externa (`/rpc/get_ai_report`)
@@ -184,3 +215,30 @@ if __name__ == "__main__":
     print(f"Total de saldos resgatados: {len(balances)}")
     print(f"KPIs executivos: {kpis}")
 ```
+
+---
+
+## 7. Arquitetura de Segurança & Homologação de Produção
+
+### 7.1. Defesa em Profundidade (3 Camadas no PostgreSQL / PostgREST)
+1. **Camada 1 — Interceptação Pré-Request (`pgrst.db_pre_request` → `public.check_hbac_pre_request`):**
+   - Executada pelo PostgREST antes de qualquer query ou mutação quando `X-HBAC-Token` está presente.
+   - Rejeita com código SQL `28000` (`HTTP 403`) tokens inexistentes ou expirados (`expires_at <= NOW()`).
+   - Rejeita com código SQL `42501` (`HTTP 401`) tokens desativados (`is_active = false`), tentativas de acesso cruzado entre lojas (`X-Store-ID` diferente do `store_id` do token) e falta do escopo HBAC exigido para o par `(endpoint, método HTTP)`.
+2. **Camada 2 — Row-Level Security por Linha (`public.has_hbac_scope(store_id, required_scopes)`):**
+   - Mesmo que um agente tente omitir filtros ou injetar outro `store_id` no corpo/query, todas as políticas `SELECT`, `INSERT`, `UPDATE` e `DELETE` exigem que `store_id` coincida com a filial autorizada no token.
+3. **Camada 3 — Proteção de Credenciais e Grants (`public.api_tokens`):**
+   - A política `anon_read_own_hbac_token_only` garante que requisições anônimas sem `X-HBAC-Token` recebam `0` linhas (`[]`) em `/rest/v1/api_tokens`, e um token válido só enxerga a sua própria linha.
+   - O role `anon` possui `REVOKE INSERT, UPDATE, DELETE` em `public.api_tokens`, impedindo criação ou escalonamento de privilégios via API externa.
+
+### 7.2. Matriz de Status de Validação E2E em Produção (53/53 Testes Aprovados)
+Todos os **53 cenários de integração e segurança** foram executados e aprovados contra a instância de produção (`https://mffrafqyjbjitlhjnlai.supabase.co/rest/v1`):
+- **Inspeção de Token (`1/1`):** Leitura isolada do próprio token e validação dos 23 escopos ativos.
+- **Produtos & Catálogo (`7/7`):** `GET /stores`, `GET /categories`, `GET /products`, `POST /products`, `PATCH /products` (edição de preço, desativação `products:delete` e reativação).
+- **Estoque, Lotes & Movimentações (`9/9`):** `GET /stock_balances`, `GET /stock_batches`, `GET /stock_movements`, `GET /cost_centers`, `GET /loss_reasons`, `POST /stock_movements` (`ENTRY +10` e `LOSS -2` com cálculo automático de `previous_quantity`/`new_quantity` e atualização em tempo real de `stock_balances`).
+- **Clientes & CRM (`4/4`):** `GET /customers`, `GET /customer_addresses`, `POST /customers`, `PATCH /customers`.
+- **Pedidos & PDV (`6/6`):** `GET /orders`, `GET /order_items`, `GET /payments`, `POST /orders`, `POST /order_items`, `PATCH /orders` (`orders:cancel`).
+- **Compras & Fornecedores (`6/6`):** `GET /suppliers`, `GET /purchase_orders`, `GET /purchase_order_items`, `POST /suppliers`, `POST /purchase_orders`, `PATCH /purchase_orders`.
+- **Relatórios Analíticos & IA (`12/12`):** `GET` e `POST` em `/rpc/get_ai_report` para `list`, `kpis`, `valuation`, `abc`, `stockouts`, `demand`, `customers`, `capital`, `purchases`, `losses` e `sales`.
+- **Auditoria & Notificações (`2/2`):** `GET /audit_logs` e `GET /notifications`.
+- **Segurança & Bloqueio de Ataques (`6/6`):** Bloqueio de leitura anônima de `/api_tokens` e `/orders`, bloqueio de `POST /products` sem token (`42501`), bloqueio de token forjado (`28000`), bloqueio de tentativa Cross-Tenant em outra loja (`42501`) e bloqueio de tentativa de inserção em `/api_tokens` (`42501`).
