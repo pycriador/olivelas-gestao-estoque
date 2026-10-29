@@ -5,7 +5,7 @@ type: Security
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-28
+updated: 2026-10-29
 language: pt-BR
 classification: Confirmed
 source:
@@ -17,7 +17,11 @@ source:
   - supabase/migrations/20260927000015_revoke_internal_helpers_from_authenticated.sql
   - supabase/migrations/20260927000016_close_authenticated_default_on_new_functions.sql
   - supabase/migrations/20261028000020_hbac_api_integration.sql
+  - supabase/migrations/20261030000023_staff_roles_approvers_and_branches.sql
+  - supabase/migrations/20261030000024_global_finance_licensing_rules.sql
+  - supabase/migrations/20261030000025_store_saved_views.sql
   - src/routes/ProtectedRoute.tsx
+  - src/routes/PermissionGate.tsx
   - src/hooks/usePermissions.ts
 ---
 
@@ -29,16 +33,16 @@ Modelo: **confiança no PostgreSQL (RLS + SECURITY DEFINER seletivo)**. O fronte
 
 - Supabase Auth (`auth.users`) ↔ `public.profiles` (`handle_new_user`).
 - Flag `profiles.is_global_admin`.
-- Papel por loja em `store_users.role`.
+- Papel por loja em `store_users.role`, papel customizado em `store_users.custom_role_id` (`store_custom_roles`) e permissões granulares por funcionário (`granted_permissions`, `revoked_permissions`).
 
 ## Fronteiras de confiança
 
 | Fronteira | Controle |
 | --- | --- |
-| Browser | SPA pública no Pages; chave **anon/publishable** no bundle |
-| PostgREST | JWT; RLS |
+| Browser | SPA pública no Pages; chave **anon/publishable** no bundle; `credentials: 'omit'` no fetch |
+| PostgREST | JWT ou `X-HBAC-Token` validado por `check_hbac_pre_request`; RLS em todas as tabelas |
 | Storage | policies por bucket e primeiro segmento do path |
-| RPCs | `GRANT` explícito para `authenticated` na migration 11; `anon`, `PUBLIC`, `authenticated` e `service_role` sem EXECUTE; funções novas perdem todo EXECUTE default via evento `fn_revoke_default_function_exec` (migrations 11 e 16) |
+| RPCs | `GRANT` explícito para `authenticated`; `anon`, `PUBLIC`, `authenticated` e `service_role` sem EXECUTE default; funções novas perdem todo EXECUTE default via event trigger `fn_revoke_default_function_exec` (migrations 11 e 16) |
 
 ### anonymous com EXECUTE (achado de 2026-09-27)
 
@@ -47,7 +51,7 @@ A auditoria do banco de produção mostrou que **todas** as funções privileged
 - O Supabase cria `ALTER DEFAULT PRIVILEGES` com `anon=X` para funções no schema `public`.
 - O `REVOKE ALL ... FROM PUBLIC` das migrations anteriores não removia isso: um grant explícito para `anon` só sai com `REVOKE` do próprio `anon`.
 
-Corrigido na migration 11, que revoga de `PUBLIC` e `anon` por função e dá `GRANT` explícito a `authenticated` para as 9 RPCs que o app usa.
+Corrigido na migration 11, que revoga de `PUBLIC` e `anon` por função e dá `GRANT` explícito a `authenticated` para as RPCs que o app usa.
 
 Sobre funções **futuras**: `ALTER DEFAULT PRIVILEGES ... FROM PUBLIC` não resolve, porque o EXECUTE para `PUBLIC` é default implícito do Postgres e o `pg_default_acl` gerado é descartado (verificado no PG 17). Quem fecha isso é o event trigger `trg_revoke_default_function_exec`, que roda em `ddl_command_end`. A migration 11 fechava só `PUBLIC`/`anon`; a migration 16 ampliou o revoke para `authenticated` e `service_role`, verificando que uma função recém-criada nasce com `anon=false authenticated=false service_role=false`. **Consequência para quem escreve migration: toda RPC nova precisa de `GRANT EXECUTE ... TO authenticated`, senão o app perde acesso.** O teste `15_grants.sql` (G7/G7b/G8) cobre esse contrato.
 
@@ -58,19 +62,20 @@ Duas correções de fechamento da auditoria de 2026-09-27:
 
 `process_sale_stock_deduction` (legada) perdeu EXECUTE para todos e recebeu guard interno: recusa estoque insuficiente em vez de inserir linha de saldo negativo, que era a origem do histórico de saldos quebrados.
 
-## Autorização no UI
+## Autorização no UI (`ProtectedRoute`, `PermissionGate` e `usePermissions`)
 
-- `ProtectedRoute`: sessão + opcional global admin.
-- `usePermissions`: mapa TypeScript por papel (espelha em grande parte o seed, mas **não** consulta `role_permissions`).
-- `PermissionGate`: componente pronto, **não usado** nas pages.
+- `ProtectedRoute`: exige sessão autenticada, verifica `requireGlobalAdmin` nas rotas `/global-admin*` e aciona `SubscriptionGuardModal` caso a assinatura SaaS do usuário esteja bloqueada (`PAST_DUE` / `SUSPENDED` / `CANCELLED` com `block_access = true`).
+- `PermissionGate`: envolve as rotas de módulos em `src/routes/AppRoutes.tsx` (`MOD_CATALOG_WA`, `MOD_INVENTORY`, `MOD_EXPIRATION`, `MOD_POS_SALES`, `MOD_CUSTOMERS`, `MOD_SUPPLIERS`, `MOD_PURCHASING`, `MOD_REPORTS`, `MOD_TEAM_AUDIT`, `MOD_API_INTEGRATIONS`), bloqueando a navegação caso o módulo tenha sido desmarcado no plano comercial SaaS do usuário (mesmo que seja `STORE_ADMIN`) ou revogado nas permissões do funcionário.
+- `usePermissions`: calcula as 47 permissões granulares efetivas combinando papel base (`store_users.role`), papel customizado (`store_custom_roles`), `granted_permissions`, `revoked_permissions` e os módulos habilitados no perfil SaaS (`UserPermissionProfile`).
 
-Qualquer “esconder botão” é UX. Operações indevidas devem falhar no RLS/RPC.
+Qualquer “esconder botão” ou bloqueio de rota no cliente é camada de UX/governança visual. Operações indevidas são barradas no PostgreSQL por RLS e RPCs.
 
-## Padrões RLS (migration 02, simplificado)
+## Padrões RLS (migrations 02, 19, 20, 22, 23, 24 e 25)
 
-- **Perfil:** usuário vê/edita o próprio `profiles` (policies posteriores em 13 para admin global).
+- **Perfil:** usuário vê/edita o próprio `profiles` (policies em 13 para admin global).
 - **Lojas:** membro ou catálogo público ativo; insert autenticado / global admin; update admin da loja ou global; delete (soft) global admin.
 - **Cadastros com `store_id`:** `has_store_access` no SELECT; papéis staff no write (varia: produtos, estoque, compras, pedidos).
+- **Visões Salvas por Loja/Filial (`store_saved_views`, migration 25):** `has_store_access(store_id) OR is_global_admin()` em `SELECT`, `INSERT`, `UPDATE` e `DELETE`, garantindo que cada loja ou filial acesse e gerencie exclusivamente suas próprias visões de filtros.
 - **Produtos SELECT:** membro **ou** produto publicado no catálogo (`is_published_catalog` e loja ativa — ver SQL exato).
 - **Imagens de produto SELECT:** policy `"Product images select: all"` (leitura ampla no SQL).
 - **Pedidos INSERT:** staff **ou** checkout público (condição na policy; o catálogo atual usa WhatsApp).
@@ -82,11 +87,11 @@ Qualquer “esconder botão” é UX. Operações indevidas devem falhar no RLS/
   - Hook `pgrst.db_pre_request` (`public.check_hbac_pre_request`) valida o cabeçalho `X-HBAC-Token`, status `is_active`, `expires_at`, vínculo de loja (`X-Store-ID` vs `api_tokens.store_id`) e escopo mínimo exigido para cada tabela/método HTTP antes da execução da query.
   - RLS por linha (`public.has_hbac_scope(store_id, required_scopes)`) aplica isolamento de tenant para agentes externos usando `X-HBAC-Token`.
 
-Detalhe fino: abrir o arquivo `20260925000002_rls_policies.sql`. Não copiar USING clauses da memória.
+Detalhe fino: abrir o arquivo `20260925000002_rls_policies.sql` e migrations subsequentes. Não copiar USING clauses da memória.
 
 ## Hard delete global
 
-| `global_admin_delete` e `global_admin_delete_platform_user`: restritos a global admin (corpo SQL). Recusam exclusão quando há histórico comercial, conforme comentários da migration 10. Auditoria na mesma transação.
+`global_admin_delete` e `global_admin_delete_platform_user`: restritos a global admin (corpo SQL). Recusam exclusão quando há histórico comercial, conforme comentários da migration 10. Auditoria na mesma transação.
 
 ## Gestão de Funcionários, Papéis Granulares e Alçada de Baixa de Estoque (migration 23)
 

@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-29
 language: pt-BR
 classification: Confirmed
 source:
@@ -17,6 +17,11 @@ source:
   - src/components/common/ResponsiveTable.tsx
   - src/components/common/PageHeader.tsx
   - src/components/ui/modal.tsx
+  - src/components/ui/dropdown-menu.tsx
+  - src/pages/DashboardPage.tsx
+  - src/pages/ReportsPage.tsx
+  - src/pages/CustomersPage.tsx
+  - src/pages/GlobalAdminDashboardPage.tsx
 ---
 
 # Mapa desktop × mobile
@@ -36,7 +41,7 @@ Raiz: `h-dvh max-h-dvh flex flex-col md:flex-row overflow-hidden`.
 | Botão hamburger | header `md:hidden` | oculto |
 | Fechar sidebar (X) | brand header `md:hidden` | oculto |
 | Grupos de nav | botão accordion `md:hidden`; filhos `hidden` salvo grupo aberto | título `hidden md:flex`; filhos `md:block` |
-| Links inferiores | `grid grid-cols-2` | `md:block md:space-y-1` |
+| Links inferiores | `grid grid-cols-1` no mobile | `md:block md:space-y-1` |
 | Header | coluna (`flex-col`); altura `min-h-12` | `md:h-12 md:flex-row` |
 | Main | `overflow-y-auto` | `lg:overflow-hidden` a partir de `lg` |
 
@@ -48,7 +53,7 @@ Tema da loja: `applyStoreTheme` quando há `storeId` ≠ `'all'`.
 
 | Região | Mobile | `md+` |
 | --- | --- | --- |
-| Links Recursos / Planos / Contato | hamburger; painel `grid-cols-2` | `hidden md:flex` na navbar |
+| Links Recursos / Planos / Evidências / Contato | hamburger; lista vertical 1 item por linha com botão CTA em destaque | `hidden md:flex` na navbar |
 | Idioma / tema / login | no painel aberto | `hidden md:flex` à direita |
 | Footer | `grid-cols-1` | `md:grid-cols-4` |
 
@@ -56,7 +61,7 @@ Tema da loja: `applyStoreTheme` quando há `storeId` ≠ `'all'`.
 
 Header empilha (`flex-col`) e vira `sm:flex-row`. Formulário `max-w-md` centralizado. Sem drawer.
 
-## Tabelas
+## Tabelas (`ResponsiveTable`)
 
 `ResponsiveTable` + CSS em `src/index.css` `@media (max-width: 767px)`:
 
@@ -65,53 +70,56 @@ Header empilha (`flex-col`) e vira `sm:flex-row`. Formulário `max-w-md` central
 - Labels via `data-mobile-label` (MutationObserver nas `th`).
 - Primeira célula e células `.mobile-table-actions` ocupam a linha inteira.
 
-`ProductsPage` **não** usa só esse CSS: duplica markup — tabela `hidden md:block` e lista `md:hidden`.
+## Menus Dropdown via Portal (`DropdownMenu`)
 
-## Header de página (`PageHeader`)
+`src/components/ui/dropdown-menu.tsx` renderiza o menu flutuante via `createPortal(..., document.body)` com cálculo automático de coordenadas (`getBoundingClientRect`), garantindo que o botão **Ações Rápidas** nas tabelas de `/global-admin`, `/stores` e `/team` nunca seja cortado por containers com `overflow-hidden` ou `overflow-x-auto`.
 
-Portal para `#page-header-slot`. Abaixo de `sm`, o campo de busca vira ícone; ao abrir, o título some (`hidden sm:flex` no bloco do título quando a busca está expandida).
+## Dashboard Executivo Multi-Loja (`DashboardPage`)
 
-## Modais e CommandK
-
-Padrão sheet:
-
-- Mobile: `items-end`, `rounded-t-[1.75rem]`, handle, `slide-in-from-bottom`.
-- `sm+`: centralizado, `sm:rounded-2xl`, borda completa.
-
-CommandK: mobile `items-end`; `sm:items-start sm:pt-20`. Atalho Ctrl/Cmd+K (pouco relevante em teclado virtual; a UI ainda abre se `isOpen`).
+- **Barra de Controle Dinâmica**: seletor de unidade (`Todas as Lojas Consolidado`, `Matriz` ou `Filial`), presets rápidos de período (`Hoje`, `7d`, `30d`, `90d`, `Este Mês`, `Mês Passado`, `Este Ano`, `Tudo`), seletor de datas `De / Até`, filtro de canal (`PDV`, `WhatsApp`, `Online`), granularidade (`Diário`, `Semanal`, `Mensal`) e dropdown `Baixar Dados` (CSV, JSON e PDF/Impressão).
+- **Grade de 8 KPIs Executivos**: cards responsivos (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) com badges de variação percentual vs. período anterior.
+- **Gráficos Interativos**:
+  - Gráfico principal de **Vendas Mensais (12 Meses)** e **Evolução no Período** com barras de Receita/Lucro e linha de tendência.
+  - Card comparativo **Desempenho por Loja (Matriz vs. Filiais)** clicável para filtrar o Dashboard por unidade.
+  - Ranking **Top Produtos Mais Vendidos** ordenável por Receita (`R$`), Volume (`un.`) ou Lucro (`R$`).
+  - Gráficos de **Vendas por Categoria (Donut SVG)**, **Canais de Venda**, **Meios de Pagamento** e **Ritmo por Dia da Semana**.
 
 ## Central de Relatórios (`ReportsPage`)
 
 Estrutura visual e responsividade:
+- **Seletor de Loja e Barra de Filtros de Período / Datas Personalizadas**: permite alternar entre qualquer loja ou `Todas as Lojas (Consolidado)` e filtrar por `Todo o Histórico`, `Hoje`, `Esta Semana`, `Este Mês`, `Mês Passado`, `Últimos 90 Dias`, `Este Ano` ou intervalo `De / Até`.
 - **Barra de KPIs Executivos no Topo**: 6 cards responsivos (`grid-cols-2 sm:grid-cols-3 lg:grid-cols-6`) fixados para visualização instantânea de métricas financeiras.
-- **Navegação Segmentada**: Barra de pílulas com rolagem horizontal suave no mobile (`overflow-x-auto custom-scrollbar`), ícones coloridos por contexto e badges dinâmicos de alerta.
-- **Barra Contextual de Filtros**: Header dinâmico com descrição da análise ativa, contador instantâneo de registros, seletores contextuais (Categoria, Classe ABC, Urgência de Compra, Segmento de Cliente ou Gravidade) e botões de ação para Exportação CSV e Impressão de Demonstrativo.
-- **Modo Tabela vs Mobile Cards**: Desktop exibe tabela densa com sticky header e colunas numéricas alinhadas à direita; mobile (`md:hidden`) renderiza cards detalhados estruturados em grid 2 colunas com tipografia mono para valores.
-- **Paginação Paginada no Rodapé**: Fixada no card principal e sincronizada com a query string da URL.
+- **Navegação Segmentada**: Barra de 9 abas com rolagem horizontal suave no mobile (`overflow-x-auto custom-scrollbar`), ícones coloridos por contexto e badges dinâmicos de alerta.
+- **Registros com Data/Hora e Deep-Linking**:
+  - Aba **Ticket Médio & Clientes (`customers`)**: exibe todos os pedidos de cada cliente com data e hora exatas (`DD/MM/YYYY HH:mm`), sub-tabela expansível e links clicáveis para `/customers?customerId=:id&orderId=:orderId`.
+  - Aba **Compras & Fornecedores (`purchasing`)**: exibe data e hora exatas de emissão/recebimento e resumo dos itens comprados.
+  - Aba **Vendas & Desempenho (`sales`)**: exibe data e hora exatas, itens detalhados, meio de pagamento e link para o pedido na tela do cliente.
+- **Botão `Exportar Visíveis`**: exporta exclusivamente as linhas visíveis da aba ativa com todos os detalhes.
 
-## Painel Global Admin (`GlobalAdminDashboardPage`)
+## Clientes, Pedidos na URL & Visões Salvas (`CustomersPage`)
 
-- **Navegação em 5 Abas**: Lojas, Usuários da Plataforma, Explorador de Banco de Dados (`GlobalDbExplorerPanel`), Central de Backup Multi-loja (`GlobalBackupPanel`) e Chaves de API / HBAC (`GlobalApiKeyHbacPanel`).
-- **Menus de Ações Rápidas**: Menus dropdown (`<DropdownMenu />`) na listagem de lojas e usuários para evitar poluição visual.
-- **Explorador de Banco de Dados**: CRUD completo para 12 entidades relacionais com modais de inserção/edição e confirmação de exclusão.
-- **Central de Backup**: Geração sob demanda de Dumps SQL relacionais completos (`INSERT INTO`), pacotes compactados `.ZIP` de imagens com `manifest.json` e arquivos estruturados `.JSON`.
-- **Gestor de Tokens HBAC**: Criação de chaves com seleção granular de escopos, preset rápido, cópia instantânea e documentação interativa com exemplos `curl`/`fetch`.
+- **Barra de Visões Salvas por Loja/Filial (`store_saved_views`)**: pílulas no topo para alternar em 1 clique entre visões padrão (*Pedidos em Aberto*, *Pedidos Fechados*, *Pedidos Cancelados*, *Todos os Clientes Ativos*) e visões personalizadas salvas no banco para aquela loja ou filial (`store_id`).
+- **Seletor Multi-Status e Filtro de Período**: dropdown com checkboxes para múltipla seleção simultânea de status de pedidos (`PENDING`, `CONFIRMED`, `PROCESSING`, `READY`, `SHIPPED`, `DELIVERED`, `CANCELLED`) e status cadastral (`ACTIVE`, `INACTIVE`), além de presets de datas.
+- **Coluna "Pedidos Realizados" e Sub-Tabela Expansível**: cada cliente exibe seus pedidos como pílulas clicáveis (com número, data/hora, total e status) e permite expandir o histórico completo na própria tabela.
+- **Deep-Link via URL (`/customers?customerId=...&orderId=...`)**: filtra automaticamente o cliente na listagem e abre o modal de detalhes completos do pedido selecionado, com botão `Exportar Visíveis` no cabeçalho.
+
+## Painel Global Admin (`GlobalAdminDashboardPage`) e Páginas Dedicadas
+
+- **Navegação em 7 Abas**: Lojas & Filiais (`stores`), Usuários Admin (`users`), Financeiro (`finance`), Central de Backup (`backups`), Explorador de Banco de Dados (`database`), Chaves de API / HBAC (`apikeys`) e Exclusão Definitiva (`delete`).
+- **Hierarquia Matriz → Filiais (`tab=stores` e `/stores`)**: filiais renderizadas como itens filhos indentados (`└─ Filial`) abaixo da Matriz correspondente.
+- **Páginas Completas com URLs Próprias (substituindo modais sobrecarregados)**:
+  - `/global-admin/stores/:storeId/edit` (edição da loja, filiação Matriz/Filial e administradores `STORE_ADMIN`)
+  - `/global-admin/stores/:storeId/employees/:employeeId` e `/team/stores/:storeId/employees/:employeeId` (cadastro/edição de funcionário e 47 permissões granulares)
+  - `/global-admin/users/:userId/edit`, `/global-admin/users/:userId/permissions` e `/global-admin/users/:userId/billing`
+  - `/global-admin/finance/rules` (franquia de 10 funcionários grátis por loja e valor por licença extra), `/global-admin/finance/plans` (planos SaaS com grafo de dependências) e `/global-admin/finance/payments` (histórico e lançamento de pagamentos).
 
 ## PDV (`SalesPage`)
 
-`grid-cols-1 lg:grid-cols-12`: abaixo de `lg`, grade de produtos e painel do carrinho **empilham**. Grid de cards de produto: `grid-cols-2 sm:grid-cols-3 xl:grid-cols-4`.
+`grid-cols-1 lg:grid-cols-12`: abaixo de `lg`, grade de produtos e painel do carrinho **empilham**. Grid de cards de produto: `grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4`. Suporta produtos pesáveis (`KG`/gramas via `WeightInputModal`), cadastro rápido de cliente (`CustomerQuickCreateModal`), associação automática de `"Cliente Genérico"` e modo de edição de pedido (`/sales?editOrder=:id`).
 
-## Formulários em modal
+## Catálogo público (`CatalogPublicPage`)
 
-Padrão repetido nas pages: campos `grid-cols-1 sm:grid-cols-2`; botões Cancelar/Salvar `flex-col-reverse sm:flex-row` e `w-full sm:w-auto h-11 sm:h-10` (área de toque maior no mobile).
-
-## Catálogo público
-
-Layout próprio (não usa `AppLayout`). Carrinho em `Modal`. Checkout WhatsApp.
-
-## Tokens visuais
-
-CSS variables em `:root` e `.dark` (`src/index.css`). Cores Tailwind mapeiam `hsl(var(--...))`. Utilitários `.glass` / `.glass-border` existem; uso pontual nas pages não foi inventariado um a um.
+Layout próprio (não usa `AppLayout`). Suporta seleção de peso (`KG`/gramas) para itens pesáveis, carrinho em `Modal` e checkout formatado via WhatsApp.
 
 ## Relacionamentos
 

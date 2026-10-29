@@ -5,7 +5,7 @@ type: Contract
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-28
+updated: 2026-10-29
 language: pt-BR
 classification: Confirmed
 source:
@@ -60,7 +60,7 @@ Via `apiKeyService` e tabela `public.api_tokens` (migrations 17 e 20):
 
 ## Tabelas (PostgREST)
 
-Cada service usa `supabase.from('<tabela>')` com filtros `store_id` no cliente **e** RLS no servidor. Lista de tabelas: [backend-inventory.md](backend-inventory.md).
+Cada service usa `supabase.from('<tabela>')` com filtros `store_id` no cliente **e** RLS no servidor (incluindo `public.store_saved_views` em `savedViewService.ts` para visões personalizadas de filtros por loja/filial). Lista de tabelas: [backend-inventory.md](backend-inventory.md).
 
 ## RPCs invocadas pelo front
 
@@ -86,19 +86,20 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 
 `create_order_with_stock`: pedido + itens + pagamento + baixa com `FOR UPDATE` (comentário e corpo em `20260926000009_atomic_order_creation.sql`).
 
-## Catálogo de Relatórios Analíticos (`reportService.ts`)
+## Catálogo de Relatórios Analíticos & Dashboard Executivo (`reportService.ts`)
 
-Módulos consolidados para consumo em tela e integrações:
-1. `getRetailSummaryKPIs(storeId)`: Resumo executivo macro.
-2. `getValuationReport(storeId)`: Valorização do estoque a custo e venda, markup e margem por SKU.
-3. `getAbcCurveReport(storeId)`: Curva ABC de Pareto 80/15/5 com diretrizes estratégicas.
-4. `getConsumptionDemandReport(storeId)`: Giro de estoque, runout em dias, sugestão inteligente de compra para 30 dias e urgência.
-5. `getCustomerTicketReport(storeId)`: LTV, ticket médio por cliente, recência e segmentação VIP/Frequente/Ocasional/Inativo.
-6. `getCapitalInvestmentReport(storeId)`: Capital investido por categoria, potencial de venda, margem e GMROI.
-7. `getPurchasingReport(storeId)`: Histórico de ordens de compra e recebimentos.
-8. `getLossesReport(storeId)`: Perdas, avarias, vencimentos e centros de custo.
-9. `getStockoutsReport(storeId)`: Ruptura total e alertas de estoque crítico com custo de reposição.
-10. `getSalesPerformanceReport(storeId)`: Faturamento, canais e desempenho de pedidos.
+Módulos consolidados para consumo em tela (`/dashboard` e `/reports`, ambos com suporte a `dateRange?: ReportDateRangeFilter` e `storeId === 'all'`) e integrações:
+1. `getExecutiveDashboardData(params)`: Consolidado completo do Dashboard Executivo Multi-Loja (8 KPIs com variação vs. período anterior, séries diária/semanal/mensal, vendas mensais de 12 meses, comparativo Matriz vs. Filiais, Top Produtos, categorias, canais, pagamentos e alertas operacionais).
+2. `getRetailSummaryKPIs(storeId, dateRange)`: Resumo executivo macro da Central de Relatórios.
+3. `getValuationReport(storeId)`: Valorização do estoque a custo e venda, markup e margem por SKU.
+4. `getAbcCurveReport(storeId)`: Curva ABC de Pareto 80/15/5 com diretrizes estratégicas.
+5. `getConsumptionDemandReport(storeId, dateRange)`: Giro de estoque, runout em dias, sugestão inteligente de compra para 30 dias e urgência.
+6. `getCustomerTicketReport(storeId, dateRange)`: LTV, ticket médio por cliente, recência, segmentação VIP/Frequente/Ocasional/Inativo e lista completa dos pedidos do cliente (`orders`) com data/hora e itens para deep-linking (`/customers?customerId=...&orderId=...`).
+7. `getCapitalInvestmentReport(storeId)`: Capital investido por categoria, potencial de venda, margem e GMROI.
+8. `getPurchasingReport(storeId, dateRange)`: Histórico de ordens de compra e recebimentos com data/hora exatas e resumo de itens comprados (`itemsSummary`).
+9. `getLossesReport(storeId, dateRange)`: Perdas, avarias, vencimentos e centros de custo.
+10. `getStockoutsReport(storeId)`: Ruptura total e alertas de estoque crítico com custo de reposição.
+11. `getSalesPerformanceReport(storeId, dateRange)`: Faturamento, canais, meio de pagamento, itens detalhados e data/hora exatas de cada venda.
 
 ## Realtime
 
@@ -108,9 +109,11 @@ Eventos `postgres_changes` em `public.stock_balances` (`*`), `public.orders` (`*
 
 Buckets `products`, `stores`, `avatars`. APIs em `storageService` / `productImageService`.
 
-## Query string de listagens
+## Query string de listagens e Deep-Linking
 
-Contrato de UI (não HTTP próprio): `useTablePagination` grava `page`, `pageSize`, `search`, `sortBy`, `sortOrder`, `tab`, `category`, `status` como filtros na URL. Compartilhável e reidratável.
+Contrato de UI (não HTTP próprio):
+- `useTablePagination` grava `page`, `pageSize`, `search`, `sortBy`, `sortOrder`, `tab`, `category`, `status` como filtros na URL (sincronizados de forma atômica via `latestParamsRef` e `setFilters`).
+- Em `/customers`, a URL também sincroniza `?customerId=<uuid>&orderId=<uuid>&orderStatuses=PENDING,PROCESSING&period=30d&from=...&to=...&view=<viewId>`, permitindo compartilhar links diretos para o pedido de um cliente específico ou abrir visões salvas da loja/filial.
 
 ## Quebras conhecidas no histórico SQL
 

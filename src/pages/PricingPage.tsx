@@ -1,68 +1,67 @@
 import { Link } from 'react-router-dom'
-import { Check } from 'lucide-react'
+import { Check, Users, ShieldCheck, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function PricingPage() {
   const plans = [
     {
-      name: 'Starter',
-      price: 'R$ 0',
-      period: '/mês (Gratuito)',
-      description: 'Ideal para lojas individuais que desejam organizar o estoque e vender no WhatsApp.',
+      name: 'Catálogo & Pedidos WhatsApp',
+      price: 'R$ 49,90',
+      period: '/mês por Store Admin',
+      description: 'Ideal para comércios que desejam vender pelo catálogo digital com pedidos diretos no WhatsApp.',
       features: [
-        '1 Loja (Tenant)',
-        'Até 500 produtos cadastrados',
-        'Controle básico de estoque',
-        'Catálogo online com link exclusivo',
-        'Checkout no WhatsApp',
-        'Exportação CSV',
+        'Catálogo Público Online (/store/sua-loja)',
+        'Produtos unitários e pesáveis (KG / gramas)',
+        'Gestão de Clientes com histórico de pedidos',
+        'Visões de filtros salvas no banco por loja',
+        'Até 10 funcionários operacionais grátis por loja',
+        'Exportação detalhada dos pedidos visíveis (CSV)',
       ],
-      cta: 'Começar Grátis',
+      cta: 'Começar com Catálogo',
       popular: false,
     },
     {
-      name: 'Professional',
-      price: 'R$ 89',
-      period: '/mês por loja',
-      description: 'Para comércios em crescimento que precisam de lotes, validades e PDV avançado.',
+      name: 'Controle de Estoque & Validades',
+      price: 'R$ 99,90',
+      period: '/mês por Store Admin',
+      description: 'Para operações focadas em controle rigoroso de lotes, validades, compras e aprovadores de baixa.',
       features: [
-        'Multi-lojas ativadas',
-        'Produtos e vendas ilimitadas',
-        'Controle completo de Lotes & Validades',
-        'Frente de Caixa (PDV) ilimitado',
-        'Ordens de compra & Fornecedores',
-        'Relatórios gerenciais completos',
-        'Gestão de equipe e permissões (RBAC)',
+        'Tudo do plano Catálogo WhatsApp',
+        'Controle completo de Saldos, Lotes & Validades',
+        'Alertas automáticos de vencimento (7 e 30 dias)',
+        'Fluxo de Aprovador de Baixa (STOCK_APPROVER)',
+        'Ordens de Compra, Fornecedores & Cálculo de Markup',
+        'Até 10 funcionários operacionais grátis por loja',
       ],
-      cta: 'Assinar Plano Pro',
+      cta: 'Escolher Controle de Estoque',
+      popular: false,
+    },
+    {
+      name: 'ERP Completo + PDV + Filiais',
+      price: 'R$ 189,90',
+      period: '/mês por Store Admin',
+      description: 'Solução completa com Frente de Caixa (PDV), Matriz & Filiais, Dashboard BI, 9 Relatórios e API Studio.',
+      features: [
+        'Frente de Caixa (PDV) ilimitado (UN e KG)',
+        'Hierarquia Matriz → Filiais & Remessa Sem Venda',
+        'Dashboard Executivo Multi-Loja & Vendas Mensais',
+        'Todos os 9 Relatórios Analíticos com Data e Hora',
+        'API Studio (Postman) & Chaves REST HBAC',
+        'Até 10 funcionários grátis por loja (+ R$ 19,90/licença extra)',
+      ],
+      cta: 'Assinar ERP Completo',
       popular: true,
-    },
-    {
-      name: 'Redes & Franquias',
-      price: 'Sob Consulta',
-      period: '',
-      description: 'Para redes de lojas, franquias e operações que demandam suporte prioritário.',
-      features: [
-        'Múltiplas lojas & franquias centralizadas',
-        'Acesso Global Admin unificado',
-        'Trilha de auditoria expandida',
-        'Treinamento e migração de dados',
-        'SLA de atendimento prioritário',
-        'API aberta para integrações de ERP/E-commerce',
-      ],
-      cta: 'Falar com Consultor',
-      popular: false,
     },
   ]
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 space-y-16">
-      <div className="text-center max-w-2xl mx-auto space-y-4">
+      <div className="text-center max-w-3xl mx-auto space-y-4">
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
-          Planos transparentes para todas as fases
+          Planos modulares sob medida para sua operação
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground">
-          Escolha o plano ideal para a sua operação. Cancele ou altere a qualquer momento.
+          Monte pacotes de funcionalidades de acordo com a necessidade de cada cliente. Funcionários operacionais da loja não pagam plano individual — apenas o titular Store Admin possui assinatura.
         </p>
       </div>
 
@@ -78,7 +77,7 @@ export function PricingPage() {
           >
             {plan.popular && (
               <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[11px] font-extrabold uppercase tracking-wider shadow-md">
-                Mais Escolhido
+                Mais Completo
               </span>
             )}
 
@@ -98,7 +97,7 @@ export function PricingPage() {
               <div className="space-y-2.5 pt-4 border-t border-border">
                 {plan.features.map((feat, fIdx) => (
                   <div key={fIdx} className="flex items-center gap-2.5 text-xs text-foreground">
-                    <Check className="h-4 w-4 text-success shrink-0" />
+                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                     <span>{feat}</span>
                   </div>
                 ))}
@@ -118,6 +117,39 @@ export function PricingPage() {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Regras Comerciais & Licenciamento Transparente */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+        <div className="p-6 rounded-2xl bg-surface border border-border space-y-2">
+          <div className="flex items-center gap-2 text-primary font-bold text-sm">
+            <Users className="h-4 w-4" />
+            <span>10 Funcionários Grátis por Loja</span>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Cada unidade conta com franquia gratuita de até 10 funcionários ativos (vendedores, estoquistas, aprovadores de baixa, financeiro). Licenças adicionais são configuráveis por unidade.
+          </p>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-surface border border-border space-y-2">
+          <div className="flex items-center gap-2 text-primary font-bold text-sm">
+            <ShieldCheck className="h-4 w-4" />
+            <span>Módulos Avulsos & Grafo de Telas</span>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            O Global Admin pode personalizar quais módulos cada Store Admin contrata, visualizando em tempo real a relação de dependência entre telas e o valor mensal resultante.
+          </p>
+        </div>
+
+        <div className="p-6 rounded-2xl bg-surface border border-border space-y-2">
+          <div className="flex items-center gap-2 text-primary font-bold text-sm">
+            <Building2 className="h-4 w-4" />
+            <span>Expansão para Filiais</span>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Cadastre filiais vinculadas à Matriz com código próprio, gerente responsável e transferência direta de lotes de estoque sem necessidade de venda.
+          </p>
+        </div>
       </div>
     </div>
   )
