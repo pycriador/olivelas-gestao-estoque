@@ -48,6 +48,7 @@ import { useI18n } from '@/hooks/useI18n'
 import { useRealtimeSubscriptions } from '@/hooks/useRealtime'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { GlobalCommandK } from '@/components/common/GlobalCommandK'
+import { EmployeePinResetModal } from '@/components/auth/EmployeePinResetModal'
 import { Badge } from '@/components/ui/badge'
 import { applyStoreTheme, getStoreThemeId } from '@/lib/storeThemes'
 
@@ -230,6 +231,7 @@ export function AppLayout() {
   return (
     <div className="h-dvh max-h-dvh bg-background flex flex-col md:flex-row overflow-hidden">
       <GlobalCommandK />
+      <EmployeePinResetModal />
 
       {/* Mobile Backdrop */}
       {sidebarOpen && (

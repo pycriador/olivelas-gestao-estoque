@@ -34,6 +34,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Lock,
+  RefreshCw,
 } from 'lucide-react'
 import { formatDateTime } from '@/utils/dates'
 import { formatCurrency } from '@/utils/currency'
@@ -92,11 +93,18 @@ export function TeamPage() {
       id,
       isActive,
       canApproveWriteoff,
+      requirePinReset,
     }: {
       id: string
       isActive?: boolean
       canApproveWriteoff?: boolean
-    }) => userService.updateStoreMemberRole(id, { isActive, canApproveWriteoff }),
+      requirePinReset?: boolean
+    }) =>
+      userService.updateStoreMemberRole(id, {
+        isActive,
+        canApproveWriteoff,
+        requirePinReset,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-members', storeId] })
       window.dispatchEvent(new CustomEvent('olivelas:employee-permissions-updated'))
@@ -416,12 +424,26 @@ export function TeamPage() {
                                     <Lock className="h-2.5 w-2.5" /> PIN Ativo
                                   </span>
                                 )}
+                                {m.requirePinReset && (
+                                  <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                                    <RefreshCw className="h-2.5 w-2.5" /> Reset PIN no Login
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ) : (
-                            <span className="text-[11px] text-muted-foreground">
-                              Sem alçada de aprovação de baixa
-                            </span>
+                            <div className="space-y-1">
+                              <span className="text-[11px] text-muted-foreground">
+                                Sem alçada de aprovação de baixa
+                              </span>
+                              {m.requirePinReset && (
+                                <div>
+                                  <span className="inline-flex items-center gap-0.5 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                                    <RefreshCw className="h-2.5 w-2.5" /> Reset PIN no Login
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           )}
                         </td>
 
@@ -461,9 +483,21 @@ export function TeamPage() {
                             items={[
                               {
                                 key: 'edit-role-perms',
-                                label: 'Abrir Tela Completa (Papel & Permissões)',
+                                label: 'Abrir Tela Completa (Papel, PIN & Permissões)',
                                 icon: <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />,
                                 onSelect: () => handleOpenEdit(m),
+                              },
+                              {
+                                key: 'toggle-pin-reset',
+                                label: m.requirePinReset
+                                  ? 'Cancelar Reset de PIN no Próximo Login'
+                                  : 'Exigir Reset de PIN no Próximo Login',
+                                icon: <RefreshCw className="h-3.5 w-3.5 text-amber-500" />,
+                                onSelect: () =>
+                                  updateRoleMutation.mutate({
+                                    id: m.id,
+                                    requirePinReset: !m.requirePinReset,
+                                  }),
                               },
                               {
                                 key: 'reset-password',

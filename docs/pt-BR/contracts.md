@@ -80,6 +80,7 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 | `assign_user_permission_group` | `saasBillingService.ts` |
 | `record_subscription_payment` | `saasBillingService.ts` |
 | `upsert_store_employee` | `userService.ts` |
+| `complete_employee_pin_reset` | `userService.ts` (`EmployeePinResetModal.tsx`) |
 | `can_user_approve_writeoff` | `inventoryService.ts` / validação interna em `apply_stock_movement` e `review_stock_writeoff_request` |
 | `review_stock_writeoff_request` | `inventoryService.ts` |
 | `execute_stock_transfer_to_branch` | `inventoryService.ts` |

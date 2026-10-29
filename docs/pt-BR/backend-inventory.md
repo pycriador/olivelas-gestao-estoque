@@ -42,6 +42,7 @@ Ordem incremental observada (arquivos datados):
 23. `20261030000023_staff_roles_approvers_and_branches.sql`
 24. `20261030000024_global_finance_licensing_rules.sql`
 25. `20261030000025_store_saved_views.sql`
+26. `20261030000026_employee_pin_reset_and_policy.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -59,7 +60,7 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | --- | --- |
 | `profiles` | 1:1 `auth.users`; `is_global_admin` |
 | `stores` | tenant; `slug` único; `theme_config`; `deleted_at`; hierarquia de filiais (`parent_store_id`, `branch_code`, `is_branch`, `manager_name`); exceções de licenciamento de equipe (`free_employees_limit`, `extra_employee_price`) |
-| `store_users` | membership `store_id` + `user_id` + `role` + credenciais granulares de funcionário (`job_title`, `employee_registration`, `custom_role_id`, `can_approve_writeoff`, `approval_pin`, `max_writeoff_value`, `granted_permissions`, `revoked_permissions`) |
+| `store_users` | membership `store_id` + `user_id` + `role` + credenciais granulares de funcionário (`job_title`, `employee_registration`, `custom_role_id`, `can_approve_writeoff`, `approval_pin`, `require_pin_reset`, `pin_requirements`, `pin_updated_at`, `max_writeoff_value`, `granted_permissions`, `revoked_permissions`) |
 | `store_custom_roles` | papéis operacionais customizados por loja (`code`, `name`, `base_role`, `permissions`, `can_approve_writeoff`, `max_writeoff_value`) |
 | `roles`, `permissions`, `role_permissions` | catálogo de permissões (seed + 24 permissões granulares adicionais na migration 23) |
 | `permission_modules` | catálogo de módulos de tela comercializáveis com preço mensal (`monthly_price`) |
@@ -112,7 +113,8 @@ Usadas pelo frontend (`supabase.rpc`):
 | `apply_stock_movement` | `inventoryService.applyMovement` (endurecida na migration 23 com validação estrita `can_user_approve_writeoff` e alçada `max_writeoff_value`) |
 | `review_stock_writeoff_request` | `inventoryService.reviewWriteoffRequest` (aprova ou rejeita solicitações pendentes de baixa, restrito a aprovadores de baixa de estoque) |
 | `execute_stock_transfer_to_branch` | `inventoryService.executeStockTransferToBranch` (transfere produtos e lotes do estoque para uma filial sem venda, sincronizando catálogo, imagens e saldos no destino) |
-| `upsert_store_employee` | `userService.upsertStoreEmployee` (cria/atualiza funcionário na loja com papel, matrícula, credencial de aprovador de baixa e permissões granulares sem deslogar o admin atual) |
+| `upsert_store_employee` | `userService.upsertStoreEmployee` (cria/atualiza funcionário na loja com papel, matrícula, credencial de aprovador de baixa, política de pré-requisitos do PIN, flag de reset no próximo login e permissões granulares sem deslogar o admin atual) |
+| `complete_employee_pin_reset` | `userService.completeEmployeePinReset` (conclui o reset obrigatório de PIN pelo próprio funcionário no login, validando contra `pin_requirements` e limpando `require_pin_reset`) |
 | `set_batch_disposition` | `inventoryService.setBatchDisposition` |
 | `clear_batch_disposition` | `inventoryService.clearBatchDisposition` |
 | `generate_stock_alerts` | `notificationService.generateStockAlerts` |

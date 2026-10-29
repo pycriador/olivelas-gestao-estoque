@@ -2,20 +2,24 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
+  AlertTriangle,
   ArrowLeft,
-  Building2,
   Check,
-  GitBranch,
+  CheckCircle2,
+  Eye,
+  EyeOff,
   KeyRound,
   Lock,
+  RefreshCw,
   RotateCcw,
   Save,
   Shield,
-  ShieldAlert,
   ShieldCheck,
+  Sparkles,
   UserCheck,
   UserPlus,
   Users,
+  XCircle,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Card } from '@/components/ui/card'
@@ -32,10 +36,22 @@ import {
   ROLE_METADATA,
   resolveEmployeePermissions,
 } from '@/constants/granularPermissions'
+import {
+  DEFAULT_PIN_REQUIREMENTS,
+  PIN_PRESET_POLICIES,
+  evaluatePinRequirements,
+  generateCompliantPin,
+  normalizePinRequirements,
+} from '@/utils/pinValidator'
 import { formatCurrency } from '@/utils/currency'
+import { formatDateTime } from '@/utils/dates'
 import { cn } from '@/utils/cn'
 import type { Store } from '@/types/store.types'
-import type { StoreCustomRole, StoreMember } from '@/types/user.types'
+import type {
+  EmployeePinRequirements,
+  StoreCustomRole,
+  StoreMember,
+} from '@/types/user.types'
 import type { UserRole } from '@/types/database.types'
 import type { StoreEmployeeLicenseSummary } from '@/types/permissionGroup.types'
 
@@ -58,14 +74,23 @@ export const StoreEmployeeEditPage: React.FC = () => {
   const { storeId: tenantStoreId } = useTenant()
 
   const isGlobalAdminRoute = location.pathname.startsWith('/global-admin')
-  const effectiveStoreId = routeStoreId || tenantStoreId || ''
   const isCreateMode = !employeeId || employeeId === 'new'
+
+  const [resolvedStoreId, setResolvedStoreId] = useState<string>(
+    routeStoreId || (tenantStoreId !== 'all' ? tenantStoreId : '') || ''
+  )
+  const effectiveStoreId =
+    routeStoreId ||
+    resolvedStoreId ||
+    (tenantStoreId !== 'all' ? tenantStoreId : '') ||
+    ''
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [store, setStore] = useState<Store | null>(null)
-  const [licenseSummary, setLicenseSummary] = useState<StoreEmployeeLicenseSummary | null>(null)
+  const [licenseSummary, setLicenseSummary] =
+    useState<StoreEmployeeLicenseSummary | null>(null)
   const [customRoles, setCustomRoles] = useState<StoreCustomRole[]>([])
   const [member, setMember] = useState<StoreMember | null>(null)
 
@@ -80,6 +105,10 @@ export const StoreEmployeeEditPage: React.FC = () => {
   const [customRoleId, setCustomRoleId] = useState<string>('')
   const [canApproveWriteoff, setCanApproveWriteoff] = useState(false)
   const [approvalPin, setApprovalPin] = useState('')
+  const [showPin, setShowPin] = useState(false)
+  const [requirePinReset, setRequirePinReset] = useState(false)
+  const [pinRequirements, setPinRequirements] =
+    useState<EmployeePinRequirements>(DEFAULT_PIN_REQUIREMENTS)
   const [maxWriteoffValue, setMaxWriteoffValue] = useState<string>('')
   const [grantedPermissions, setGrantedPermissions] = useState<string[]>([])
   const [revokedPermissions, setRevokedPermissions] = useState<string[]>([])
@@ -92,18 +121,64 @@ export const StoreEmployeeEditPage: React.FC = () => {
     ? `/global-admin/stores/${effectiveStoreId}/edit`
     : '/team'
 
+  const populateMemberState = useCallback((found: StoreMember) => {
+    setMember(found)
+    setEmail(found.email || '')
+    setFullName(found.fullName || '')
+    setPhone(found.phone || '')
+    setEmployeeRegistration(found.employeeRegistration || '')
+    setJobTitle(found.jobTitle || '')
+    setRole(found.role || 'SELLER')
+    setCustomRoleId(found.customRoleId || '')
+    setCanApproveWriteoff(
+      Boolean(
+        found.canApproveWriteoff ||
+          found.role === 'STOCK_APPROVER' ||
+          found.role === 'STORE_ADMIN'
+      )
+    )
+    setApprovalPin(found.approvalPin || '')
+    setRequirePinReset(Boolean(found.requirePinReset))
+    setPinRequirements(normalizePinRequirements(found.pinRequirements))
+    setMaxWriteoffValue(
+      found.maxWriteoffValue !== null && found.maxWriteoffValue !== undefined
+        ? String(found.maxWriteoffValue)
+        : ''
+    )
+    setGrantedPermissions(found.grantedPermissions || [])
+    setRevokedPermissions(found.revokedPermissions || [])
+    setIsActive(found.isActive !== false)
+  }, [])
+
   const loadData = useCallback(async () => {
-    if (!effectiveStoreId) {
-      setLoading(false)
-      return
-    }
     setLoading(true)
     try {
+      let targetStoreId =
+        routeStoreId || (tenantStoreId !== 'all' ? tenantStoreId : '') || ''
+      let foundMember: StoreMember | null = null
+
+      if (!isCreateMode && employeeId) {
+        const lookup = await userService.findStoreMemberByIdOrUserId(
+          employeeId,
+          targetStoreId || undefined
+        )
+        if (lookup) {
+          targetStoreId = lookup.storeId
+          foundMember = lookup.member
+          setResolvedStoreId(lookup.storeId)
+        }
+      }
+
+      if (!targetStoreId) {
+        setLoading(false)
+        return
+      }
+
       const [storeObj, rolesList, membersList, licSummary] = await Promise.all([
-        storeService.getStoreById(effectiveStoreId),
-        userService.listStoreCustomRoles(effectiveStoreId),
-        userService.listStoreMembers(effectiveStoreId),
-        permissionGroupService.getStoreEmployeeLicenseSummary(effectiveStoreId),
+        storeService.getStoreById(targetStoreId),
+        userService.listStoreCustomRoles(targetStoreId),
+        userService.listStoreMembers(targetStoreId),
+        permissionGroupService.getStoreEmployeeLicenseSummary(targetStoreId),
       ])
 
       setStore(storeObj)
@@ -111,45 +186,32 @@ export const StoreEmployeeEditPage: React.FC = () => {
       setLicenseSummary(licSummary)
 
       if (!isCreateMode && employeeId) {
-        const found = membersList.find(
-          (m) => m.userId === employeeId || m.id === employeeId
-        )
+        const found =
+          membersList.find(
+            (m) => m.userId === employeeId || m.id === employeeId
+          ) || foundMember
+
         if (!found) {
           toast.error('Funcionário não encontrado nesta loja.')
           navigate(backUrl)
           return
         }
-        setMember(found)
-        setEmail(found.email || '')
-        setFullName(found.fullName || '')
-        setPhone(found.phone || '')
-        setEmployeeRegistration(found.employeeRegistration || '')
-        setJobTitle(found.jobTitle || '')
-        setRole(found.role || 'SELLER')
-        setCustomRoleId(found.customRoleId || '')
-        setCanApproveWriteoff(
-          Boolean(
-            found.canApproveWriteoff ||
-              found.role === 'STOCK_APPROVER' ||
-              found.role === 'STORE_ADMIN'
-          )
-        )
-        setApprovalPin(found.approvalPin || '')
-        setMaxWriteoffValue(
-          found.maxWriteoffValue !== null && found.maxWriteoffValue !== undefined
-            ? String(found.maxWriteoffValue)
-            : ''
-        )
-        setGrantedPermissions(found.grantedPermissions || [])
-        setRevokedPermissions(found.revokedPermissions || [])
-        setIsActive(found.isActive !== false)
+        populateMemberState(found)
       }
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao carregar dados do funcionário.')
     } finally {
       setLoading(false)
     }
-  }, [backUrl, effectiveStoreId, employeeId, isCreateMode, navigate])
+  }, [
+    backUrl,
+    employeeId,
+    isCreateMode,
+    navigate,
+    populateMemberState,
+    routeStoreId,
+    tenantStoreId,
+  ])
 
   useEffect(() => {
     loadData()
@@ -185,6 +247,39 @@ export const StoreEmployeeEditPage: React.FC = () => {
     ]
   )
 
+  const pinEvaluation = useMemo(
+    () => evaluatePinRequirements(approvalPin, pinRequirements),
+    [approvalPin, pinRequirements]
+  )
+
+  const updatePinReqField = <K extends keyof EmployeePinRequirements>(
+    key: K,
+    value: EmployeePinRequirements[K]
+  ) => {
+    setPinRequirements((prev) =>
+      normalizePinRequirements({
+        ...prev,
+        [key]: value,
+      })
+    )
+  }
+
+  const handleGeneratePin = (forceResetOnNextLogin = false) => {
+    const generated = generateCompliantPin(pinRequirements)
+    setApprovalPin(generated)
+    setShowPin(true)
+    if (forceResetOnNextLogin) {
+      setRequirePinReset(true)
+      toast.success(
+        `PIN temporário "${generated}" gerado! O funcionário deverá redefinir o PIN no próximo login.`
+      )
+    } else {
+      toast.info(
+        `PIN compatível "${generated}" gerado de acordo com os pré-requisitos selecionados.`
+      )
+    }
+  }
+
   const togglePermission = (permCode: string) => {
     const isCurrentlyEffective = effectivePermissions.includes(permCode)
     const isInBase = basePermissions.includes(permCode)
@@ -194,7 +289,6 @@ export const StoreEmployeeEditPage: React.FC = () => {
     }
 
     if (isCurrentlyEffective) {
-      // Turning OFF
       setGrantedPermissions((prev) => prev.filter((p) => p !== permCode))
       if (isInBase) {
         setRevokedPermissions((prev) =>
@@ -202,7 +296,6 @@ export const StoreEmployeeEditPage: React.FC = () => {
         )
       }
     } else {
-      // Turning ON
       setRevokedPermissions((prev) => prev.filter((p) => p !== permCode))
       if (!isInBase) {
         setGrantedPermissions((prev) =>
@@ -230,6 +323,18 @@ export const StoreEmployeeEditPage: React.FC = () => {
       return
     }
 
+    // Validate PIN against configured prerequisites if a PIN is entered and we are not forcing reset on next login
+    if (approvalPin.trim() !== '' && !pinEvaluation.isValid) {
+      const failedLabels = pinEvaluation.checks
+        .filter((c) => !c.passed)
+        .map((c) => c.label)
+        .join(', ')
+      toast.error(
+        `O PIN informado não atende aos pré-requisitos configurados: ${failedLabels}`
+      )
+      return
+    }
+
     setSaving(true)
     try {
       const saved = await userService.upsertStoreEmployee(effectiveStoreId, {
@@ -248,6 +353,8 @@ export const StoreEmployeeEditPage: React.FC = () => {
             effectivePermissions.includes('inventory.approve_writeoff')
         ),
         approvalPin: approvalPin.trim() || null,
+        requirePinReset,
+        pinRequirements,
         maxWriteoffValue:
           maxWriteoffValue.trim() !== '' && !Number.isNaN(Number(maxWriteoffValue))
             ? Number(maxWriteoffValue)
@@ -260,7 +367,7 @@ export const StoreEmployeeEditPage: React.FC = () => {
       toast.success(
         isCreateMode
           ? `Funcionário "${saved.fullName || saved.email}" cadastrado com sucesso!`
-          : `Permissões e dados de "${saved.fullName || saved.email}" atualizados!`
+          : `Configurações, PIN e permissões de "${saved.fullName || saved.email}" atualizados!`
       )
 
       if (isCreateMode && saved.userId) {
@@ -288,9 +395,14 @@ export const StoreEmployeeEditPage: React.FC = () => {
             : `Funcionário: ${fullName || email}`
         }
         badge={
-          <Badge variant={canApproveWriteoff ? 'success' : 'secondary'}>
-            {ROLE_METADATA[role]?.label || role}
-          </Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant={canApproveWriteoff ? 'success' : 'secondary'}>
+              {ROLE_METADATA[role]?.label || role}
+            </Badge>
+            {requirePinReset && (
+              <Badge variant="warning">Reset de PIN no Próximo Login</Badge>
+            )}
+          </div>
         }
       />
 
@@ -307,11 +419,11 @@ export const StoreEmployeeEditPage: React.FC = () => {
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono text-xs font-semibold text-primary">
-                Loja ID: {effectiveStoreId}
+                Loja ID: {effectiveStoreId || 'Resolvendo...'}
               </span>
               {!isCreateMode && (
                 <span className="font-mono text-xs font-semibold text-muted-foreground">
-                  • Funcionário ID: {member?.userId || employeeId}
+                  • Vínculo ID: {member?.id || employeeId}
                 </span>
               )}
               {store && (
@@ -335,7 +447,7 @@ export const StoreEmployeeEditPage: React.FC = () => {
               )}
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Funcionários operacionais não pagam plano individual. Gerencie aqui o papel, alçada de aprovação de baixa de estoque e permissões granulares em todas as áreas do sistema.
+              Gerencie o papel operacional, alçada de aprovação de baixa de estoque, política de pré-requisitos do PIN, reset obrigatório no próximo login e permissões granulares.
             </p>
           </div>
         </div>
@@ -359,7 +471,7 @@ export const StoreEmployeeEditPage: React.FC = () => {
 
       {loading ? (
         <Card className="p-12 text-center text-muted-foreground">
-          Carregando perfil e matriz de permissões do funcionário...
+          Carregando perfil, política de PIN e matriz de permissões do funcionário...
         </Card>
       ) : (
         <form onSubmit={handleSave} className="space-y-6">
@@ -450,7 +562,9 @@ export const StoreEmployeeEditPage: React.FC = () => {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={isCreateMode ? 'Mín. 6 dígitos' : 'Em branco p/ manter'}
+                      placeholder={
+                        isCreateMode ? 'Mín. 6 dígitos' : 'Em branco p/ manter'
+                      }
                     />
                   </div>
                 </div>
@@ -463,11 +577,19 @@ export const StoreEmployeeEditPage: React.FC = () => {
                     Status da Licença na Loja ({store?.name})
                   </div>
                   <p className="mt-1 text-muted-foreground">
-                    Esta loja possui <strong>{licenseSummary.freeEmployeesQuota} licenças gratuitas</strong>. Atualmente há{' '}
-                    <strong>{licenseSummary.activeEmployeesCount} funcionários ativos</strong>{' '}
-                    ({licenseSummary.extraBillableEmployees > 0
+                    Esta loja possui{' '}
+                    <strong>
+                      {licenseSummary.freeEmployeesQuota} licenças gratuitas
+                    </strong>
+                    . Atualmente há{' '}
+                    <strong>
+                      {licenseSummary.activeEmployeesCount} funcionários ativos
+                    </strong>{' '}
+                    (
+                    {licenseSummary.extraBillableEmployees > 0
                       ? `${licenseSummary.extraBillableEmployees} licença(s) adicional(is) por ${formatCurrency(licenseSummary.extraEmployeeUnitPrice)}/mês`
-                      : 'dentro da cota gratuita sem custo extra'}).
+                      : 'dentro da cota gratuita sem custo extra'}
+                    ).
                   </p>
                 </div>
               )}
@@ -486,7 +608,9 @@ export const StoreEmployeeEditPage: React.FC = () => {
                     onChange={(e) => setCustomRoleId(e.target.value)}
                     className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs text-foreground"
                   >
-                    <option value="">Sem papel customizado (Usar papel padrão)</option>
+                    <option value="">
+                      Sem papel customizado (Usar papel padrão)
+                    </option>
                     {customRoles.map((cr) => (
                       <option key={cr.id} value={cr.id}>
                         Papel Customizado: {cr.name}
@@ -589,17 +713,12 @@ export const StoreEmployeeEditPage: React.FC = () => {
                         placeholder="Ex: 500.00 (ou livre)"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-semibold text-foreground">
-                        PIN de Confirmação de Baixa (Opcional)
-                      </label>
-                      <Input
-                        type="password"
-                        maxLength={8}
-                        value={approvalPin}
-                        onChange={(e) => setApprovalPin(e.target.value)}
-                        placeholder="PIN numérico de 4 a 6 dígitos"
-                      />
+                    <div className="flex items-end">
+                      <div className="w-full rounded-lg border border-emerald-500/30 bg-background/80 p-2.5 text-xs text-muted-foreground">
+                        Configure o <b className="text-foreground">PIN de Segurança</b>, os{' '}
+                        <b className="text-foreground">Pré-requisitos do PIN</b> e o{' '}
+                        <b className="text-foreground">Reset no Próximo Login</b> na seção dedicada abaixo.
+                      </div>
                     </div>
                   </div>
                 )}
@@ -607,14 +726,421 @@ export const StoreEmployeeEditPage: React.FC = () => {
             </Card>
           </div>
 
+          {/* Seção 3: Configuração de PIN de Segurança, Reset no Próximo Login & Pré-requisitos do PIN */}
+          <Card className="space-y-5 p-6 border-primary/25">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
+              <div>
+                <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
+                  <Lock className="h-5 w-5 text-primary" />
+                  3. Configuração de PIN, Reset no Próximo Login & Pré-requisitos de Segurança
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Defina as regras obrigatórias para o PIN deste funcionário (números, letras maiúsculas, minúsculas, símbolos, tamanho) e force a redefinição do PIN no próximo login.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {member?.pinUpdatedAt && (
+                  <Badge variant="outline" className="text-[11px] font-mono">
+                    Última atualização do PIN: {formatDateTime(member.pinUpdatedAt)}
+                  </Badge>
+                )}
+                <Badge variant={requirePinReset ? 'warning' : 'success'}>
+                  {requirePinReset
+                    ? 'Reset Obrigatório Pendente no Próximo Login'
+                    : 'PIN Regularizado'}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+              {/* Coluna Esquerda: Reset no Próximo Login + Campo de PIN + Checklist Ao Vivo */}
+              <div className="space-y-4 lg:col-span-5">
+                {/* Bloco de Reset de PIN no Próximo Login */}
+                <div
+                  className={cn(
+                    'rounded-xl border p-4 transition',
+                    requirePinReset
+                      ? 'border-amber-500/50 bg-amber-500/10'
+                      : 'border-border bg-muted/20'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-2.5">
+                      <RefreshCw
+                        className={cn(
+                          'mt-0.5 h-5 w-5 shrink-0',
+                          requirePinReset
+                            ? 'text-amber-600 dark:text-amber-400'
+                            : 'text-muted-foreground'
+                        )}
+                      />
+                      <div>
+                        <div className="text-xs font-bold text-foreground">
+                          Exigir Reset de PIN no Próximo Login
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          Quando ativado, assim que o funcionário entrar no sistema, será exibido um modal obrigatório para cadastrar um novo PIN que cumpra todos os pré-requisitos ao lado.
+                        </p>
+                      </div>
+                    </div>
+
+                    <label className="flex shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-bold text-foreground shadow-xs">
+                      <input
+                        type="checkbox"
+                        checked={requirePinReset}
+                        onChange={(e) => setRequirePinReset(e.target.checked)}
+                        className="h-4 w-4 rounded border-border text-amber-600"
+                      />
+                      Forçar Reset
+                    </label>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleGeneratePin(true)}
+                      className="h-7 text-[11px]"
+                    >
+                      <Sparkles className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
+                      Gerar PIN Temporário + Exigir Reset no Login
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Campo do PIN Atual / Temporário */}
+                <div className="space-y-2 rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-foreground">
+                      PIN de Autorização / Operação do Funcionário
+                    </label>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => handleGeneratePin(false)}
+                      className="h-6 px-2 text-[11px] text-primary"
+                    >
+                      <Sparkles className="mr-1 h-3 w-3" />
+                      Gerar PIN Compatível
+                    </Button>
+                  </div>
+
+                  <div className="relative">
+                    <Input
+                      type={showPin ? 'text' : 'password'}
+                      maxLength={pinRequirements.maxLength}
+                      value={approvalPin}
+                      onChange={(e) => setApprovalPin(e.target.value)}
+                      placeholder={`Digite um PIN (${pinRequirements.minLength} a ${pinRequirements.maxLength} caracteres)`}
+                      className="pr-10 font-mono text-sm tracking-wider"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin((prev) => !prev)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      title={showPin ? 'Ocultar PIN' : 'Mostrar PIN'}
+                    >
+                      {showPin ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Barra de Força + Checklist de Pré-requisitos em Tempo Real */}
+                  <div className="space-y-2 pt-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="font-semibold text-muted-foreground">
+                        Validação dos Pré-requisitos do PIN:
+                      </span>
+                      <span
+                        className={cn(
+                          'font-bold',
+                          !approvalPin
+                            ? 'text-muted-foreground'
+                            : pinEvaluation.isValid
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-amber-600 dark:text-amber-400'
+                        )}
+                      >
+                        {!approvalPin
+                          ? 'Sem PIN definido'
+                          : pinEvaluation.isValid
+                            ? `PIN Válido (${pinEvaluation.strengthLabel})`
+                            : 'PIN não atende aos pré-requisitos'}
+                      </span>
+                    </div>
+
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className={cn(
+                          'h-full transition-all duration-200',
+                          !approvalPin
+                            ? 'w-0'
+                            : pinEvaluation.isValid
+                              ? 'bg-emerald-500'
+                              : 'bg-amber-500'
+                        )}
+                        style={{
+                          width: `${approvalPin ? pinEvaluation.strengthPercent : 0}%`,
+                        }}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-1.5 pt-1">
+                      {pinEvaluation.checks.map((chk) => (
+                        <div
+                          key={chk.key}
+                          className={cn(
+                            'flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[11px]',
+                            !approvalPin
+                              ? 'border-border/60 bg-muted/20 text-muted-foreground'
+                              : chk.passed
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-medium'
+                                : 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                          )}
+                        >
+                          {!approvalPin ? (
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          ) : chk.passed ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+                          )}
+                          <span>{chk.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Coluna Direita: Configuração dos Pré-requisitos Obrigatórios do PIN */}
+              <div className="space-y-4 lg:col-span-7">
+                <div className="rounded-xl border border-border bg-muted/15 p-4 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+                    <div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                        Pré-requisitos Obrigatórios para o PIN deste Funcionário
+                      </h3>
+                      <p className="text-[11px] text-muted-foreground">
+                        Selecione quais elementos são exigidos no cadastro e no reset de PIN do colaborador:
+                      </p>
+                    </div>
+
+                    {/* Presets rápidos de política de PIN */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {Object.entries(PIN_PRESET_POLICIES).map(([key, preset]) => (
+                        <Button
+                          key={key}
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setPinRequirements(
+                              normalizePinRequirements(preset.requirements)
+                            )
+                            toast.info(`Política "${preset.label}" aplicada aos pré-requisitos do PIN.`)
+                          }}
+                          className="h-7 px-2 text-[11px]"
+                          title={preset.description}
+                        >
+                          {preset.label}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tamanho Mínimo e Máximo */}
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <div className="space-y-1 rounded-lg border border-border bg-background p-3">
+                      <label className="text-xs font-semibold text-foreground">
+                        Comprimento Mínimo do PIN (caracteres)
+                      </label>
+                      <Input
+                        type="number"
+                        min={4}
+                        max={16}
+                        value={pinRequirements.minLength}
+                        onChange={(e) =>
+                          updatePinReqField('minLength', Number(e.target.value) || 4)
+                        }
+                        className="h-8 text-xs font-mono"
+                      />
+                      <span className="text-[10px] text-muted-foreground">
+                        Mínimo recomendado: 6 caracteres
+                      </span>
+                    </div>
+
+                    <div className="space-y-1 rounded-lg border border-border bg-background p-3">
+                      <label className="text-xs font-semibold text-foreground">
+                        Comprimento Máximo do PIN (caracteres)
+                      </label>
+                      <Input
+                        type="number"
+                        min={pinRequirements.minLength}
+                        max={32}
+                        value={pinRequirements.maxLength}
+                        onChange={(e) =>
+                          updatePinReqField('maxLength', Number(e.target.value) || 12)
+                        }
+                        className="h-8 text-xs font-mono"
+                      />
+                      <span className="text-[10px] text-muted-foreground">
+                        Até 32 caracteres alfanuméricos e símbolos
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Checkboxes de Regras de Complexidade do PIN */}
+                  <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                    <label
+                      className={cn(
+                        'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition',
+                        pinRequirements.requireNumbers
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border bg-background'
+                      )}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-foreground">
+                          Exigir Números (0-9)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          O PIN deve conter pelo menos um algarismo numérico (ex: 4, 8, 9).
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={pinRequirements.requireNumbers}
+                        onChange={(e) =>
+                          updatePinReqField('requireNumbers', e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border text-primary"
+                      />
+                    </label>
+
+                    <label
+                      className={cn(
+                        'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition',
+                        pinRequirements.requireUppercase
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border bg-background'
+                      )}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-foreground">
+                          Exigir Letras Maiúsculas (A-Z)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          O PIN deve conter pelo menos uma letra maiúscula (ex: A, K, Z).
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={pinRequirements.requireUppercase}
+                        onChange={(e) =>
+                          updatePinReqField('requireUppercase', e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border text-primary"
+                      />
+                    </label>
+
+                    <label
+                      className={cn(
+                        'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition',
+                        pinRequirements.requireLowercase
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border bg-background'
+                      )}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-foreground">
+                          Exigir Letras Minúsculas (a-z)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          O PIN deve conter pelo menos uma letra minúscula (ex: b, m, x).
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={pinRequirements.requireLowercase}
+                        onChange={(e) =>
+                          updatePinReqField('requireLowercase', e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border text-primary"
+                      />
+                    </label>
+
+                    <label
+                      className={cn(
+                        'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition',
+                        pinRequirements.requireSymbols
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border bg-background'
+                      )}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-foreground">
+                          Exigir Símbolos Especiais (@#$%&*!?)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          O PIN deve incluir pelo menos um caractere especial ou símbolo.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={pinRequirements.requireSymbols}
+                        onChange={(e) =>
+                          updatePinReqField('requireSymbols', e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border text-primary"
+                      />
+                    </label>
+
+                    <label
+                      className={cn(
+                        'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3 transition sm:col-span-2',
+                        pinRequirements.disallowSequential
+                          ? 'border-primary/40 bg-primary/5'
+                          : 'border-border bg-background'
+                      )}
+                    >
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-bold text-foreground">
+                          Bloquear Sequências Óbvias e Caracteres Repetidos (1234, 0000, AAAA)
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Impede que o funcionário escolha PINs triviais como 123456, 9876, 1111 ou AAAA no momento do reset.
+                        </p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={pinRequirements.disallowSequential}
+                        onChange={(e) =>
+                          updatePinReqField('disallowSequential', e.target.checked)
+                        }
+                        className="mt-0.5 h-4 w-4 rounded border-border text-primary"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </Card>
+
           {/* Matriz Granular Completa de Permissões por Recurso */}
           <Card className="space-y-4 p-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
               <div>
                 <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
                   <KeyRound className="h-5 w-5 text-primary" />
-                  3. Matriz Granular de Permissões por Recurso ({effectivePermissions.length}{' '}
-                  permissões ativas)
+                  4. Matriz Granular de Permissões por Recurso (
+                  {effectivePermissions.length} permissões ativas)
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   Personalize exatamente o que este funcionário pode visualizar, criar, editar, excluir ou aprovar dentro da loja.
@@ -623,10 +1149,14 @@ export const StoreEmployeeEditPage: React.FC = () => {
 
               <div className="flex items-center gap-2">
                 {grantedPermissions.length > 0 && (
-                  <Badge variant="success">+{grantedPermissions.length} extras</Badge>
+                  <Badge variant="success">
+                    +{grantedPermissions.length} extras
+                  </Badge>
                 )}
                 {revokedPermissions.length > 0 && (
-                  <Badge variant="danger">-{revokedPermissions.length} revogadas</Badge>
+                  <Badge variant="danger">
+                    -{revokedPermissions.length} revogadas
+                  </Badge>
                 )}
                 <Button
                   type="button"
@@ -676,67 +1206,77 @@ export const StoreEmployeeEditPage: React.FC = () => {
             </div>
 
             {/* Lista de Permissões do Grupo Ativo */}
-            {GRANULAR_PERMISSION_GROUPS.filter((g) => g.id === activeGroupKey).map(
-              (group) => (
-                <div key={group.id} className="space-y-3">
-                  <div className="text-xs text-muted-foreground">
-                    {group.subtitle}
-                  </div>
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
-                    {group.permissions.map((perm) => {
-                      const isChecked = effectivePermissions.includes(perm.code)
-                      const isGrantedOverride = grantedPermissions.includes(perm.code)
-                      const isRevokedOverride = revokedPermissions.includes(perm.code)
-
-                      return (
-                        <div
-                          key={perm.code}
-                          onClick={() => togglePermission(perm.code)}
-                          className={cn(
-                            'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3.5 transition',
-                            isChecked
-                              ? 'border-primary/40 bg-primary/5'
-                              : 'border-border bg-background opacity-75 hover:opacity-100'
-                          )}
-                        >
-                          <div className="space-y-1">
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-xs font-bold text-foreground">
-                                {perm.name}
-                              </span>
-                              {perm.highlight && (
-                                <Badge variant={perm.highlight === 'emerald' ? 'success' : 'warning'}>
-                                  Destaque
-                                </Badge>
-                              )}
-                              {isGrantedOverride && (
-                                <Badge variant="success">Concedida</Badge>
-                              )}
-                              {isRevokedOverride && (
-                                <Badge variant="danger">Bloqueada</Badge>
-                              )}
-                            </div>
-                            <p className="text-[11px] text-muted-foreground">
-                              {perm.description}
-                            </p>
-                            <div className="font-mono text-[10px] text-muted-foreground/80">
-                              {perm.code}
-                            </div>
-                          </div>
-
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={() => {}}
-                            className="mt-1 h-4 w-4 rounded border-border text-primary"
-                          />
-                        </div>
-                      )
-                    })}
-                  </div>
+            {GRANULAR_PERMISSION_GROUPS.filter(
+              (g) => g.id === activeGroupKey
+            ).map((group) => (
+              <div key={group.id} className="space-y-3">
+                <div className="text-xs text-muted-foreground">
+                  {group.subtitle}
                 </div>
-              )
-            )}
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+                  {group.permissions.map((perm) => {
+                    const isChecked = effectivePermissions.includes(perm.code)
+                    const isGrantedOverride = grantedPermissions.includes(
+                      perm.code
+                    )
+                    const isRevokedOverride = revokedPermissions.includes(
+                      perm.code
+                    )
+
+                    return (
+                      <div
+                        key={perm.code}
+                        onClick={() => togglePermission(perm.code)}
+                        className={cn(
+                          'flex cursor-pointer items-start justify-between gap-3 rounded-xl border p-3.5 transition',
+                          isChecked
+                            ? 'border-primary/40 bg-primary/5'
+                            : 'border-border bg-background opacity-75 hover:opacity-100'
+                        )}
+                      >
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-xs font-bold text-foreground">
+                              {perm.name}
+                            </span>
+                            {perm.highlight && (
+                              <Badge
+                                variant={
+                                  perm.highlight === 'emerald'
+                                    ? 'success'
+                                    : 'warning'
+                                }
+                              >
+                                Destaque
+                              </Badge>
+                            )}
+                            {isGrantedOverride && (
+                              <Badge variant="success">Concedida</Badge>
+                            )}
+                            {isRevokedOverride && (
+                              <Badge variant="danger">Bloqueada</Badge>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-muted-foreground">
+                            {perm.description}
+                          </p>
+                          <div className="font-mono text-[10px] text-muted-foreground/80">
+                            {perm.code}
+                          </div>
+                        </div>
+
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => {}}
+                          className="mt-1 h-4 w-4 rounded border-border text-primary"
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
           </Card>
         </form>
       )}

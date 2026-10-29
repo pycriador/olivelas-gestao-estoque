@@ -44,6 +44,16 @@ export interface StoreCustomRole {
   updatedAt: string
 }
 
+export interface EmployeePinRequirements {
+  minLength: number
+  maxLength: number
+  requireNumbers: boolean
+  requireUppercase: boolean
+  requireLowercase: boolean
+  requireSymbols: boolean
+  disallowSequential: boolean
+}
+
 export interface StoreMember {
   id: string
   userId: string
@@ -62,6 +72,9 @@ export interface StoreMember {
   canApproveWriteoff?: boolean
   hasApprovalPin?: boolean
   approvalPin?: string | null
+  requirePinReset?: boolean
+  pinRequirements?: EmployeePinRequirements
+  pinUpdatedAt?: string | null
   maxWriteoffValue?: number | null
   grantedPermissions?: string[]
   revokedPermissions?: string[]
@@ -78,6 +91,8 @@ export interface StoreMemberUpsertInput {
   customRoleId?: string | null
   canApproveWriteoff?: boolean
   approvalPin?: string | null
+  requirePinReset?: boolean
+  pinRequirements?: EmployeePinRequirements
   maxWriteoffValue?: number | null
   grantedPermissions?: string[]
   revokedPermissions?: string[]
