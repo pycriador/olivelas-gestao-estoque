@@ -147,8 +147,9 @@ Estrutura visual e responsividade:
 
 ## Painel Global Admin (`GlobalAdminDashboardPage`) e Páginas Dedicadas
 
-- **Navegação em 7 Abas**: Lojas & Filiais (`stores`), Usuários Admin (`users`), Financeiro (`finance`), Central de Backup (`backups`), Explorador de Banco de Dados (`database`), Chaves de API / HBAC (`apikeys`) e Exclusão Definitiva (`delete`).
+- **Navegação por Seções na URL (`?tab=...`)**: Lojas & Filiais (`stores`), Usuários Admin (`users`), Financeiro (`finance`), Central de Backup (`backups`), Explorador de Banco de Dados (`db-explorer`), Chaves de API / HBAC (`api-hbac`) e Exclusão Definitiva (`delete`).
 - **Hierarquia Matriz → Filiais (`tab=stores` e `/stores`)**: filiais renderizadas como itens filhos indentados (`└─ Filial`) abaixo da Matriz correspondente.
+- **Coluna "Lojas Administradas" em Dropdown Menu (`tab=users`)**: em `/global-admin?tab=users`, a lista de lojas vinculadas a cada `STORE_ADMIN` / `GLOBAL_ADMIN` é exibida como um `<DropdownMenu>` compacto (`showChevron` + ícone `Building2`) listando todas as unidades administradas (com identificação de `Matriz` ou `Filial`, cota de funcionários ativos/grátis e atalho para editar a loja ou gerenciar vínculos do usuário).
 - **Páginas Completas com URLs Próprias (substituindo modais sobrecarregados)**:
   - `/global-admin/stores/:storeId/edit` (edição da loja, filiação Matriz/Filial e administradores `STORE_ADMIN`)
   - `/global-admin/stores/:storeId/employees/:employeeId` e `/team/stores/:storeId/employees/:employeeId` (cadastro/edição de funcionário e 47 permissões granulares)

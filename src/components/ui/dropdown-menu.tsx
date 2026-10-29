@@ -1,6 +1,6 @@
 import React from 'react'
 import { createPortal } from 'react-dom'
-import { MoreHorizontal } from 'lucide-react'
+import { ChevronDown, MoreHorizontal } from 'lucide-react'
 
 export interface DropdownMenuItem {
   key: string
@@ -14,6 +14,8 @@ export interface DropdownMenuItem {
 export interface DropdownMenuProps {
   items: DropdownMenuItem[]
   triggerLabel?: string
+  triggerIcon?: React.ReactNode
+  showChevron?: boolean
   align?: 'left' | 'right'
   className?: string
   buttonClassName?: string
@@ -27,6 +29,8 @@ export interface DropdownMenuProps {
 export function DropdownMenu({
   items,
   triggerLabel,
+  triggerIcon,
+  showChevron = false,
   align = 'right',
   className = '',
   buttonClassName = '',
@@ -181,8 +185,13 @@ export function DropdownMenu({
       >
         {triggerLabel ? (
           <>
+            {triggerIcon && <span className="shrink-0 flex items-center">{triggerIcon}</span>}
             <span className="text-xs font-semibold whitespace-nowrap">{triggerLabel}</span>
-            <MoreHorizontal className="h-3.5 w-3.5 opacity-70 shrink-0" />
+            {showChevron ? (
+              <ChevronDown className="h-3.5 w-3.5 opacity-70 shrink-0" />
+            ) : (
+              <MoreHorizontal className="h-3.5 w-3.5 opacity-70 shrink-0" />
+            )}
           </>
         ) : (
           <MoreHorizontal className="h-4 w-4 shrink-0" />

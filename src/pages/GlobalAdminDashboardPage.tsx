@@ -1384,25 +1384,57 @@ export function GlobalAdminDashboardPage() {
                                 )}
                               </td>
                               <td className="py-2.5 px-4">
-                                <div className="flex flex-wrap gap-1 max-w-xs">
-                                  {u.stores.length === 0 ? (
-                                    <span className="text-muted-foreground text-[11px]">
-                                      Nenhuma loja vinculada
-                                    </span>
-                                  ) : (
-                                    u.stores.map((st) => (
-                                      <Link
-                                        key={st.storeId}
-                                        to={`/global-admin/stores/${st.storeId}/edit`}
-                                        title="Abrir tela completa da loja e filiação"
-                                        className="inline-flex items-center text-[10px] px-2 py-0.5 rounded-md gap-1 border border-primary/25 bg-primary/5 hover:bg-primary/15 transition-colors font-medium text-foreground"
-                                      >
-                                        <Building2 className="h-2.5 w-2.5 text-primary" />
-                                        <span>{st.storeName}</span>
-                                      </Link>
-                                    ))
-                                  )}
-                                </div>
+                                {u.stores.length === 0 ? (
+                                  <Link
+                                    to={`/global-admin/users/${u.id}/edit`}
+                                    className="text-muted-foreground hover:text-primary text-[11px] hover:underline"
+                                  >
+                                    Nenhuma loja vinculada
+                                  </Link>
+                                ) : (
+                                  <DropdownMenu
+                                    align="left"
+                                    showChevron
+                                    triggerIcon={<Building2 className="h-3.5 w-3.5 text-primary" />}
+                                    triggerLabel={
+                                      u.stores.length === 1
+                                        ? u.stores[0].storeName
+                                        : `${u.stores.length} Lojas (${u.stores[0].storeName} +${u.stores.length - 1})`
+                                    }
+                                    items={[
+                                      ...u.stores.map((st) => {
+                                        const storeObj = allStoresRaw.find((s) => s.id === st.storeId)
+                                        const lic = licenseMap.get(st.storeId)
+                                        const isStoreBranch = Boolean(
+                                          storeObj?.is_branch ||
+                                            storeObj?.parent_store_id ||
+                                            lic?.isBranch
+                                        )
+                                        return {
+                                          key: `store-${st.storeId}`,
+                                          label: `${st.storeName} (${isStoreBranch ? 'Filial' : 'Matriz'})${
+                                            lic
+                                              ? ` • ${lic.activeEmployeesCount}/${lic.freeEmployeesQuota} func.`
+                                              : ''
+                                          }`,
+                                          icon: isStoreBranch ? (
+                                            <GitBranch className="h-3.5 w-3.5 text-amber-500" />
+                                          ) : (
+                                            <Building2 className="h-3.5 w-3.5 text-primary" />
+                                          ),
+                                          onSelect: () =>
+                                            navigate(`/global-admin/stores/${st.storeId}/edit`),
+                                        }
+                                      }),
+                                      {
+                                        key: 'manage-user-stores',
+                                        label: 'Gerenciar Vínculos de Lojas do Usuário',
+                                        icon: <Edit2 className="h-3.5 w-3.5 text-blue-500" />,
+                                        onSelect: () => navigate(`/global-admin/users/${u.id}/edit`),
+                                      },
+                                    ]}
+                                  />
+                                )}
                               </td>
                               <td className="py-2.5 px-4">
                                 {u.isGlobalAdmin ? (
