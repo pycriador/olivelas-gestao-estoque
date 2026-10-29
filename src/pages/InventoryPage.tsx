@@ -672,8 +672,22 @@ export function InventoryPage() {
                             />
                           </td>
                           <td className="py-2.5 px-4 font-semibold text-foreground">
-                            <div className="font-semibold text-foreground truncate max-w-[14rem]" title={b.product_name}>
-                              {b.product_name}
+                            <div className="flex items-center gap-2.5">
+                              {b.product_image_url ? (
+                                <img
+                                  src={b.product_image_url}
+                                  alt={b.product_name}
+                                  loading="lazy"
+                                  className="h-8 w-8 shrink-0 rounded-md object-cover border border-border/60 bg-muted/40"
+                                />
+                              ) : (
+                                <div className="h-8 w-8 shrink-0 rounded-md border border-border/60 bg-muted/40 flex items-center justify-center text-muted-foreground">
+                                  <Layers className="h-3.5 w-3.5" />
+                                </div>
+                              )}
+                              <div className="font-semibold text-foreground truncate max-w-[14rem]" title={b.product_name}>
+                                {b.product_name}
+                              </div>
                             </div>
                           </td>
                           <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground whitespace-nowrap">

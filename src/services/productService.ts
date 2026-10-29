@@ -179,7 +179,8 @@ export const productService = {
         products!inner (
           id, store_id, name, sku, barcode, description, unit,
           selling_price, cost_price, category_id, is_active,
-          categories ( id, name )
+          categories ( id, name ),
+          product_images ( id, storage_path, public_url, is_primary, display_order )
         )
       `,
         { count: 'exact' }
@@ -220,6 +221,7 @@ export const productService = {
           stock_quantity: Number(row.available_quantity ?? 0),
           reserved_quantity: Number(row.reserved_quantity ?? 0),
           physical_quantity: Number(row.quantity ?? 0),
+          images: product.product_images || [],
         } as Product
       })
       .filter(Boolean) as Product[]
@@ -359,7 +361,8 @@ export const productService = {
       .select(`
         *,
         categories ( name ),
-        stock_balances ( quantity, available_quantity )
+        stock_balances ( quantity, available_quantity ),
+        product_images ( id, storage_path, public_url, is_primary, display_order )
       `)
       .eq('store_id', storeId)
       .in('id', ids)
@@ -371,6 +374,7 @@ export const productService = {
       ...row,
       category_name: row.categories?.name,
       stock_quantity: Number(row.stock_balances?.[0]?.available_quantity ?? row.stock_balances?.[0]?.quantity ?? 0),
+      images: row.product_images || [],
     })) as Product[]
   },
 

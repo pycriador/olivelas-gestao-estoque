@@ -379,7 +379,21 @@ export function ExpirationPage() {
                     return (
                       <tr key={batch.id} className="hover:bg-muted/30 transition-colors">
                         <td className="py-3 px-4 font-semibold text-foreground">
-                          {batch.product_name}
+                          <div className="flex items-center gap-2.5">
+                            {batch.product_image_url ? (
+                              <img
+                                src={batch.product_image_url}
+                                alt={batch.product_name}
+                                loading="lazy"
+                                className="h-8 w-8 shrink-0 rounded-md object-cover border border-border/60 bg-muted/40"
+                              />
+                            ) : (
+                              <div className="h-8 w-8 shrink-0 rounded-md border border-border/60 bg-muted/40 flex items-center justify-center text-muted-foreground">
+                                <Clock className="h-3.5 w-3.5" />
+                              </div>
+                            )}
+                            <span>{batch.product_name}</span>
+                          </div>
                         </td>
                         <td className="py-3 px-4 font-mono font-medium">
                           {batch.lot_number}

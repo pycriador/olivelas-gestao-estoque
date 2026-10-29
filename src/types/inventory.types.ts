@@ -21,6 +21,7 @@ export interface StockBalance {
   supplier_name?: string | null
   controls_batch?: boolean
   controls_expiration?: boolean
+  product_image_url?: string | null
 }
 
 export interface StockBalanceListParams {
@@ -77,6 +78,7 @@ export interface StockBatch {
   status: 'ACTIVE' | 'EXPIRED' | 'DEPLETED' | 'BLOCKED'
   created_at: string
   product_name?: string
+  product_image_url?: string | null
 }
 
 export interface CostCenter {

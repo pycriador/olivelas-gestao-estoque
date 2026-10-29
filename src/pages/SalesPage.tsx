@@ -610,6 +610,8 @@ export function SalesPage() {
                     // Ja atingiu o saldo disponivel: nao deixa passar.
                     const atStockLimit = !isOutOfStock && inCartQty >= stock
                     const isWeighed = isWeighedProduct(p)
+                    const primaryImage =
+                      (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
 
                     return (
                       <button
@@ -634,24 +636,38 @@ export function SalesPage() {
                         }`}
                       >
                         {inCart && (
-                          <div className="absolute top-2.5 right-2.5 sm:top-1.5 sm:right-1.5 px-2 py-0.5 sm:px-1.5 sm:py-0.5 rounded-md bg-primary text-primary-foreground text-xs sm:text-[10px] font-bold font-mono flex items-center gap-0.5 shadow-xs">
+                          <div className="absolute top-2.5 right-2.5 sm:top-1.5 sm:right-1.5 z-10 px-2 py-0.5 sm:px-1.5 sm:py-0.5 rounded-md bg-primary text-primary-foreground text-xs sm:text-[10px] font-bold font-mono flex items-center gap-0.5 shadow-xs">
                             {isWeighed ? (inCartQty >= 1 ? `${inCartQty}kg` : `${Math.round(inCartQty * 1000)}g`) : `${inCartQty}x`}
                           </div>
                         )}
 
-                        <div className="pr-12 sm:pr-6">
-                          <div className="font-semibold text-sm sm:text-xs text-foreground line-clamp-1">
-                            {p.name}
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className="text-[11px] sm:text-[10px] text-muted-foreground font-mono truncate">
-                              {p.sku || p.barcode || 'Sem SKU'}
-                            </span>
-                            {isWeighed && (
-                              <Badge variant="outline" className="text-[10px] sm:text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30 font-bold shrink-0">
-                                <Scale className="h-3 w-3 sm:h-2.5 sm:w-2.5 mr-0.5" /> KG
-                              </Badge>
+                        <div className="flex items-center gap-2.5 pr-12 sm:pr-6">
+                          <div className="h-10 w-10 shrink-0 rounded-lg overflow-hidden border border-border/70 bg-muted/40 flex items-center justify-center">
+                            {primaryImage?.public_url ? (
+                              <img
+                                src={primaryImage.public_url}
+                                alt={p.name}
+                                loading="lazy"
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Package className="h-4 w-4 text-muted-foreground/70" />
                             )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-sm sm:text-xs text-foreground line-clamp-1">
+                              {p.name}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="text-[11px] sm:text-[10px] text-muted-foreground font-mono truncate">
+                                {p.sku || p.barcode || 'Sem SKU'}
+                              </span>
+                              {isWeighed && (
+                                <Badge variant="outline" className="text-[10px] sm:text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/30 font-bold shrink-0">
+                                  <Scale className="h-3 w-3 sm:h-2.5 sm:w-2.5 mr-0.5" /> KG
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
 

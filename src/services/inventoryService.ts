@@ -122,7 +122,8 @@ export const inventoryService = {
           controls_expiration,
           supplier_id,
           deleted_at,
-          suppliers ( id, corporate_name, trade_name )
+          suppliers ( id, corporate_name, trade_name ),
+          product_images ( public_url, is_primary, display_order )
         )
       `,
         { count: 'exact' }
@@ -156,6 +157,8 @@ export const inventoryService = {
     const list = (data || []).map((item: any) => {
       const prod = Array.isArray(item.products) ? item.products[0] : item.products
       const supplier = Array.isArray(prod?.suppliers) ? prod?.suppliers[0] : prod?.suppliers
+      const imgs = Array.isArray(prod?.product_images) ? prod.product_images : []
+      const primaryImg = imgs.find((i: any) => i.is_primary) || imgs[0]
       const qty = Number(item.quantity)
       const costPrice = Number(prod?.cost_price) || 0
       const sellingPrice = Number(prod?.selling_price) || 0
@@ -183,6 +186,7 @@ export const inventoryService = {
         supplier_name: supplier?.trade_name || supplier?.corporate_name || null,
         controls_batch: Boolean(prod?.controls_batch),
         controls_expiration: Boolean(prod?.controls_expiration),
+        product_image_url: primaryImg?.public_url || null,
       }
     })
 
@@ -402,27 +406,35 @@ export const inventoryService = {
       .from('stock_batches')
       .select(`
         *,
-        products ( name )
+        products (
+          name,
+          product_images ( public_url, is_primary, display_order )
+        )
       `)
       .eq('store_id', storeId)
       .order(sortBy, { ascending: sortOrder === 'asc' })
 
     if (allErr) throw allErr
 
-    const mapped = (allData || []).map((item: any) => ({
-      id: item.id,
-      store_id: item.store_id,
-      product_id: item.product_id,
-      lot_number: item.lot_number,
-      quantity: Number(item.quantity),
-      cost_price: item.cost_price ? Number(item.cost_price) : null,
-      manufacturing_date: item.manufacturing_date,
-      expiration_date: item.expiration_date,
-      status: item.status,
-      created_at: item.created_at,
-      product_name: item.products?.name || 'Produto',
-      expirationInfo: checkExpirationStatus(item.expiration_date),
-    }))
+    const mapped = (allData || []).map((item: any) => {
+      const imgs = Array.isArray(item.products?.product_images) ? item.products.product_images : []
+      const primaryImg = imgs.find((i: any) => i.is_primary) || imgs[0]
+      return {
+        id: item.id,
+        store_id: item.store_id,
+        product_id: item.product_id,
+        lot_number: item.lot_number,
+        quantity: Number(item.quantity),
+        cost_price: item.cost_price ? Number(item.cost_price) : null,
+        manufacturing_date: item.manufacturing_date,
+        expiration_date: item.expiration_date,
+        status: item.status,
+        created_at: item.created_at,
+        product_name: item.products?.name || 'Produto',
+        product_image_url: primaryImg?.public_url || null,
+        expirationInfo: checkExpirationStatus(item.expiration_date),
+      }
+    })
 
     const summary = {
       total: mapped.length,

@@ -89,9 +89,10 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | Page | Padrão principal |
 | --- | --- |
 | `DashboardPage` | cards de métrica (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) + lista de pedidos recentes |
-| `SalesPage` | PDV: `grid-cols-1 lg:grid-cols-12` (catálogo 8 / carrinho 4 em `lg`) |
-| `ProductsPage` | catálogo mestre: tabela `hidden md:block` + lista `md:hidden`, seleção múltipla e `BulkStockEntryModal` |
-| `InventoryPage` | KPI de valorização a custo/venda + abas de saldos, lotes, movimentações, centros de custo, motivos de perda e `BulkStockWriteoffModal` |
+| `SalesPage` | PDV: `grid-cols-1 lg:grid-cols-12` (catálogo 8 com miniaturas de `product_images` / carrinho 4 em `lg`) |
+| `ProductsPage` | catálogo mestre: tabela `hidden md:block` + lista `md:hidden` com miniaturas, seleção múltipla e `BulkStockEntryModal` |
+| `InventoryPage` | KPI de valorização a custo/venda + abas de saldos (com miniaturas de produtos), lotes, movimentações, centros de custo, motivos de perda e `BulkStockWriteoffModal` |
+| `ExpirationPage` | KPIs de validade (Vencidos, `<= 7d`, `<= 30d`, No Prazo) + listagem de lotes com miniaturas de produtos e justificativas (`batch_dispositions`) |
 | `ReportsPage` | menu segmentado com 9 abas analíticas, KPI summary, barra contextual de filtros por categoria/status/classe/urgência/segmento, busca instantânea, sincronização de URL e exportação CSV |
 | `GlobalAdminDashboardPage` | métricas globais + abas de Lojas, Usuários, `GlobalDbExplorerPanel` (CRUD dinâmico), `GlobalBackupPanel` (Dumps SQL/ZIP/JSON) e `GlobalApiKeyHbacPanel` (Gestor de Chaves HBAC) |
 | `ApiIntegrationsPage` | API Studio estilo Postman (`grid-cols-1 lg:grid-cols-12`): Request Builder HTTP, Importar/Exportar cURL, Templates Prontos, Mapeador Visual De → Para com Auto-Map, Simulação Dry-Run e Sincronização em lote com Clientes, Categorias, Produtos, Fornecedores e Estoque |
