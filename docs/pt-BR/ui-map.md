@@ -93,7 +93,17 @@ O menu lateral autenticado organiza todas as páginas e telas dedicadas em seç�
 
 Header empilha (`flex-col`) e vira `sm:flex-row`. Formulário `max-w-md` centralizado. Sem drawer.
 
-## Tabelas (`ResponsiveTable`)
+## Tabelas (`ResponsiveTable`) e Padronização de Densidade Visual (`ExpirationPage` Pattern)
+
+Todas as páginas com tabelas de dados (`/expiration`, `/global-admin?tab=stores`, `/global-admin?tab=users`, `/global-admin?tab=finance`, `/global-admin?tab=db-explorer`, `/global-admin?tab=delete`, `/global-admin/finance/payments`, `/inventory`, `/products`, `/categories`, `/suppliers`, `/purchases`, `/orders`, `/customers`, `/reports`, `/stores`, `/team`, `/audit`, `/notifications`) seguem a mesma estrutura de ajuste à altura da tela (`viewport-fitted`) inspirada em `/expiration`:
+
+- **Container Raiz**: `h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150`, ocupando 100% da área visível de `<main>`.
+- **KPIs em Pílulas Compactas de 1 Linha (`flex-shrink-0`)**: `px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between`, evitando cards altos que empurram a tabela para baixo.
+- **Card de Tabela Expansível com Scroll Interno e Paginação Fixa no Rodapé**:
+  - `<Card className="flex-1 min-h-0 flex flex-col border border-border shadow-sm bg-card overflow-hidden">`
+  - `<CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">`
+  - Área de rolagem interna da tabela (`<div className="flex-1 min-h-0 overflow-auto custom-scrollbar">`) com cabeçalho fixo (`thead sticky top-0 z-10`).
+  - Barra de paginação (`<Pagination>`) sempre visível e fixada na base do card (`<div className="p-3 border-t border-border bg-surface flex-shrink-0">`), impedindo que a tabela fique cortada na metade da tela ou que a barra de navegação/paginação fique escondida abaixo do scroll da página.
 
 `ResponsiveTable` + CSS em `src/index.css` `@media (max-width: 767px)`:
 

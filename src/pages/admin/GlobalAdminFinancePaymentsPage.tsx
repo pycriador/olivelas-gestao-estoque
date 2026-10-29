@@ -16,7 +16,8 @@ import {
   Users,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
-import { Card } from '@/components/ui/card'
+import { Pagination } from '@/components/ui/pagination'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -37,6 +38,8 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
 
   const [storeAdminUsers, setStoreAdminUsers] = useState<PlatformUser[]>([])
   const [allPayments, setAllPayments] = useState<SubscriptionPayment[]>([])
@@ -112,8 +115,15 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
     [allPayments]
   )
 
+  const totalItems = filteredAdmins.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const paginatedAdmins = useMemo(() => {
+    const start = (page - 1) * pageSize
+    return filteredAdmins.slice(start, start + pageSize)
+  }, [filteredAdmins, page, pageSize])
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       <PageHeader
         title="Financeiro: Controle de Pagamentos & Assinaturas (STORE_ADMIN)"
         badge={
@@ -122,167 +132,133 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
           </Badge>
         }
       >
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar STORE_ADMIN ou loja..."
-          icon={<Search className="h-4 w-4" />}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          <Input
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setPage(1)
+            }}
+            placeholder="Buscar STORE_ADMIN ou loja..."
+            className="h-8 text-xs w-56"
+            icon={<Search className="h-3.5 w-3.5" />}
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value)
+              setPage(1)
+            }}
+            className="h-8 rounded-lg border border-input bg-background px-2.5 text-xs text-foreground"
+          >
+            <option value="ALL">Todos os Status</option>
+            <option value="ACTIVE">Em Dia (ACTIVE)</option>
+            <option value="TRIAL">Em Teste (TRIAL)</option>
+            <option value="PENDING">Pendente (PENDING)</option>
+            <option value="PAST_DUE">Em Atraso (PAST_DUE)</option>
+            <option value="SUSPENDED">Suspenso (SUSPENDED)</option>
+          </select>
+        </div>
       </PageHeader>
 
-      {/* Top Navigation Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xs">
-            <CreditCard className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-semibold text-primary">
-                /global-admin/finance/payments
-              </span>
-              <Badge variant="warning">Apenas Titulares STORE_ADMIN</Badge>
-            </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Controle de pagamentos consolidado. Funcionários das lojas não pagam plano individual — apenas o STORE_ADMIN possui assinatura e eventuais licenças excedentes (&gt;10 funcionários).
-            </p>
-          </div>
+      {/* Compact Top Navigation Strip */}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary/25 bg-primary/5 px-3 py-1.5 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-primary shrink-0" />
+          <span className="font-mono text-[11px] font-semibold text-primary">
+            /global-admin/finance/payments
+          </span>
+          <Badge variant="warning" className="text-[10px]">
+            Apenas Titulares STORE_ADMIN
+          </Badge>
+          <span className="hidden xl:inline text-[11px] text-muted-foreground">
+            — Funcionários operacionais não pagam plano individual (10 grátis/loja).
+          </span>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Button
             variant="outline"
             size="sm"
+            className="h-7 text-xs px-2.5"
             onClick={() => navigate('/global-admin?tab=finance')}
           >
-            <ArrowLeft className="mr-1.5 h-4 w-4" />
+            <ArrowLeft className="mr-1 h-3.5 w-3.5" />
             Voltar ao Financeiro
           </Button>
           <Button
             variant="outline"
             size="sm"
+            className="h-7 text-xs px-2.5"
             onClick={() => navigate('/global-admin/finance/rules')}
           >
-            <Sliders className="mr-1.5 h-4 w-4" />
+            <Sliders className="mr-1 h-3.5 w-3.5" />
             Regras & Licenças (10 Grátis)
           </Button>
           <Button
             variant="outline"
             size="sm"
+            className="h-7 text-xs px-2.5"
             onClick={() => navigate('/global-admin/finance/plans')}
           >
-            <Layers className="mr-1.5 h-4 w-4" />
+            <Layers className="mr-1 h-3.5 w-3.5" />
             Planos & Preços de Telas
           </Button>
         </div>
       </div>
 
-      {loading ? (
-        <Card className="p-12 text-center text-muted-foreground">
-          Carregando controle de pagamentos e assinaturas...
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {/* KPIs Consolidados */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Card className="p-4">
-              <div className="text-xs font-medium text-muted-foreground">
-                Assinantes Titulares (STORE_ADMIN)
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-foreground">
-                {storeAdminUsers.length}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                Funcionários operacionais isentos de plano
-              </div>
-            </Card>
+      {/* Compact 1-Line KPI Pills (matching /expiration) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 flex-shrink-0">
+        <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">Assinantes (STORE_ADMIN)</span>
+          <span className="text-sm font-bold font-mono text-foreground">{storeAdminUsers.length}</span>
+        </div>
 
-            <Card className="p-4">
-              <div className="text-xs font-medium text-muted-foreground">
-                MRR Planos de Telas Acordados
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-primary">
-                {formatCurrency(mrrBasePlans)}
-                <span className="text-xs font-normal text-muted-foreground">
-                  /mês
-                </span>
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                Soma das mensalidades de pacotes/telas
-              </div>
-            </Card>
+        <div className="px-3 py-1.5 rounded-lg border bg-primary/5 border-primary/20 flex items-center justify-between">
+          <span className="text-xs font-medium text-primary">MRR Planos Acordados</span>
+          <span className="text-sm font-bold font-mono text-primary">
+            {formatCurrency(mrrBasePlans)}/mês
+          </span>
+        </div>
 
-            <Card className="p-4">
-              <div className="text-xs font-medium text-muted-foreground">
-                MRR Licenças Extras de Funcionários
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-amber-500">
-                {formatCurrency(mrrExtraEmployeeSeats)}
-                <span className="text-xs font-normal text-muted-foreground">
-                  /mês
-                </span>
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                Excedente acima dos 10 grátis por loja
-              </div>
-            </Card>
+        <div className="px-3 py-1.5 rounded-lg border bg-amber-500/5 border-amber-500/20 flex items-center justify-between">
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">MRR Licenças Extras</span>
+          <span className="text-sm font-bold font-mono text-amber-600 dark:text-amber-400">
+            {formatCurrency(mrrExtraEmployeeSeats)}/mês
+          </span>
+        </div>
 
-            <Card className="p-4">
-              <div className="text-xs font-medium text-muted-foreground">
-                Faturas Pagas Registradas
-              </div>
-              <div className="mt-1 text-2xl font-extrabold text-emerald-500">
-                {formatCurrency(totalPaidInvoices)}
-              </div>
-              <div className="mt-1 text-[11px] text-muted-foreground">
-                {allPayments.length} lançamento(s) no livro-razão
-              </div>
-            </Card>
-          </div>
+        <div className="px-3 py-1.5 rounded-lg border bg-emerald-500/5 border-emerald-500/20 flex items-center justify-between">
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Faturas Pagas</span>
+          <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+            {formatCurrency(totalPaidInvoices)}
+          </span>
+        </div>
+      </div>
 
-          {/* Tabela de Assinantes STORE_ADMIN */}
-          <Card className="space-y-4 p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
-              <div>
-                <h2 className="text-base font-bold text-foreground">
-                  Contratos e Status de Pagamento por Titular (STORE_ADMIN)
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Clique em Ações Rápidas para abrir a página individual de faturas (`/global-admin/users/:userId/billing`) ou de permissões de tela (`/global-admin/users/:userId/permissions`).
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="h-9 rounded-lg border border-input bg-background px-3 text-xs text-foreground"
-                >
-                  <option value="ALL">Todos os Status</option>
-                  <option value="ACTIVE">Em Dia (ACTIVE)</option>
-                  <option value="TRIAL">Em Teste (TRIAL)</option>
-                  <option value="PENDING">Pendente (PENDING)</option>
-                  <option value="PAST_DUE">Em Atraso (PAST_DUE)</option>
-                  <option value="SUSPENDED">Suspenso (SUSPENDED)</option>
-                </select>
-              </div>
+      {/* Tabela de Assinantes STORE_ADMIN (Viewport-fitted with pinned bottom Pagination) */}
+      <Card className="flex-1 min-h-0 flex flex-col border border-border shadow-sm bg-card overflow-hidden">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+          {loading ? (
+            <div className="flex-1 min-h-0 flex items-center justify-center p-12 text-center text-muted-foreground text-sm">
+              Carregando controle de pagamentos e assinaturas...
             </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
-                <thead className="border-b border-border text-xs uppercase text-muted-foreground">
+          ) : (
+            <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
+              <table className="w-full text-left text-sm border-collapse">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-[11px] uppercase text-muted-foreground tracking-wider">
                   <tr>
-                    <th className="py-3 pr-4">Titular (STORE_ADMIN)</th>
-                    <th className="px-3 py-3">Lojas & Cota de Funcionários</th>
-                    <th className="px-3 py-3">Plano de Telas</th>
-                    <th className="px-3 py-3">Mensalidade + Licenças</th>
-                    <th className="px-3 py-3">Próx. Vencimento</th>
-                    <th className="px-3 py-3">Status</th>
-                    <th className="py-3 pl-3 text-right">Ações Rápidas</th>
+                    <th className="py-2.5 px-4 font-semibold">Titular (STORE_ADMIN)</th>
+                    <th className="px-3 py-2.5 font-semibold">Lojas & Cota de Funcionários</th>
+                    <th className="px-3 py-2.5 font-semibold">Plano de Telas</th>
+                    <th className="px-3 py-2.5 font-semibold">Mensalidade + Licenças</th>
+                    <th className="px-3 py-2.5 font-semibold">Próx. Vencimento</th>
+                    <th className="px-3 py-2.5 font-semibold">Status</th>
+                    <th className="py-2.5 px-4 text-right font-semibold">Ações Rápidas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {filteredAdmins.map((u) => {
+                  {paginatedAdmins.map((u) => {
                     const userStoreIds = new Set(u.stores.map((s) => s.storeId))
                     const userStoreLics = storeLicenses.filter((sl) =>
                       userStoreIds.has(sl.storeId)
@@ -298,8 +274,8 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                       u.permissionProfile?.paymentStatus || 'ACTIVE'
 
                     return (
-                      <tr key={u.id} className="hover:bg-muted/30">
-                        <td className="py-3 pr-4">
+                      <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                        <td className="py-2.5 px-4">
                           <div className="font-semibold text-foreground">
                             {u.fullName || 'Sem nome'}
                           </div>
@@ -308,7 +284,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                           </div>
                         </td>
 
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-2.5">
                           {userStoreLics.length === 0 ? (
                             <span className="text-xs text-muted-foreground">
                               Sem loja vinculada
@@ -340,7 +316,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                           )}
                         </td>
 
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-2.5">
                           <div className="font-medium text-foreground">
                             {u.permissionProfile?.customPlanName ||
                               'Acesso Total Padrão'}
@@ -351,8 +327,8 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                           </div>
                         </td>
 
-                        <td className="px-3 py-3">
-                          <div className="font-bold text-foreground">
+                        <td className="px-3 py-2.5">
+                          <div className="font-bold text-foreground font-mono">
                             {formatCurrency(baseValue + extraSeatsCost)}/mês
                           </div>
                           {extraSeatsCost > 0 && (
@@ -362,13 +338,13 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                           )}
                         </td>
 
-                        <td className="px-3 py-3 text-xs text-muted-foreground">
+                        <td className="px-3 py-2.5 text-xs text-muted-foreground font-mono">
                           {u.permissionProfile?.nextDueDate
                             ? formatDate(u.permissionProfile.nextDueDate)
                             : `Todo dia ${u.permissionProfile?.billingDay || 10}`}
                         </td>
 
-                        <td className="px-3 py-3">
+                        <td className="px-3 py-2.5">
                           <Badge
                             variant={
                               payStatus === 'ACTIVE'
@@ -383,7 +359,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                           </Badge>
                         </td>
 
-                        <td className="py-3 pl-3 text-right">
+                        <td className="py-2.5 px-4 text-right">
                           <DropdownMenu
                             triggerLabel="Ações Rápidas"
                             items={[
@@ -419,9 +395,23 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
                 </tbody>
               </table>
             </div>
-          </Card>
+          )}
+        </CardContent>
+
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={setPage}
+            onPageSizeChange={(s) => {
+              setPageSize(s)
+              setPage(1)
+            }}
+          />
         </div>
-      )}
+      </Card>
     </div>
   )
 }

@@ -1001,41 +1001,11 @@ export function CustomersPage() {
     urlOnlyWithOrders
 
   return (
-    <div className="space-y-4">
-      <PageHeader title={t.nav.customers} />
-
-      {feedbackNotice && (
-        <div
-          className={`flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl border text-xs shadow-xs ${
-            feedbackNotice.variant === 'destructive' || feedbackNotice.variant === 'error'
-              ? 'bg-destructive/10 border-destructive/30 text-destructive'
-              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
-          }`}
-        >
-          <div>
-            <span className="font-bold">{feedbackNotice.title}</span>
-            {feedbackNotice.description && (
-              <span className="ml-1.5 opacity-90">{feedbackNotice.description}</span>
-            )}
-          </div>
-          <button
-            type="button"
-            onClick={() => setFeedbackNotice(null)}
-            className="text-xs underline opacity-75 hover:opacity-100 cursor-pointer"
-          >
-            Fechar
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <p className="text-xs text-muted-foreground">
-          Acompanhe clientes, histórico completo de pedidos com link direto por URL, filtros multi-status e visões salvas por loja ou filial.
-        </p>
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2 animate-in fade-in duration-150">
+      <PageHeader title={t.nav.customers}>
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Store / Branch Selector if user has access to multiple units */}
           {userStores.length > 1 && (
-            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg px-2.5 h-9 shadow-2xs">
+            <div className="flex items-center gap-1.5 bg-card border border-border rounded-lg px-2.5 h-8 shadow-2xs">
               <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
               <select
                 value={effectiveStoreId}
@@ -1058,154 +1028,172 @@ export function CustomersPage() {
           <Button
             variant="outline"
             size="sm"
+            className="h-8 text-xs px-2.5"
             onClick={handleExportVisibleDetailedCSV}
             title="Exportar apenas os clientes e pedidos visíveis na tela com detalhamento completo dos itens"
           >
-            <Download className="h-4 w-4 mr-1.5 text-emerald-600" />
+            <Download className="h-3.5 w-3.5 mr-1.5 text-emerald-600" />
             Exportar Visíveis ({customerList.length})
           </Button>
 
           <Button
             variant="outline"
             size="sm"
+            className="h-8 text-xs px-2.5"
             onClick={handlePrintVisibleDetailed}
             title="Imprimir visão detalhada atual"
           >
-            <Printer className="h-4 w-4 mr-1.5" />
+            <Printer className="h-3.5 w-3.5 mr-1.5" />
             Imprimir Visão
           </Button>
 
           {hasPermission('customers:write') && (
-            <Button size="sm" onClick={handleOpenCreate}>
-              <Plus className="h-4 w-4 mr-1.5" />
+            <Button size="sm" className="h-8 text-xs px-3" onClick={handleOpenCreate}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
               Novo Cliente
+            </Button>
+          )}
+        </div>
+      </PageHeader>
+
+      {feedbackNotice && (
+        <div
+          className={`flex items-center justify-between gap-3 px-3 py-1.5 rounded-lg border text-xs shadow-xs flex-shrink-0 ${
+            feedbackNotice.variant === 'destructive' || feedbackNotice.variant === 'error'
+              ? 'bg-destructive/10 border-destructive/30 text-destructive'
+              : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+          }`}
+        >
+          <div>
+            <span className="font-bold">{feedbackNotice.title}</span>
+            {feedbackNotice.description && (
+              <span className="ml-1.5 opacity-90">{feedbackNotice.description}</span>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setFeedbackNotice(null)}
+            className="text-xs underline opacity-75 hover:opacity-100 cursor-pointer"
+          >
+            Fechar
+          </button>
+        </div>
+      )}
+
+      {/* SAVED VIEWS BAR (Individual per Store / Branch in Database) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg border border-border bg-card shadow-2xs flex-shrink-0">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 mr-1">
+            <BookmarkCheck className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-[11px] font-semibold text-foreground">
+              Visões ({effectiveStoreName}):
+            </span>
+          </div>
+
+          {savedViews.map((view) => {
+            const isSelected = urlViewId === view.id
+            return (
+              <div
+                key={view.id}
+                className={`inline-flex items-center rounded-md border text-[11px] transition-all ${
+                  isSelected
+                    ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
+                    : 'bg-muted/40 hover:bg-muted text-foreground border-border'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => applySavedView(view)}
+                  className="px-2 py-0.5 flex items-center gap-1 cursor-pointer"
+                  title={view.description || view.name}
+                >
+                  <Bookmark className="h-2.5 w-2.5 shrink-0" />
+                  <span>{view.name}</span>
+                  {view.is_default && (
+                    <Star className="h-2.5 w-2.5 fill-amber-400 text-amber-400 shrink-0" />
+                  )}
+                </button>
+
+                <div className="flex items-center pr-1 border-l border-border/40 pl-1 gap-0.5">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      toggleDefaultViewMutation.mutate(view.id)
+                    }}
+                    title={view.is_default ? 'Remover como visão padrão da unidade' : 'Definir como visão padrão desta unidade'}
+                    className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer"
+                  >
+                    <Star
+                      className={`h-2.5 w-2.5 ${
+                        view.is_default
+                          ? 'fill-amber-400 text-amber-400'
+                          : isSelected
+                          ? 'text-primary-foreground/70'
+                          : 'text-muted-foreground'
+                      }`}
+                    />
+                  </button>
+
+                  {!view.is_system_preset && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        deleteViewMutation.mutate(view.id)
+                      }}
+                      title="Excluir visão salva"
+                      className="p-0.5 rounded hover:bg-rose-500/20 text-rose-500 cursor-pointer"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {activeSavedView && !activeSavedView.is_system_preset && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[11px] px-2 border-primary/40 text-primary"
+              onClick={() => openSaveCurrentViewModal(activeSavedView)}
+            >
+              <Bookmark className="h-3 w-3 mr-1" />
+              Atualizar "{activeSavedView.name}"
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-[11px] px-2 bg-primary/5 hover:bg-primary/10 text-primary border-primary/30"
+            onClick={() => openSaveCurrentViewModal()}
+          >
+            <Sparkles className="h-3 w-3 mr-1" />
+            Salvar Visão
+          </Button>
+
+          {hasAnyActiveFilter && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[11px] px-2 text-muted-foreground hover:text-foreground"
+              onClick={handleClearAllFilters}
+            >
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Limpar
             </Button>
           )}
         </div>
       </div>
 
-      {/* SAVED VIEWS BAR (Individual per Store / Branch in Database) */}
-      <Card className="border border-border/80 bg-card/95 shadow-2xs">
-        <CardContent className="p-3 space-y-2.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60 pb-2">
-            <div className="flex items-center gap-2">
-              <BookmarkCheck className="h-4 w-4 text-primary shrink-0" />
-              <span className="text-xs font-semibold text-foreground">
-                Visões Salvas no Banco — Unidade: <span className="text-primary">{effectiveStoreName}</span>
-              </span>
-              <Badge variant="outline" className="text-[10px] font-normal">
-                Individual por Loja/Filial
-              </Badge>
-            </div>
-
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {activeSavedView && !activeSavedView.is_system_preset && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs px-2.5 border-primary/40 text-primary"
-                  onClick={() => openSaveCurrentViewModal(activeSavedView)}
-                >
-                  <Bookmark className="h-3 w-3 mr-1" />
-                  Atualizar "{activeSavedView.name}"
-                </Button>
-              )}
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs px-2.5 bg-primary/5 hover:bg-primary/10 text-primary border-primary/30"
-                onClick={() => openSaveCurrentViewModal()}
-              >
-                <Sparkles className="h-3 w-3 mr-1" />
-                Salvar Filtros como Nova Visão
-              </Button>
-
-              {hasAnyActiveFilter && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
-                  onClick={handleClearAllFilters}
-                >
-                  <RotateCcw className="h-3 w-3 mr-1" />
-                  Limpar Filtros
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Saved Views Chips */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {savedViews.map((view) => {
-              const isSelected = urlViewId === view.id
-              return (
-                <div
-                  key={view.id}
-                  className={`inline-flex items-center rounded-lg border text-xs transition-all ${
-                    isSelected
-                      ? 'bg-primary text-primary-foreground border-primary shadow-xs font-semibold'
-                      : 'bg-muted/40 hover:bg-muted text-foreground border-border'
-                  }`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => applySavedView(view)}
-                    className="px-2.5 py-1 flex items-center gap-1.5 cursor-pointer"
-                    title={view.description || view.name}
-                  >
-                    <Bookmark className="h-3 w-3 shrink-0" />
-                    <span>{view.name}</span>
-                    {view.is_default && (
-                      <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
-                    )}
-                  </button>
-
-                  <div className="flex items-center pr-1 border-l border-border/40 pl-1 gap-0.5">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleDefaultViewMutation.mutate(view.id)
-                      }}
-                      title={view.is_default ? 'Remover como visão padrão da unidade' : 'Definir como visão padrão desta unidade'}
-                      className="p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 cursor-pointer"
-                    >
-                      <Star
-                        className={`h-3 w-3 ${
-                          view.is_default
-                            ? 'fill-amber-400 text-amber-400'
-                            : isSelected
-                            ? 'text-primary-foreground/70'
-                            : 'text-muted-foreground'
-                        }`}
-                      />
-                    </button>
-
-                    {!view.is_system_preset && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          deleteViewMutation.mutate(view.id)
-                        }}
-                        title="Excluir visão salva"
-                        className="p-0.5 rounded hover:bg-rose-500/20 text-rose-500 cursor-pointer"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* URL DEEP-LINK FILTER BANNER (when ?customerId= or ?orderId= is active) */}
       {(urlCustomerId || urlOrderId) && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-primary/10 border border-primary/30 rounded-xl px-4 py-2.5 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-primary/10 border border-primary/30 rounded-lg px-3 py-1.5 text-xs flex-shrink-0">
           <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="default" className="text-[10px]">
               Filtro por URL Ativo
@@ -1216,400 +1204,386 @@ export function CustomersPage() {
               {urlOrderId && <span className="font-mono ml-2 text-primary">Pedido: {urlOrderId}</span>}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => updateUrlParams({ customerId: null, orderId: null, order: null })}
-            >
-              <X className="h-3.5 w-3.5 mr-1" />
-              Mostrar Todos os Clientes
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-[11px] px-2"
+            onClick={() => updateUrlParams({ customerId: null, orderId: null, order: null })}
+          >
+            <X className="h-3 w-3 mr-1" />
+            Mostrar Todos os Clientes
+          </Button>
         </div>
       )}
 
-      {/* SUMMARY KPI CARDS FOR CURRENT FILTERED VIEW */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
-        <Card className="border border-border/70 shadow-2xs">
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase font-semibold text-muted-foreground">Clientes no Filtro</div>
-            <div className="text-lg font-bold font-mono text-foreground mt-0.5">{viewSummary.totalCustomers}</div>
-            <div className="text-[10px] text-muted-foreground">Visíveis nesta página: {customerList.length}</div>
-          </CardContent>
-        </Card>
+      {/* COMPACT 1-LINE KPI PILLS (matching /expiration) */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 flex-shrink-0">
+        <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">Clientes no Filtro</span>
+          <span className="text-sm font-bold font-mono text-foreground">{viewSummary.totalCustomers}</span>
+        </div>
 
-        <Card
+        <button
+          type="button"
           onClick={() => toggleOrderStatusGroup(OPEN_ORDER_STATUSES)}
-          className={`border cursor-pointer transition-all shadow-2xs ${
+          className={`px-3 py-1.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
             isOpenGroupActive
-              ? 'border-amber-500 bg-amber-500/10'
-              : 'border-border/70 hover:border-amber-500/50'
+              ? 'border-amber-500 bg-amber-500/15 ring-1 ring-amber-500/30'
+              : 'bg-amber-500/5 border-amber-500/20 hover:border-amber-500/50'
           }`}
         >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-semibold text-amber-600 dark:text-amber-400">Pedidos Abertos</span>
-              <Clock className="h-3.5 w-3.5 text-amber-500" />
-            </div>
-            <div className="text-lg font-bold font-mono text-amber-600 dark:text-amber-400 mt-0.5">
-              {viewSummary.openOrdersCount}
-            </div>
-            <div className="text-[10px] text-muted-foreground">Clique p/ filtrar abertos</div>
-          </CardContent>
-        </Card>
+          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+            <Clock className="h-3 w-3" /> Abertos
+          </span>
+          <span className="text-sm font-bold font-mono text-amber-600 dark:text-amber-400">
+            {viewSummary.openOrdersCount}
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => toggleOrderStatusGroup(CLOSED_ORDER_STATUSES)}
-          className={`border cursor-pointer transition-all shadow-2xs ${
+          className={`px-3 py-1.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
             isClosedGroupActive
-              ? 'border-emerald-500 bg-emerald-500/10'
-              : 'border-border/70 hover:border-emerald-500/50'
+              ? 'border-emerald-500 bg-emerald-500/15 ring-1 ring-emerald-500/30'
+              : 'bg-emerald-500/5 border-emerald-500/20 hover:border-emerald-500/50'
           }`}
         >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-semibold text-emerald-600 dark:text-emerald-400">Pedidos Fechados</span>
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            </div>
-            <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {viewSummary.closedOrdersCount}
-            </div>
-            <div className="text-[10px] text-muted-foreground">Clique p/ filtrar entregues</div>
-          </CardContent>
-        </Card>
+          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <CheckCircle2 className="h-3 w-3" /> Fechados
+          </span>
+          <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+            {viewSummary.closedOrdersCount}
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => toggleOrderStatusGroup(CANCELLED_ORDER_STATUSES)}
-          className={`border cursor-pointer transition-all shadow-2xs ${
+          className={`px-3 py-1.5 rounded-lg border flex items-center justify-between cursor-pointer transition-all ${
             isCancelledGroupActive
-              ? 'border-rose-500 bg-rose-500/10'
-              : 'border-border/70 hover:border-rose-500/50'
+              ? 'border-rose-500 bg-rose-500/15 ring-1 ring-rose-500/30'
+              : 'bg-rose-500/5 border-rose-500/20 hover:border-rose-500/50'
           }`}
         >
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase font-semibold text-rose-600 dark:text-rose-400">Cancelados</span>
-              <XCircle className="h-3.5 w-3.5 text-rose-500" />
-            </div>
-            <div className="text-lg font-bold font-mono text-rose-600 dark:text-rose-400 mt-0.5">
-              {viewSummary.cancelledOrdersCount}
-            </div>
-            <div className="text-[10px] text-muted-foreground">Clique p/ filtrar cancelados</div>
-          </CardContent>
-        </Card>
+          <span className="text-xs font-medium text-rose-600 dark:text-rose-400 flex items-center gap-1">
+            <XCircle className="h-3 w-3" /> Cancelados
+          </span>
+          <span className="text-sm font-bold font-mono text-rose-600 dark:text-rose-400">
+            {viewSummary.cancelledOrdersCount}
+          </span>
+        </button>
 
-        <Card className="border border-border/70 shadow-2xs col-span-2 sm:col-span-1">
-          <CardContent className="p-3">
-            <div className="text-[10px] uppercase font-semibold text-muted-foreground">Faturamento na Visão</div>
-            <div className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
-              {formatCurrency(viewSummary.totalRevenueInView)}
-            </div>
-            <div className="text-[10px] text-muted-foreground">{viewSummary.totalOrdersInView} pedidos listados</div>
-          </CardContent>
-        </Card>
+        <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between col-span-2 sm:col-span-1">
+          <span className="text-xs font-medium text-muted-foreground">Faturamento</span>
+          <span className="text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400">
+            {formatCurrency(viewSummary.totalRevenueInView)}
+          </span>
+        </div>
       </div>
 
       {/* MULTI-SELECT FILTERS & SEARCH TOOLBAR */}
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, CPF/CNPJ, telefone, Nº do pedido ou produto comprado..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                className="pl-9 h-9 text-xs"
-              />
-            </div>
-
-            {/* Multi-select Status Popover + Period Filter */}
-            <div className="flex flex-wrap items-center gap-2">
-              {/* MULTI-SELECT STATUS DROPDOWN */}
-              <div className="relative" ref={statusDropdownRef}>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setStatusDropdownOpen((o) => !o)}
-                  className="h-9 text-xs flex items-center gap-2 border-border"
-                >
-                  <Filter className="h-3.5 w-3.5 text-primary" />
-                  <span>
-                    Status Múltipla Seleção
-                    {urlOrderStatuses.length + urlCustomerStatuses.length > 0 && (
-                      <Badge variant="default" className="ml-1.5 text-[10px] px-1.5 py-0">
-                        {urlOrderStatuses.length + urlCustomerStatuses.length}
-                      </Badge>
-                    )}
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-
-                {statusDropdownOpen && (
-                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-80 sm:w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card shadow-xl z-50 p-3 space-y-3">
-                    <div className="flex items-center justify-between border-b border-border pb-2">
-                      <span className="text-xs font-bold text-foreground">
-                        Seleção Múltipla de Status
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          updateUrlParams({ status: null, orderStatus: null, onlyWithOrders: null })
-                        }
-                        className="text-[11px] text-primary hover:underline cursor-pointer"
-                      >
-                        Marcar Todos (Limpar)
-                      </button>
-                    </div>
-
-                    {/* Quick Group Presets */}
-                    <div className="space-y-1.5">
-                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        Agrupamentos Rápidos de Pedidos
-                      </div>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => toggleOrderStatusGroup(OPEN_ORDER_STATUSES)}
-                          className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer ${
-                            isOpenGroupActive
-                              ? 'bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
-                              : 'border-border hover:bg-muted text-foreground'
-                          }`}
-                        >
-                          {isOpenGroupActive && <Check className="h-3 w-3" />}
-                          Abertos
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleOrderStatusGroup(CLOSED_ORDER_STATUSES)}
-                          className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer ${
-                            isClosedGroupActive
-                              ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
-                              : 'border-border hover:bg-muted text-foreground'
-                          }`}
-                        >
-                          {isClosedGroupActive && <Check className="h-3 w-3" />}
-                          Fechados
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => toggleOrderStatusGroup(CANCELLED_ORDER_STATUSES)}
-                          className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer ${
-                            isCancelledGroupActive
-                              ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 font-bold'
-                              : 'border-border hover:bg-muted text-foreground'
-                          }`}
-                        >
-                          {isCancelledGroupActive && <Check className="h-3 w-3" />}
-                          Cancelados
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Individual Order Status Checkboxes */}
-                    <div className="space-y-1.5">
-                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        Status Individual do Pedido (Múltipla Seleção)
-                      </div>
-                      <div className="grid grid-cols-2 gap-1">
-                        {ALL_ORDER_STATUSES.map((st) => {
-                          const checked = urlOrderStatuses.includes(st)
-                          const meta = ORDER_STATUS_META[st]
-                          return (
-                            <label
-                              key={st}
-                              onClick={() => toggleOrderStatus(st)}
-                              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition-colors ${
-                                checked
-                                  ? 'bg-primary/10 border-primary/50 text-foreground font-semibold'
-                                  : 'border-transparent hover:bg-muted/60 text-muted-foreground'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => {}}
-                                className="rounded border-input text-primary focus:ring-primary h-3.5 w-3.5"
-                              />
-                              <span className="truncate">{meta.label}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Customer Account Status Checkboxes */}
-                    <div className="space-y-1.5 pt-2 border-t border-border">
-                      <div className="text-[10px] font-semibold uppercase text-muted-foreground">
-                        Status do Cadastro do Cliente
-                      </div>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(['ACTIVE', 'INACTIVE'] as const).map((cst) => {
-                          const checked = urlCustomerStatuses.includes(cst)
-                          return (
-                            <label
-                              key={cst}
-                              onClick={() => toggleCustomerStatus(cst)}
-                              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none ${
-                                checked
-                                  ? 'bg-primary/10 border-primary/50 text-foreground font-semibold'
-                                  : 'border-border/60 hover:bg-muted/60 text-muted-foreground'
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => {}}
-                                className="rounded border-input text-primary h-3.5 w-3.5"
-                              />
-                              <span>{cst === 'ACTIVE' ? 'Clientes Ativos' : 'Clientes Inativos'}</span>
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-border flex items-center justify-between">
-                      <label className="flex items-center gap-2 text-xs cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={urlOnlyWithOrders}
-                          onChange={(e) =>
-                            updateUrlParams({ onlyWithOrders: e.target.checked ? 'true' : null })
-                          }
-                          className="rounded border-input text-primary h-3.5 w-3.5"
-                        />
-                        <span>Apenas clientes com pedidos</span>
-                      </label>
-                      <Button
-                        size="sm"
-                        className="h-7 text-xs px-3"
-                        onClick={() => setStatusDropdownOpen(false)}
-                      >
-                        Concluir
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Period Filter */}
-              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2.5 h-9">
-                <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <select
-                  value={urlPeriod}
-                  onChange={(e) => updateUrlParams({ period: e.target.value, viewId: null })}
-                  aria-label="Período dos pedidos"
-                  className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
-                >
-                  <option value="ALL">Todo o Período</option>
-                  <option value="TODAY">Hoje</option>
-                  <option value="THIS_WEEK">Esta Semana</option>
-                  <option value="THIS_MONTH">Este Mês</option>
-                  <option value="LAST_MONTH">Mês Passado</option>
-                  <option value="90D">Últimos 90 Dias</option>
-                  <option value="THIS_YEAR">Este Ano</option>
-                  <option value="CUSTOM">Datas Personalizadas...</option>
-                </select>
-              </div>
-
-              {urlPeriod === 'CUSTOM' && (
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    type="date"
-                    value={urlDateFrom}
-                    onChange={(e) => updateUrlParams({ from: e.target.value, viewId: null })}
-                    className="h-9 text-xs w-36"
-                    aria-label="Data inicial"
-                  />
-                  <span className="text-xs text-muted-foreground">até</span>
-                  <Input
-                    type="date"
-                    value={urlDateTo}
-                    onChange={(e) => updateUrlParams({ to: e.target.value, viewId: null })}
-                    className="h-9 text-xs w-36"
-                    aria-label="Data final"
-                  />
-                </div>
-              )}
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={expandOrCollapseAllVisible}
-                className="h-9 text-xs px-2.5"
-              >
-                <ShoppingBag className="h-3.5 w-3.5 mr-1.5 text-primary" />
-                {customerList.length > 0 && customerList.every((c) => expandedCustomerIds.has(c.id))
-                  ? 'Recolher Pedidos'
-                  : 'Expandir Todos os Pedidos'}
-              </Button>
-            </div>
+      <div className="px-3 py-2 rounded-lg border border-border bg-card shadow-2xs space-y-2 flex-shrink-0">
+        <div className="flex flex-col lg:flex-row gap-2 items-stretch lg:items-center justify-between">
+          {/* Search Input */}
+          <div className="relative flex-1 min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por nome, CPF/CNPJ, telefone, Nº do pedido ou produto comprado..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className="pl-8 h-8 text-xs"
+            />
           </div>
 
-          {/* Active Multi-Select Status Pills Bar */}
-          {(urlOrderStatuses.length > 0 || urlCustomerStatuses.length > 0) && (
-            <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-border/50">
-              <span className="text-[11px] text-muted-foreground mr-1">Filtros ativos:</span>
-              {urlCustomerStatuses.map((cst) => (
-                <Badge
-                  key={cst}
-                  variant="secondary"
-                  className="text-[10px] gap-1 pl-2 pr-1 py-0.5 cursor-pointer"
-                  onClick={() => toggleCustomerStatus(cst)}
-                >
-                  Cliente: {cst === 'ACTIVE' ? 'Ativo' : 'Inativo'}
-                  <X className="h-2.5 w-2.5" />
-                </Badge>
-              ))}
-              {urlOrderStatuses.map((ost) => (
-                <Badge
-                  key={ost}
-                  variant={ORDER_STATUS_META[ost]?.badgeVariant || 'default'}
-                  className="text-[10px] gap-1 pl-2 pr-1 py-0.5 cursor-pointer"
-                  onClick={() => toggleOrderStatus(ost)}
-                >
-                  Pedido: {ORDER_STATUS_META[ost]?.label || ost}
-                  <X className="h-2.5 w-2.5" />
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          {/* Multi-select Status Popover + Period Filter */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* MULTI-SELECT STATUS DROPDOWN */}
+            <div className="relative" ref={statusDropdownRef}>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setStatusDropdownOpen((o) => !o)}
+                className="h-8 text-xs flex items-center gap-1.5 border-border"
+              >
+                <Filter className="h-3.5 w-3.5 text-primary" />
+                <span>
+                  Status Múltipla Seleção
+                  {urlOrderStatuses.length + urlCustomerStatuses.length > 0 && (
+                    <Badge variant="default" className="ml-1.5 text-[10px] px-1.5 py-0">
+                      {urlOrderStatuses.length + urlCustomerStatuses.length}
+                    </Badge>
+                  )}
+                </span>
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+              </Button>
 
-      {/* CUSTOMERS & LINKED ORDERS TABLE */}
-      {isLoading ? (
-        <LoadingSkeleton count={5} />
-      ) : customerList.length === 0 ? (
-        <EmptyState
-          icon={<Users className="h-12 w-12" />}
-          title="Nenhum cliente ou pedido encontrado para este filtro"
-          description="Altere a seleção múltipla de status, limpe o filtro de URL ou cadastre um novo cliente."
-          actionLabel={hasAnyActiveFilter ? 'Limpar Filtros Aplicados' : 'Adicionar Cliente'}
-          onAction={hasAnyActiveFilter ? handleClearAllFilters : handleOpenCreate}
-        />
-      ) : (
-        <Card className="overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-border bg-muted/40 text-muted-foreground text-xs uppercase">
-                  <th className="py-3 px-3 font-medium w-8"></th>
-                  <th className="py-3 px-4 font-medium">Cliente / Documento</th>
-                  <th className="py-3 px-4 font-medium">Contato</th>
-                  <th className="py-3 px-4 font-medium">Pedidos Realizados (Links Diretos)</th>
-                  <th className="py-3 px-4 font-medium text-right">Total Gasto</th>
-                  <th className="py-3 px-4 font-medium text-center">Status</th>
-                  <th className="py-3 px-4 font-medium text-right">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border text-sm">
+              {statusDropdownOpen && (
+                <div className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-80 sm:w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card shadow-xl z-50 p-3 space-y-3">
+                  <div className="flex items-center justify-between border-b border-border pb-2">
+                    <span className="text-xs font-bold text-foreground">
+                      Seleção Múltipla de Status
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateUrlParams({ status: null, orderStatus: null, onlyWithOrders: null })
+                      }
+                      className="text-[11px] text-primary hover:underline cursor-pointer"
+                    >
+                      Marcar Todos (Limpar)
+                    </button>
+                  </div>
+
+                  {/* Quick Group Presets */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Agrupamentos Rápidos de Pedidos
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleOrderStatusGroup(OPEN_ORDER_STATUSES)}
+                        className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer ${
+                          isOpenGroupActive
+                            ? 'bg-amber-500/15 border-amber-500 text-amber-600 dark:text-amber-400 font-bold'
+                            : 'border-border hover:bg-muted text-foreground'
+                        }`}
+                      >
+                        {isOpenGroupActive && <Check className="h-3 w-3" />}
+                        Abertos
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleOrderStatusGroup(CLOSED_ORDER_STATUSES)}
+                        className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer ${
+                          isClosedGroupActive
+                            ? 'bg-emerald-500/15 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-bold'
+                            : 'border-border hover:bg-muted text-foreground'
+                        }`}
+                      >
+                        {isClosedGroupActive && <Check className="h-3 w-3" />}
+                        Fechados
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleOrderStatusGroup(CANCELLED_ORDER_STATUSES)}
+                        className={`px-2 py-1.5 rounded-lg border text-[11px] font-medium flex items-center justify-center gap-1 cursor-pointer ${
+                          isCancelledGroupActive
+                            ? 'bg-rose-500/15 border-rose-500 text-rose-600 dark:text-rose-400 font-bold'
+                            : 'border-border hover:bg-muted text-foreground'
+                        }`}
+                      >
+                        {isCancelledGroupActive && <Check className="h-3 w-3" />}
+                        Cancelados
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Individual Order Status Checkboxes */}
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Status Individual do Pedido (Múltipla Seleção)
+                    </div>
+                    <div className="grid grid-cols-2 gap-1">
+                      {ALL_ORDER_STATUSES.map((st) => {
+                        const checked = urlOrderStatuses.includes(st)
+                        const meta = ORDER_STATUS_META[st]
+                        return (
+                          <label
+                            key={st}
+                            onClick={() => toggleOrderStatus(st)}
+                            className={`flex items-center gap-2 px-2 py-1.5 rounded-lg border text-xs cursor-pointer select-none transition-colors ${
+                              checked
+                                ? 'bg-primary/10 border-primary/50 text-foreground font-semibold'
+                                : 'border-transparent hover:bg-muted/60 text-muted-foreground'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {}}
+                              className="rounded border-input text-primary focus:ring-primary h-3.5 w-3.5"
+                            />
+                            <span className="truncate">{meta.label}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Customer Account Status Checkboxes */}
+                  <div className="space-y-1.5 pt-2 border-t border-border">
+                    <div className="text-[10px] font-semibold uppercase text-muted-foreground">
+                      Status do Cadastro do Cliente
+                    </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {(['ACTIVE', 'INACTIVE'] as const).map((cst) => {
+                        const checked = urlCustomerStatuses.includes(cst)
+                        return (
+                          <label
+                            key={cst}
+                            onClick={() => toggleCustomerStatus(cst)}
+                            className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer select-none ${
+                              checked
+                                ? 'bg-primary/10 border-primary/50 text-foreground font-semibold'
+                                : 'border-border/60 hover:bg-muted/60 text-muted-foreground'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {}}
+                              className="rounded border-input text-primary h-3.5 w-3.5"
+                            />
+                            <span>{cst === 'ACTIVE' ? 'Clientes Ativos' : 'Clientes Inativos'}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-2 border-t border-border flex items-center justify-between">
+                    <label className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={urlOnlyWithOrders}
+                        onChange={(e) =>
+                          updateUrlParams({ onlyWithOrders: e.target.checked ? 'true' : null })
+                        }
+                        className="rounded border-input text-primary h-3.5 w-3.5"
+                      />
+                      <span>Apenas clientes com pedidos</span>
+                    </label>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs px-3"
+                      onClick={() => setStatusDropdownOpen(false)}
+                    >
+                      Concluir
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Period Filter */}
+            <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2.5 h-8">
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <select
+                value={urlPeriod}
+                onChange={(e) => updateUrlParams({ period: e.target.value, viewId: null })}
+                aria-label="Período dos pedidos"
+                className="bg-transparent text-xs text-foreground focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">Todo o Período</option>
+                <option value="TODAY">Hoje</option>
+                <option value="THIS_WEEK">Esta Semana</option>
+                <option value="THIS_MONTH">Este Mês</option>
+                <option value="LAST_MONTH">Mês Passado</option>
+                <option value="90D">Últimos 90 Dias</option>
+                <option value="THIS_YEAR">Este Ano</option>
+                <option value="CUSTOM">Datas Personalizadas...</option>
+              </select>
+            </div>
+
+            {urlPeriod === 'CUSTOM' && (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={urlDateFrom}
+                  onChange={(e) => updateUrlParams({ from: e.target.value, viewId: null })}
+                  className="h-8 text-xs w-34"
+                  aria-label="Data inicial"
+                />
+                <span className="text-xs text-muted-foreground">até</span>
+                <Input
+                  type="date"
+                  value={urlDateTo}
+                  onChange={(e) => updateUrlParams({ to: e.target.value, viewId: null })}
+                  className="h-8 text-xs w-34"
+                  aria-label="Data final"
+                />
+              </div>
+            )}
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={expandOrCollapseAllVisible}
+              className="h-8 text-xs px-2.5"
+            >
+              <ShoppingBag className="h-3.5 w-3.5 mr-1.5 text-primary" />
+              {customerList.length > 0 && customerList.every((c) => expandedCustomerIds.has(c.id))
+                ? 'Recolher Pedidos'
+                : 'Expandir Todos'}
+            </Button>
+          </div>
+        </div>
+
+        {/* Active Multi-Select Status Pills Bar */}
+        {(urlOrderStatuses.length > 0 || urlCustomerStatuses.length > 0) && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-border/50">
+            <span className="text-[11px] text-muted-foreground mr-1">Filtros ativos:</span>
+            {urlCustomerStatuses.map((cst) => (
+              <Badge
+                key={cst}
+                variant="secondary"
+                className="text-[10px] gap-1 pl-2 pr-1 py-0.5 cursor-pointer"
+                onClick={() => toggleCustomerStatus(cst)}
+              >
+                Cliente: {cst === 'ACTIVE' ? 'Ativo' : 'Inativo'}
+                <X className="h-2.5 w-2.5" />
+              </Badge>
+            ))}
+            {urlOrderStatuses.map((ost) => (
+              <Badge
+                key={ost}
+                variant={ORDER_STATUS_META[ost]?.badgeVariant || 'default'}
+                className="text-[10px] gap-1 pl-2 pr-1 py-0.5 cursor-pointer"
+                onClick={() => toggleOrderStatus(ost)}
+              >
+                Pedido: {ORDER_STATUS_META[ost]?.label || ost}
+                <X className="h-2.5 w-2.5" />
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* CUSTOMERS & LINKED ORDERS TABLE (Viewport-fitted with pinned bottom Pagination matching /expiration) */}
+      <Card className="flex-1 min-h-0 flex flex-col border border-border shadow-sm bg-card overflow-hidden">
+        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+          {isLoading ? (
+            <div className="p-6 flex-1 min-h-0 overflow-auto">
+              <LoadingSkeleton count={5} />
+            </div>
+          ) : customerList.length === 0 ? (
+            <div className="flex-1 min-h-0 flex items-center justify-center p-6">
+              <EmptyState
+                icon={<Users className="h-12 w-12" />}
+                title="Nenhum cliente ou pedido encontrado para este filtro"
+                description="Altere a seleção múltipla de status, limpe o filtro de URL ou cadastre um novo cliente."
+                actionLabel={hasAnyActiveFilter ? 'Limpar Filtros Aplicados' : 'Adicionar Cliente'}
+                onAction={hasAnyActiveFilter ? handleClearAllFilters : handleOpenCreate}
+              />
+            </div>
+          ) : (
+            <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground text-[11px] uppercase tracking-wider">
+                  <tr>
+                    <th className="py-2.5 px-3 font-semibold w-8"></th>
+                    <th className="py-2.5 px-4 font-semibold">Cliente / Documento</th>
+                    <th className="py-2.5 px-4 font-semibold">Contato</th>
+                    <th className="py-2.5 px-4 font-semibold">Pedidos Realizados (Links Diretos)</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Total Gasto</th>
+                    <th className="py-2.5 px-4 font-semibold text-center">Status</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border text-sm">
                 {customerList.map((customer) => {
                   const orders = customer.filtered_orders || customer.orders || []
                   const isExpanded = expandedCustomerIds.has(customer.id)
@@ -1944,22 +1918,23 @@ export function CustomersPage() {
                     </React.Fragment>
                   )
                 })}
-              </tbody>
-            </table>
-          </div>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
 
-          <div className="p-4 border-t border-border">
-            <Pagination
-              currentPage={urlPage}
-              totalPages={totalPages}
-              totalItems={totalItems}
-              pageSize={urlPageSize}
-              onPageChange={(p) => updateUrlParams({ page: String(p) }, false)}
-              onPageSizeChange={(s) => updateUrlParams({ pageSize: String(s), page: '1' }, false)}
-            />
-          </div>
-        </Card>
-      )}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={urlPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={urlPageSize}
+            onPageChange={(p) => updateUrlParams({ page: String(p) }, false)}
+            onPageSizeChange={(s) => updateUrlParams({ pageSize: String(s), page: '1' }, false)}
+          />
+        </div>
+      </Card>
 
       {/* MODAL: DETALHES COMPLETOS DO PEDIDO DO CLIENTE (Acionado por clique ou URL ?orderId=...) */}
       <Modal

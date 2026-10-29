@@ -434,7 +434,7 @@ export function StoresPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
       <PageHeader title="Lojas & Filiais">
         <Input

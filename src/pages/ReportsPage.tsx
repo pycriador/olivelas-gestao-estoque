@@ -932,7 +932,7 @@ export function ReportsPage() {
   const currentTabMeta = reportTabs.find((t) => t.id === activeTab) || reportTabs[0]
 
   return (
-    <div className="space-y-3 pb-6 animate-in fade-in duration-150">
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2 animate-in fade-in duration-150">
       {/* Top Navbar Title & Global Actions */}
       <PageHeader title={t.nav.reports}>
         <div className="flex items-center gap-2 flex-wrap">
@@ -970,119 +970,107 @@ export function ReportsPage() {
         </div>
       </PageHeader>
 
-      {/* Retail Performance KPI Summary Bar */}
+      {/* Retail Performance KPI Summary Bar (Compact 1-line pills matching /expiration) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 flex-shrink-0">
-        <Card
+        <button
+          type="button"
           onClick={() => handleTabChange('valuation')}
-          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
-            activeTab === 'valuation' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          className={`px-2.5 py-1.5 rounded-lg border bg-card flex items-center justify-between cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'valuation' ? 'ring-1 ring-primary/50 border-primary/50' : 'border-border'
           }`}
         >
-          <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
-            <Layers className="h-3.5 w-3.5 text-blue-500" />
-            Estoque em Custo
-          </div>
-          <div className="text-sm sm:text-base font-bold text-foreground mt-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 truncate">
+            <Layers className="h-3 w-3 text-blue-500 shrink-0" />
+            Custo
+          </span>
+          <span className="text-xs font-bold font-mono text-foreground ml-1">
             {isSummaryLoading ? '...' : formatCurrency(summaryKPIs?.totalCostValue || 0)}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            {summaryKPIs?.totalPhysicalUnits || 0} un. físicas
-          </div>
-        </Card>
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => handleTabChange('investment')}
-          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
-            activeTab === 'investment' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          className={`px-2.5 py-1.5 rounded-lg border bg-card flex items-center justify-between cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'investment' ? 'ring-1 ring-primary/50 border-primary/50' : 'border-border'
           }`}
         >
-          <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
-            <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
-            Estoque em Venda
-          </div>
-          <div className="text-sm sm:text-base font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 truncate">
+            <DollarSign className="h-3 w-3 text-emerald-500 shrink-0" />
+            Venda
+          </span>
+          <span className="text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 ml-1">
             {isSummaryLoading ? '...' : formatCurrency(summaryKPIs?.totalSellingValue || 0)}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            Potencial total na gôndola
-          </div>
-        </Card>
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => handleTabChange('abc')}
-          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
-            activeTab === 'abc' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          className={`px-2.5 py-1.5 rounded-lg border bg-card flex items-center justify-between cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'abc' ? 'ring-1 ring-primary/50 border-primary/50' : 'border-border'
           }`}
         >
-          <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
-            <Percent className="h-3.5 w-3.5 text-primary" />
-            Margem Bruta
-          </div>
-          <div className="text-sm sm:text-base font-bold text-foreground mt-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 truncate">
+            <Percent className="h-3 w-3 text-primary shrink-0" />
+            Margem
+          </span>
+          <span className="text-xs font-bold font-mono text-foreground ml-1">
             {isSummaryLoading ? '...' : `${(summaryKPIs?.marginPercent || 0).toFixed(1)}%`}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            Lucro: {formatCurrency(summaryKPIs?.potentialProfit || 0)}
-          </div>
-        </Card>
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => handleTabChange('sales')}
-          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
-            activeTab === 'sales' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          className={`px-2.5 py-1.5 rounded-lg border bg-card flex items-center justify-between cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'sales' ? 'ring-1 ring-primary/50 border-primary/50' : 'border-border'
           }`}
         >
-          <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
-            <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-            Vendas no Mês
-          </div>
-          <div className="text-sm sm:text-base font-bold text-foreground mt-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 truncate">
+            <TrendingUp className="h-3 w-3 text-emerald-500 shrink-0" />
+            Vendas Mês
+          </span>
+          <span className="text-xs font-bold font-mono text-foreground ml-1">
             {isSummaryLoading ? '...' : formatCurrency(summaryKPIs?.salesMonthTotal || 0)}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            Hoje: {formatCurrency(summaryKPIs?.salesTodayTotal || 0)}
-          </div>
-        </Card>
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => handleTabChange('losses')}
-          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
-            activeTab === 'losses' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          className={`px-2.5 py-1.5 rounded-lg border bg-card flex items-center justify-between cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'losses' ? 'ring-1 ring-primary/50 border-primary/50' : 'border-border'
           }`}
         >
-          <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
-            <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
-            Perdas Operacionais
-          </div>
-          <div className="text-sm sm:text-base font-bold text-rose-600 dark:text-rose-400 mt-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 truncate">
+            <ShieldAlert className="h-3 w-3 text-rose-500 shrink-0" />
+            Perdas
+          </span>
+          <span className="text-xs font-bold font-mono text-rose-600 dark:text-rose-400 ml-1">
             {isSummaryLoading ? '...' : formatCurrency(summaryKPIs?.totalLossValueMonth || 0)}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            Avarias / Vencimentos
-          </div>
-        </Card>
+          </span>
+        </button>
 
-        <Card
+        <button
+          type="button"
           onClick={() => handleTabChange('stockouts')}
-          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
-            activeTab === 'stockouts' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          className={`px-2.5 py-1.5 rounded-lg border bg-card flex items-center justify-between cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'stockouts' ? 'ring-1 ring-primary/50 border-primary/50' : 'border-border'
           }`}
         >
-          <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-            Ruptura & Alerta
-          </div>
-          <div className="text-sm sm:text-base font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+          <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1 truncate">
+            <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+            Ruptura
+          </span>
+          <span className="text-xs font-bold font-mono text-amber-600 dark:text-amber-400 ml-1">
             {isSummaryLoading ? '...' : `${summaryKPIs?.stockoutCount || 0} zerado(s)`}
-          </div>
-          <div className="text-[10px] text-muted-foreground mt-0.5">
-            {summaryKPIs?.lowStockCount || 0} abaixo do mín.
-          </div>
-        </Card>
+          </span>
+        </button>
       </div>
 
       {/* Reports Navigation Tabs & Action Bar */}
-      <div className="space-y-2 flex-shrink-0">
+      <div className="space-y-1.5 flex-shrink-0">
         {/* Modern Segmented Navigation Bar */}
         <div className="bg-card border border-border rounded-xl p-1 shadow-xs" role="tablist" aria-label="Abas de Relatórios">
           <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5">
@@ -1096,7 +1084,7 @@ export function ReportsPage() {
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => handleTabChange(tab.id)}
-                  className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer flex-1 sm:flex-initial justify-center sm:justify-start ${
+                  className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer flex-1 sm:flex-initial justify-center sm:justify-start ${
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-xs font-bold'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted/60'
@@ -1126,12 +1114,12 @@ export function ReportsPage() {
         </div>
 
         {/* Dynamic Contextual Toolbar: Report Info + Filters + Action Buttons */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 bg-muted/40 border border-border/80 rounded-xl px-3 py-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 bg-muted/40 border border-border/80 rounded-xl px-3 py-1.5">
           {/* Active Report Description & Info */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="p-1.5 rounded-lg bg-card border border-border flex-shrink-0 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1 rounded-lg bg-card border border-border flex-shrink-0 shadow-2xs">
               {React.createElement(currentTabMeta.icon, {
-                className: `h-4 w-4 ${currentTabMeta.color}`,
+                className: `h-3.5 w-3.5 ${currentTabMeta.color}`,
               })}
             </div>
             <div className="min-w-0">
@@ -1146,14 +1134,11 @@ export function ReportsPage() {
                   {effectiveStoreName}
                 </Badge>
               </div>
-              <p className="text-[11px] text-muted-foreground truncate hidden md:block">
-                {currentTabMeta.description}
-              </p>
             </div>
           </div>
 
           {/* Filters & Export Actions Group */}
-          <div className="flex items-center gap-2 flex-wrap justify-end flex-shrink-0">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
             {/* Period & Custom Date Filter */}
             <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8 shadow-2xs">
               <Calendar className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -1325,10 +1310,10 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {/* Main Report Table Card with Viewport Fitting & Pagination */}
-      <div ref={reportTableRef} className="flex-1 flex flex-col min-h-[480px]">
-        <Card className="flex-1 min-h-[480px] flex flex-col overflow-hidden border border-border shadow-xs bg-card">
-          <CardContent className="p-0 flex-1 min-h-[400px] flex flex-col overflow-hidden">
+      {/* Main Report Table Card with Viewport Fitting & Pagination (matching /expiration) */}
+      <div ref={reportTableRef} className="flex-1 min-h-0 flex flex-col">
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
             {isCurrentTabLoading ? (
               <div className="p-6">
                 <LoadingSkeleton count={8} />

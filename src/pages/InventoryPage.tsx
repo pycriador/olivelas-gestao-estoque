@@ -397,7 +397,7 @@ export function InventoryPage() {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
       <PageHeader title={t.inventory.title}>
         <Input
@@ -627,60 +627,56 @@ export function InventoryPage() {
         </div>
       </div>
 
-      {/* Stock Valuation KPI Summary */}
+      {/* Ultra-Compact 1-Line Stock Valuation KPI Strip (padrão /expiration) */}
       {activeTab === 'balances' && valuation && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
-          <Card className="p-2.5 bg-card border border-border shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Valor em Compra (Custo)</span>
-              <Wallet className="h-3.5 w-3.5 text-amber-500" />
+          <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <Wallet className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Valor Custo ({valuation.totalPhysicalUnits} un)
+              </span>
             </div>
-            <div className="text-sm sm:text-base font-bold font-mono text-foreground mt-0.5">
+            <span className="text-xs sm:text-sm font-bold font-mono text-foreground ml-2">
               {formatCurrency(valuation.totalCostValue)}
-            </div>
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {valuation.totalPhysicalUnits} un totais
             </span>
-          </Card>
+          </div>
 
-          <Card className="p-2.5 bg-card border border-border shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Valor em Venda (Tabela)</span>
-              <CircleDollarSign className="h-3.5 w-3.5 text-primary" />
+          <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <CircleDollarSign className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Valor Venda (Tabela)
+              </span>
             </div>
-            <div className="text-sm sm:text-base font-bold font-mono text-primary mt-0.5">
+            <span className="text-xs sm:text-sm font-bold font-mono text-primary ml-2">
               {formatCurrency(valuation.totalSellingValue)}
-            </div>
-            <span className="text-[10px] text-muted-foreground font-mono">
-              Potencial de faturamento
             </span>
-          </Card>
+          </div>
 
-          <Card className="p-2.5 bg-card border border-border shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Lucro Bruto Estimado</span>
-              <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+          <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <TrendingUp className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Lucro Estimado ({valuation.marginPercent.toFixed(0)}%)
+              </span>
             </div>
-            <div className="text-sm sm:text-base font-bold font-mono text-emerald-600 dark:text-emerald-400 mt-0.5">
+            <span className="text-xs sm:text-sm font-bold font-mono text-emerald-600 dark:text-emerald-400 ml-2">
               {formatCurrency(valuation.potentialProfit)}
-            </div>
-            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
-              Margem média {valuation.marginPercent.toFixed(1)}%
             </span>
-          </Card>
+          </div>
 
-          <Card className="p-2.5 bg-card border border-border shadow-xs">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-muted-foreground">Itens Cadastrados</span>
-              <Layers className="h-3.5 w-3.5 text-blue-500" />
+          <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <Layers className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Itens ({zeroStockCount > 0 ? `${zeroStockCount} zerados` : 'ativos'})
+              </span>
             </div>
-            <div className="text-sm sm:text-base font-bold font-mono text-foreground mt-0.5">
-              {valuation.totalItems} produtos
-            </div>
-            <span className="text-[10px] text-muted-foreground font-mono">
-              {zeroStockCount > 0 ? `${zeroStockCount} com saldo zerado` : 'Todos com saldo ativo'}
+            <span className="text-xs sm:text-sm font-bold font-mono text-foreground ml-2">
+              {valuation.totalItems}
             </span>
-          </Card>
+          </div>
         </div>
       )}
 

@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
+import { Pagination } from '@/components/ui/pagination'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
@@ -46,12 +47,16 @@ export function TeamPage() {
   const navigate = useNavigate()
 
   const {
+    page,
+    pageSize,
     search,
     filters,
+    setPage,
+    setPageSize,
     setSearch,
     setFilter,
   } = useTablePagination({
-    defaultPageSize: 50,
+    defaultPageSize: 15,
   })
 
   const roleFilter = filters.role || 'ALL'
@@ -170,9 +175,12 @@ export function TeamPage() {
 
   const totalApprovers = members.filter((m) => m.isActive && isMemberStockApprover(m)).length
   const totalActive = members.filter((m) => m.isActive).length
+  const totalItems = filteredMembers.length
+  const totalPages = Math.ceil(totalItems / pageSize) || 1
+  const paginatedMembers = filteredMembers.slice((page - 1) * pageSize, page * pageSize)
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
       <PageHeader title="Funcionários & Papéis da Loja">
         <Input
@@ -183,64 +191,6 @@ export function TeamPage() {
           icon={<Search className="h-3.5 w-3.5" />}
         />
       </PageHeader>
-
-      {/* KPI Summary Strip */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-shrink-0">
-        <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase text-muted-foreground">
-              Total na Equipe
-            </div>
-            <div className="text-base font-extrabold text-foreground">
-              {members.length} funcionários
-            </div>
-          </div>
-          <Users className="h-5 w-5 text-primary opacity-80" />
-        </div>
-
-        <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
-              Aprovadores de Baixa
-            </div>
-            <div className="text-base font-extrabold text-foreground">
-              {totalApprovers} habilitados
-            </div>
-          </div>
-          <ShieldCheck className="h-5 w-5 text-amber-500" />
-        </div>
-
-        <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase text-muted-foreground">
-              Papéis Customizados
-            </div>
-            <div className="text-base font-extrabold text-foreground">
-              {customRoles.length} perfis
-            </div>
-          </div>
-          <Shield className="h-5 w-5 text-primary opacity-80" />
-        </div>
-
-        <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
-          <div>
-            <div className="text-[10px] font-bold uppercase text-muted-foreground">
-              Cota de Licenças Grátis
-            </div>
-            <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-              {licenseSummary
-                ? `${licenseSummary.activeEmployeesCount} / ${licenseSummary.freeEmployeesQuota} grátis`
-                : `${totalActive} ativos`}
-            </div>
-            {licenseSummary && licenseSummary.extraBillableEmployees > 0 && (
-              <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
-                +{licenseSummary.extraBillableEmployees} extra ({formatCurrency(licenseSummary.extraEmployeesMonthlyCost)}/mês)
-              </div>
-            )}
-          </div>
-          <SlidersHorizontal className="h-5 w-5 text-emerald-500 opacity-80" />
-        </div>
-      </div>
 
       {/* Toolbar & Filters */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
@@ -301,6 +251,59 @@ export function TeamPage() {
         </div>
       </div>
 
+      {/* Ultra-Compact 1-Line KPI Strip (padrão /expiration) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+        <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <Users className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-[11px] font-medium text-muted-foreground truncate">
+              Total na Equipe
+            </span>
+          </div>
+          <span className="text-sm font-bold text-foreground font-mono ml-2">
+            {members.length}
+          </span>
+        </div>
+
+        <div className="px-3 py-1.5 rounded-lg border border-amber-500/30 bg-amber-500/5 flex items-center justify-between transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <ShieldCheck className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+            <span className="text-[11px] font-medium text-muted-foreground truncate">
+              Aprovadores de Baixa
+            </span>
+          </div>
+          <span className="text-sm font-bold text-amber-600 dark:text-amber-400 font-mono ml-2">
+            {totalApprovers}
+          </span>
+        </div>
+
+        <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <Shield className="h-3.5 w-3.5 text-primary shrink-0" />
+            <span className="text-[11px] font-medium text-muted-foreground truncate">
+              Papéis Customizados
+            </span>
+          </div>
+          <span className="text-sm font-bold text-foreground font-mono ml-2">
+            {customRoles.length}
+          </span>
+        </div>
+
+        <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between transition-all">
+          <div className="flex items-center gap-2 min-w-0">
+            <SlidersHorizontal className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+            <span className="text-[11px] font-medium text-muted-foreground truncate">
+              Licenças Grátis
+            </span>
+          </div>
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono ml-2">
+            {licenseSummary
+              ? `${licenseSummary.activeEmployeesCount}/${licenseSummary.freeEmployeesQuota}`
+              : `${totalActive}`}
+          </span>
+        </div>
+      </div>
+
       {/* Members Table Viewport */}
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
@@ -332,7 +335,7 @@ export function TeamPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {filteredMembers.map((m) => {
+                  {paginatedMembers.map((m) => {
                     const roleMeta = ROLE_METADATA[m.role] || ROLE_METADATA.VIEWER
                     const isApprover = isMemberStockApprover(m)
                     const customRole = customRoles.find((r) => r.id === m.customRoleId)
@@ -492,6 +495,18 @@ export function TeamPage() {
             </div>
           )}
         </CardContent>
+
+        {/* Pinned Pagination */}
+        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={setPage}
+            onPageSizeChange={setPageSize}
+          />
+        </div>
       </Card>
 
       {/* Modal: Papéis Customizados da Loja */}

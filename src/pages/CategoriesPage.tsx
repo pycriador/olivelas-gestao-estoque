@@ -157,7 +157,7 @@ export function CategoriesPage() {
   const parentOptions = categories.filter((c) => c.id !== editingCategory?.id)
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       <PageHeader title={t.nav.categories}>
         <Input
           placeholder="Buscar categoria..."

@@ -397,8 +397,21 @@ export function GlobalAdminDashboardPage() {
 
   const ActiveSectionIcon = activeSectionMeta.icon
 
+  const isTableViewportTab =
+    activeTab === 'stores' ||
+    activeTab === 'users' ||
+    activeTab === 'finance' ||
+    activeTab === 'db-explorer' ||
+    activeTab === 'delete'
+
   return (
-    <div className="space-y-3 pb-6 animate-in fade-in duration-150">
+    <div
+      className={
+        isTableViewportTab
+          ? 'h-full flex flex-col space-y-2.5 animate-in fade-in duration-150 min-h-0'
+          : 'space-y-3 pb-6 animate-in fade-in duration-150'
+      }
+    >
       {/* Top Navbar Title & Search */}
       <PageHeader
         title="Gestão Multi-Lojas"
@@ -450,16 +463,16 @@ export function GlobalAdminDashboardPage() {
       )}
 
       {/* Contextual Section Header & Action Toolbar (sem menu de abas na página) */}
-      <div className="flex items-center justify-between gap-2 flex-wrap bg-card border border-border rounded-xl px-3 py-2 shadow-2xs">
-        <div className="flex items-center gap-2.5 min-w-0">
+      <div className="flex items-center justify-between gap-2 flex-wrap flex-shrink-0">
+        <div className="flex items-center gap-2 min-w-0">
           <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
-            <ActiveSectionIcon className="h-4 w-4" />
+            <ActiveSectionIcon className="h-3.5 w-3.5" />
           </div>
-          <div className="min-w-0">
+          <div className="flex items-center gap-2 min-w-0 flex-wrap">
             <h2 className="text-xs font-bold text-foreground truncate">{activeSectionMeta.title}</h2>
-            <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
-              {activeSectionMeta.subtitle}
-            </p>
+            <span className="text-[11px] text-muted-foreground truncate hidden md:inline">
+              • {activeSectionMeta.subtitle}
+            </span>
           </div>
         </div>
 
@@ -561,242 +574,190 @@ export function GlobalAdminDashboardPage() {
         </div>
       </div>
 
-      {/* Global Compact Metrics Cards (nas abas Lojas e Usuários) */}
+      {/* Ultra-Compact 1-Line KPI Strip (padrão /expiration) */}
       {(activeTab === 'stores' || activeTab === 'users') && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
-          <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Matrizes & Filiais
+          <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Matrizes ({allStoresRaw.filter((s) => !s.is_branch && !s.parent_store_id).length}) & Filiais ({allStoresRaw.filter((s) => s.is_branch || Boolean(s.parent_store_id)).length})
               </span>
-              <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                <Building2 className="h-3.5 w-3.5" />
-              </div>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-foreground mt-1">
+            <span className="text-sm font-bold text-foreground font-mono ml-2">
               {globalMetrics?.totalStores ?? allStoresRaw.length}
-            </div>
-            <div className="text-[10px] text-muted-foreground">
-              {allStoresRaw.filter((s) => !s.is_branch && !s.parent_store_id).length} matrizes •{' '}
-              {allStoresRaw.filter((s) => s.is_branch || Boolean(s.parent_store_id)).length} filiais
-            </div>
-          </Card>
+            </span>
+          </div>
 
-          <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">Lojas Ativas</span>
-              <div className="p-1.5 rounded-lg bg-success/10 text-success">
-                <Store className="h-3.5 w-3.5" />
-              </div>
-            </div>
-            <div className="text-lg sm:text-xl font-bold text-success mt-1">
-              {globalMetrics?.activeStores ?? allStoresRaw.filter((s) => s.is_active).length}
-            </div>
-            <div className="text-[10px] text-muted-foreground">Operando com catálogo ativo</div>
-          </Card>
-
-          <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Titulares de Plano (STORE_ADMIN)
+          <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <Store className="h-3.5 w-3.5 text-success shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Lojas Ativas
               </span>
-              <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-500">
-                <Users className="h-3.5 w-3.5" />
-              </div>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-foreground mt-1">{totalUsers}</div>
-            <div className="text-[10px] text-muted-foreground">
-              Funcionários isentos ({billingRules?.defaultFreeEmployeesPerStore ?? 10} grátis/loja)
-            </div>
-          </Card>
+            <span className="text-sm font-bold text-success font-mono ml-2">
+              {globalMetrics?.activeStores ?? allStoresRaw.filter((s) => s.is_active).length}
+            </span>
+          </div>
 
-          <Card className="p-2.5 sm:p-3 border border-border shadow-xs bg-card">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-medium text-muted-foreground">Pedidos Globais</span>
-              <div className="p-1.5 rounded-lg bg-violet-500/10 text-violet-500">
-                <ShoppingCart className="h-3.5 w-3.5" />
-              </div>
+          <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <Users className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Titulares STORE_ADMIN ({billingRules?.defaultFreeEmployeesPerStore ?? 10} grátis/loja)
+              </span>
             </div>
-            <div className="text-lg sm:text-xl font-bold text-foreground mt-1">
+            <span className="text-sm font-bold text-foreground font-mono ml-2">
+              {totalUsers}
+            </span>
+          </div>
+
+          <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between transition-all">
+            <div className="flex items-center gap-2 min-w-0">
+              <ShoppingCart className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Pedidos Globais
+              </span>
+            </div>
+            <span className="text-sm font-bold text-foreground font-mono ml-2">
               {globalMetrics?.totalOrders ?? 0}
-            </div>
-            <div className="text-[10px] text-muted-foreground">Vendas acumuladas nas lojas</div>
-          </Card>
+            </span>
+          </div>
         </div>
       )}
 
       {/* TAB 3: FINANCEIRO (DEDICATED HUB & STORE SEAT LICENSING TABLE) */}
       {activeTab === 'finance' && (
-        <div className="space-y-3">
-          {/* 3 Dedicated Full-Screen Finance Pages Navigation Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Card className="border border-emerald-500/30 bg-emerald-500/5 shadow-xs hover:border-emerald-500/60 transition-all">
-              <CardContent className="p-4 flex flex-col justify-between h-full space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Badge className="bg-emerald-600 text-white text-[10px]">
-                      Licenciamento & Regras
-                    </Badge>
-                    <Settings className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    Regras Financeiras & Licenças por Loja
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Configure a franquia padrão de{' '}
-                    <b className="text-foreground">
-                      {billingRules?.defaultFreeEmployeesPerStore ?? 10} funcionários grátis por
-                      loja
-                    </b>{' '}
-                    e a cobrança de{' '}
-                    <b className="text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(billingRules?.defaultExtraEmployeePrice ?? 19.9)}
-                    </b>{' '}
-                    por licença adicional, além de exceções por loja e chave PIX.
-                  </p>
+        <div className="flex-1 min-h-0 flex flex-col space-y-2.5 overflow-hidden">
+          {/* Compact Finance Pages Action Strip + KPI Pills */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 flex-shrink-0">
+            <div className="px-3 py-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Settings className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="text-xs font-bold text-foreground truncate">
+                    Regras & Licenças ({billingRules?.defaultFreeEmployeesPerStore ?? 10} Grátis)
+                  </span>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => navigate('/global-admin/finance/rules')}
-                  className="w-full h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  Abrir Gestão de Regras & Licenças
-                </Button>
-              </CardContent>
-            </Card>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Extra: {formatCurrency(billingRules?.defaultExtraEmployeePrice ?? 19.9)}/usuário • Exceções por loja
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => navigate('/global-admin/finance/rules')}
+                className="h-7 text-[11px] px-2.5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
+              >
+                Abrir Regras
+              </Button>
+            </div>
 
-            <Card className="border border-primary/30 bg-primary/5 shadow-xs hover:border-primary/60 transition-all">
-              <CardContent className="p-4 flex flex-col justify-between h-full space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Badge className="bg-primary text-primary-foreground text-[10px]">
-                      Planos & Módulos
-                    </Badge>
-                    <Layers className="h-4 w-4 text-primary" />
-                  </div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    Catálogo de Planos & Valores de Telas
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Gerencie os grupos de permissão comerciais vendidos aos{' '}
-                    <b className="text-foreground">STORE_ADMIN</b> e defina o valor mensal de cada
-                    módulo (Estoque, PDV, Catálogo WhatsApp, Compras, Relatórios).
-                  </p>
+            <div className="px-3 py-2 rounded-lg border border-primary/30 bg-primary/5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <Layers className="h-3.5 w-3.5 text-primary shrink-0" />
+                  <span className="text-xs font-bold text-foreground truncate">
+                    Planos & Valores de Telas
+                  </span>
                 </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate('/global-admin/finance/plans')}
-                  className="w-full h-8 text-xs font-semibold border-primary/40 text-primary hover:bg-primary/10"
-                >
-                  Abrir Planos Comerciais & Preços
-                </Button>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-blue-500/30 bg-blue-500/5 shadow-xs hover:border-blue-500/60 transition-all">
-              <CardContent className="p-4 flex flex-col justify-between h-full space-y-3">
-                <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <Badge className="bg-blue-600 text-white text-[10px]">
-                      Faturamento & Caixa
-                    </Badge>
-                    <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    Controle de Pagamentos & Histórico
-                  </h3>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Acompanhe todas as faturas registradas, baixe pagamentos recebidos, filtre
-                    inadimplentes e acesse a ficha financeira individual de cada{' '}
-                    <b className="text-foreground">STORE_ADMIN</b>.
-                  </p>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate('/global-admin/finance/payments')}
-                  className="w-full h-8 text-xs font-semibold border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
-                >
-                  Abrir Controle de Pagamentos
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Summary Strip of Employee Licensing Rule */}
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
-            <div className="p-3 rounded-xl border border-border bg-card">
-              <div className="text-[10px] font-bold uppercase text-muted-foreground">
-                Franquia Grátis Padrão
-              </div>
-              <div className="text-base font-extrabold text-foreground mt-0.5">
-                {billingRules?.defaultFreeEmployeesPerStore ?? 10} funcionários / loja
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                Funcionários dentro da cota não pagam plano
-              </div>
-            </div>
-            <div className="p-3 rounded-xl border border-border bg-card">
-              <div className="text-[10px] font-bold uppercase text-muted-foreground">
-                Taxa por Licença Adicional
-              </div>
-              <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                {formatCurrency(billingRules?.defaultExtraEmployeePrice ?? 19.9)} / usuário
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                Cobrado a partir do {(billingRules?.defaultFreeEmployeesPerStore ?? 10) + 1}º
-                funcionário ativo
-              </div>
-            </div>
-            <div className="p-3 rounded-xl border border-border bg-card">
-              <div className="text-[10px] font-bold uppercase text-muted-foreground">
-                Licenças Extras Ativas
-              </div>
-              <div className="text-base font-extrabold text-amber-600 dark:text-amber-400 mt-0.5">
-                {totalExtraSeatsCount} licenças adicionais
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                Acima da franquia gratuita nas lojas
-              </div>
-            </div>
-            <div className="p-3 rounded-xl border border-border bg-card">
-              <div className="text-[10px] font-bold uppercase text-muted-foreground">
-                Receita Mensal de Licenças Extras
-              </div>
-              <div className="text-base font-extrabold text-primary mt-0.5">
-                {formatCurrency(totalExtraSeatsCost)} / mês
-              </div>
-              <div className="text-[10px] text-muted-foreground">
-                Somado à fatura do STORE_ADMIN titular
-              </div>
-            </div>
-          </div>
-
-          {/* Store Employee Licensing Table */}
-          <Card className="border border-border shadow-xs bg-card overflow-hidden">
-            <div className="p-3 border-b border-border flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
-                  Apuração de Licenças de Funcionários por Loja (Matriz & Filiais)
-                </h3>
-                <p className="text-[11px] text-muted-foreground">
-                  Cada loja possui {billingRules?.defaultFreeEmployeesPerStore ?? 10} funcionários
-                  grátis. Licenças adicionais são cobradas no plano do Administrador da Loja.
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Catálogo de planos para STORE_ADMIN e preços de módulos
                 </p>
               </div>
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => navigate('/global-admin/finance/rules')}
-                className="h-8 text-xs font-semibold"
+                onClick={() => navigate('/global-admin/finance/plans')}
+                className="h-7 text-[11px] px-2.5 font-semibold border-primary/40 text-primary hover:bg-primary/10 shrink-0"
               >
-                <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar Limites & Preços por Loja
+                Abrir Planos
               </Button>
             </div>
-            <CardContent className="p-0 overflow-x-auto">
-              <ResponsiveTable className="w-full text-xs text-left">
-                <thead className="bg-muted/80 border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
+
+            <div className="px-3 py-2 rounded-lg border border-blue-500/30 bg-blue-500/5 flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <CreditCard className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <span className="text-xs font-bold text-foreground truncate">
+                    Controle de Pagamentos
+                  </span>
+                </div>
+                <p className="text-[10px] text-muted-foreground truncate">
+                  Faturas, vencimentos e histórico por STORE_ADMIN
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/global-admin/finance/payments')}
+                className="h-7 text-[11px] px-2.5 font-semibold border-blue-500/40 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 shrink-0"
+              >
+                Pagamentos
+              </Button>
+            </div>
+          </div>
+
+          {/* Ultra-Compact 1-Line Summary Strip of Employee Licensing Rule */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
+            <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Franquia Grátis / Loja
+              </span>
+              <span className="text-xs font-bold text-foreground font-mono ml-2">
+                {billingRules?.defaultFreeEmployeesPerStore ?? 10} func.
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Taxa Licença Extra
+              </span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono ml-2">
+                {formatCurrency(billingRules?.defaultExtraEmployeePrice ?? 19.9)}
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Licenças Extras Ativas
+              </span>
+              <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-mono ml-2">
+                +{totalExtraSeatsCount}
+              </span>
+            </div>
+            <div className="px-3 py-1.5 rounded-lg border border-border bg-card flex items-center justify-between">
+              <span className="text-[11px] font-medium text-muted-foreground truncate">
+                Receita Licenças Extras
+              </span>
+              <span className="text-xs font-bold text-primary font-mono ml-2">
+                {formatCurrency(totalExtraSeatsCost)}/mês
+              </span>
+            </div>
+          </div>
+
+          {/* Store Employee Licensing Table */}
+          <Card className="flex-1 min-h-0 flex flex-col border border-border shadow-sm bg-card overflow-hidden">
+            <div className="px-3 py-2 border-b border-border flex items-center justify-between flex-wrap gap-2 flex-shrink-0 bg-muted/20">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">
+                  Apuração de Licenças de Funcionários por Loja (Matriz & Filiais)
+                </h3>
+                <span className="text-[11px] text-muted-foreground hidden sm:inline">
+                  • {billingRules?.defaultFreeEmployeesPerStore ?? 10} funcionários grátis por loja
+                </span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => navigate('/global-admin/finance/rules')}
+                className="h-7 text-xs font-semibold"
+              >
+                <Edit2 className="h-3 w-3 mr-1" /> Editar Limites & Preços por Loja
+              </Button>
+            </div>
+            <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+              <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
+                <ResponsiveTable className="w-full text-xs text-left">
+                  <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
                     <th className="py-2.5 px-4">Loja (Matriz / Filial)</th>
                     <th className="py-2.5 px-4 text-center">Equipe Ativa</th>
@@ -902,14 +863,21 @@ export function GlobalAdminDashboardPage() {
                     ))}
                 </tbody>
               </ResponsiveTable>
+              </div>
             </CardContent>
           </Card>
         </div>
       )}
 
-      {/* OTHER TAB PANELS: SCROLLABLE VIEWPORT */}
+      {/* OTHER TAB PANELS: VIEWPORT-FITTED FOR TABLE PANELS, SCROLLABLE FOR OTHER PANELS */}
       {activeTab !== 'stores' && activeTab !== 'users' && activeTab !== 'finance' && (
-        <div className="space-y-4">
+        <div
+          className={
+            activeTab === 'db-explorer' || activeTab === 'delete'
+              ? 'flex-1 min-h-0 flex flex-col space-y-2.5 overflow-hidden'
+              : 'space-y-4'
+          }
+        >
           {activeTab === 'backups' && <GlobalBackupPanel stores={allStoresRaw} />}
           {activeTab === 'db-explorer' && <GlobalDbExplorerPanel stores={allStoresRaw} />}
           {activeTab === 'api-hbac' && <GlobalApiKeyHbacPanel stores={allStoresRaw} />}
@@ -919,8 +887,8 @@ export function GlobalAdminDashboardPage() {
 
       {/* Main Table Card (Stores or Users Viewport) */}
       {(activeTab === 'stores' || activeTab === 'users') && (
-        <Card className="border border-border shadow-xs bg-card overflow-hidden">
-          <CardContent className="p-0">
+        <Card className="flex-1 min-h-0 flex flex-col border border-border shadow-sm bg-card overflow-hidden">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
             {/* TAB 1: STORES TABLE (HIERARCHICAL: MATRIZ -> FILIAIS) */}
             {activeTab === 'stores' &&
               (loadingStores ? (
@@ -928,7 +896,7 @@ export function GlobalAdminDashboardPage() {
                   <LoadingSkeleton count={5} className="h-10" />
                 </div>
               ) : hierarchicalStoreList.length === 0 ? (
-                <div className="flex items-center justify-center p-8">
+                <div className="flex-1 flex items-center justify-center p-8">
                   <EmptyState
                     icon={<Building2 className="h-10 w-10 text-primary" />}
                     title="Nenhuma loja encontrada"
@@ -938,7 +906,7 @@ export function GlobalAdminDashboardPage() {
                   />
                 </div>
               ) : (
-                <div className="overflow-x-auto custom-scrollbar">
+                <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
                   <ResponsiveTable className="w-full text-xs text-left">
                     <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                       <tr>
@@ -1224,7 +1192,7 @@ export function GlobalAdminDashboardPage() {
             {activeTab === 'users' && (
               <>
                 {/* Policy Banner explaining why employees are not listed here */}
-                <div className="px-4 py-2 bg-primary/5 border-b border-border flex items-center justify-between gap-2 flex-wrap text-[11px]">
+                <div className="px-4 py-1.5 bg-primary/5 border-b border-border flex items-center justify-between gap-2 flex-wrap text-[11px] flex-shrink-0">
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Shield className="h-3.5 w-3.5 text-primary shrink-0" />
                     <span>
@@ -1282,7 +1250,7 @@ export function GlobalAdminDashboardPage() {
                     />
                   </div>
                 ) : (
-                  <div className="overflow-x-auto custom-scrollbar">
+                  <div className="flex-1 min-h-0 overflow-auto custom-scrollbar">
                     <ResponsiveTable className="w-full text-xs text-left">
                       <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                         <tr>
