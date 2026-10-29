@@ -32,6 +32,7 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { useTenant } from '@/hooks/useTenant'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useI18n } from '@/hooks/useI18n'
 import { useRealtimeSubscriptions } from '@/hooks/useRealtime'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
@@ -47,6 +48,7 @@ export function AppLayout() {
   const navigate = useNavigate()
   const { user, userStores, signOut, isGlobalAdmin } = useAuth()
   const { storeId, storeName, storeSlug, role, setActiveStore } = useTenant()
+  const { hasRouteAccess } = usePermissions()
   const { t } = useI18n()
 
   // Realtime updates for stock, orders, and notifications
@@ -91,7 +93,7 @@ export function AppLayout() {
   ]
 
   // "Compras" fica so em Controle para nao duplicar o mesmo link.
-  const navGroups: NavGroup[] = [
+  const rawNavGroups: NavGroup[] = [
     {
       id: 'registry',
       label: t.nav.groupRegistry,
@@ -125,13 +127,22 @@ export function AppLayout() {
     },
   ]
 
-  const bottomNavItems: NavItem[] = [
+  const navGroups: NavGroup[] = rawNavGroups
+    .map((g) => ({
+      ...g,
+      items: g.items.filter((item) => hasRouteAccess(item.path)),
+    }))
+    .filter((g) => g.items.length > 0)
+
+  const rawBottomNavItems: NavItem[] = [
     { label: t.nav.sales, path: '/sales', icon: ShoppingBag },
     { label: t.nav.integrations, path: '/integrations', icon: Webhook },
     { label: t.nav.notifications, path: '/notifications', icon: Bell },
     { label: t.nav.audit, path: '/audit', icon: Shield },
     { label: t.nav.settings, path: '/settings', icon: Settings },
   ]
+
+  const bottomNavItems: NavItem[] = rawBottomNavItems.filter((item) => hasRouteAccess(item.path))
 
   const activeNavGroup = navGroups.find((group) =>
     group.items.some((item) => item.path === location.pathname),

@@ -25,8 +25,10 @@ import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
 import { BulkStockWriteoffModal } from '@/components/inventory/BulkStockWriteoffModal'
+import { StockBranchTransferModal } from '@/components/inventory/StockBranchTransferModal'
 import { StockImportModal } from '@/components/inventory/StockImportModal'
 import { ProductStockDetailsModal } from '@/components/inventory/ProductStockDetailsModal'
+import { usePermissions } from '@/hooks/usePermissions'
 import { toast } from 'sonner'
 import {
   Layers,
@@ -46,6 +48,11 @@ import {
   Building2,
   Info,
   Calendar,
+  Truck,
+  UserCheck,
+  CheckCircle2,
+  XCircle,
+  GitBranch,
 } from 'lucide-react'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -64,8 +71,9 @@ const MOVEMENT_LABELS: Record<string, string> = {
 
 
 export function InventoryPage() {
-  const { storeId, hasActiveStore } = useTenant()
+  const { storeId, activeStore: currentStore, hasActiveStore } = useTenant()
   const { isGlobalAdmin } = useAuth()
+  const { canApproveWriteoff, canTransferBranch } = usePermissions()
   const { t } = useI18n()
   const queryClient = useQueryClient()
 
@@ -95,7 +103,8 @@ export function InventoryPage() {
     },
   })
 
-  const activeTab = (filters.tab as 'balances' | 'movements') || 'balances'
+  const activeTab =
+    (filters.tab as 'balances' | 'movements' | 'approvals' | 'transfers') || 'balances'
   const stockStatusFilter = (filters.stockStatus as 'all' | 'in' | 'out') || 'all'
   const movementTypeFilter = filters.movementType || 'ALL'
   const reasonCodeFilter = filters.reasonCode || 'ALL'
@@ -103,6 +112,7 @@ export function InventoryPage() {
   const [isMovementModalOpen, setIsMovementModalOpen] = React.useState(false)
   const [isWriteoffModalOpen, setIsWriteoffModalOpen] = React.useState(false)
   const [isBulkWriteoffModalOpen, setIsBulkWriteoffModalOpen] = React.useState(false)
+  const [isBranchTransferModalOpen, setIsBranchTransferModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [selectedTraceabilityBalance, setSelectedTraceabilityBalance] = React.useState<any | null>(null)
   const [selectedBalanceIds, setSelectedBalanceIds] = React.useState<string[]>([])
@@ -170,7 +180,51 @@ export function InventoryPage() {
   const { data: lossReasons = [] } = useQuery({
     queryKey: ['loss-reasons'],
     queryFn: () => inventoryService.getLossReasons(),
-    enabled: Boolean(hasActiveStore && activeTab === 'movements'),
+    enabled: Boolean(hasActiveStore && (activeTab === 'movements' || activeTab === 'approvals')),
+  })
+
+  const { data: writeoffRequests = [], isLoading: loadingWriteoffRequests } = useQuery({
+    queryKey: ['stock-writeoff-requests', storeId],
+    queryFn: () => inventoryService.listWriteoffRequests(storeId),
+    enabled: Boolean(hasActiveStore),
+  })
+
+  const { data: stockTransfers = [], isLoading: loadingTransfers } = useQuery({
+    queryKey: ['stock-transfers', storeId],
+    queryFn: () => inventoryService.listStockTransfers(storeId),
+    enabled: Boolean(hasActiveStore),
+  })
+
+  const pendingWriteoffCount = writeoffRequests.filter((r) => r.status === 'PENDING').length
+
+  const reviewWriteoffMutation = useMutation({
+    mutationFn: ({
+      requestId,
+      decision,
+      reviewNotes,
+    }: {
+      requestId: string
+      decision: 'APPROVED' | 'REJECTED'
+      reviewNotes?: string
+    }) =>
+      inventoryService.reviewWriteoffRequest({
+        requestId,
+        decision,
+        rejectionReason: reviewNotes,
+      }),
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['stock-writeoff-requests', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-movements', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-valuation', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['products', storeId] })
+      toast.success(
+        vars.decision === 'APPROVED'
+          ? 'Solicitação de baixa aprovada e estoque deduzido com sucesso!'
+          : 'Solicitação de baixa rejeitada.'
+      )
+    },
+    onError: (err) => toast.error(parseApiError(err)),
   })
 
   const { data: productsData } = useQuery({
@@ -362,7 +416,7 @@ export function InventoryPage() {
       {/* Page Toolbar (Tabs, Filters & Actions) */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         {/* Tab Selector Pills */}
-        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border">
+        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border flex-wrap">
           <button
             onClick={() => {
               setFilter('tab', 'balances')
@@ -389,6 +443,37 @@ export function InventoryPage() {
           >
             <History className="h-3.5 w-3.5 inline mr-1" /> Movimentos ({totalMovements})
           </button>
+          <button
+            onClick={() => {
+              setFilter('tab', 'approvals')
+              setPage(1)
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
+              activeTab === 'approvals'
+                ? 'bg-card text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <UserCheck className="h-3.5 w-3.5 inline" /> Aprovações de Baixa ({writeoffRequests.length})
+            {pendingWriteoffCount > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-white text-[10px] font-bold">
+                {pendingWriteoffCount}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => {
+              setFilter('tab', 'transfers')
+              setPage(1)
+            }}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+              activeTab === 'transfers'
+                ? 'bg-card text-foreground shadow-xs'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Truck className="h-3.5 w-3.5 inline mr-1" /> Remessas p/ Filiais ({stockTransfers.length})
+          </button>
         </div>
 
         {/* Selected Balances Action Bar */}
@@ -397,6 +482,16 @@ export function InventoryPage() {
             <span className="text-xs font-bold text-destructive">
               {selectedBalanceIds.length} selecionado(s)
             </span>
+            {canTransferBranch && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setIsBranchTransferModalOpen(true)}
+                className="h-7 text-xs px-2.5 font-semibold border-primary/40 text-primary bg-background hover:bg-primary/10"
+              >
+                <Truck className="h-3.5 w-3.5 mr-1" /> Enviar p/ Filial ({selectedBalanceIds.length})
+              </Button>
+            )}
             <Button
               size="sm"
               variant="destructive"
@@ -513,6 +608,18 @@ export function InventoryPage() {
           {activeTab === 'balances' && (
             <Button variant="outline" size="sm" onClick={handleExportBalances} className="h-8 text-xs px-2.5">
               <Download className="h-3.5 w-3.5 mr-1" /> Exportar
+            </Button>
+          )}
+
+          {canTransferBranch && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBranchTransferModalOpen(true)}
+              className="h-8 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+              title="Enviar produtos do estoque para uma filial sem necessidade de venda"
+            >
+              <Truck className="h-3.5 w-3.5 mr-1" /> Enviar p/ Filial
             </Button>
           )}
 
@@ -959,6 +1066,306 @@ export function InventoryPage() {
         </Card>
       )}
 
+      {/* Write-off Approvals View (Somente Aprovador de Baixa pode autorizar) */}
+      {activeTab === 'approvals' && (
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+          <div className="p-3 border-b border-border bg-muted/30 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <UserCheck className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <div className="text-xs font-bold text-foreground">
+                  Fila de Autorização de Baixa de Estoque
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Regra de Governança: Somente usuários com papel <strong>Aprovador de Baixa (STOCK_APPROVER)</strong>, <strong>Administrador</strong> ou permissão <code>inventory.approve_writeoff</code> podem autorizar baixas.
+                </div>
+              </div>
+            </div>
+            <Badge
+              variant={canApproveWriteoff ? 'success' : 'secondary'}
+              className="text-[10px] gap-1"
+            >
+              <UserCheck className="h-3 w-3" />
+              {canApproveWriteoff
+                ? 'Você possui credencial de Aprovador de Baixa'
+                : 'Somente Leitura (Sem permissão de Aprovador)'}
+            </Badge>
+          </div>
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+            {loadingWriteoffRequests ? (
+              <div className="p-6">
+                <LoadingSkeleton count={4} className="h-10" />
+              </div>
+            ) : writeoffRequests.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-muted-foreground">
+                <UserCheck className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                Nenhuma solicitação de baixa de estoque registrada nesta loja.
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                <ResponsiveTable className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-4 font-semibold">Data</th>
+                      <th className="py-2.5 px-4 font-semibold">Produto & Lote</th>
+                      <th className="py-2.5 px-4 font-semibold">Tipo / Motivo</th>
+                      <th className="py-2.5 px-4 font-semibold text-center">Qtd</th>
+                      <th className="py-2.5 px-4 font-semibold">Solicitante</th>
+                      <th className="py-2.5 px-4 font-semibold">Status & Aprovador</th>
+                      <th className="py-2.5 px-4 font-semibold text-right">Autorização</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {writeoffRequests.map((req) => {
+                      const reasonLabel = lossReasons.find((r) => r.code === req.reasonCode)?.label
+                      return (
+                        <tr key={req.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 px-4 font-mono text-[11px] text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(req.createdAt)}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="font-semibold text-foreground">{req.productName}</div>
+                            <div className="text-[10px] font-mono text-muted-foreground">
+                              SKU: {req.productSku || '-'}
+                              {req.batchLotNumber ? ` • Lote: ${req.batchLotNumber}` : ''}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <Badge variant="warning" className="text-[10px]">
+                              {MOVEMENT_LABELS[req.movementType] || req.movementType}
+                            </Badge>
+                            <div className="text-[11px] font-medium text-foreground mt-0.5">
+                              {reasonLabel || req.reasonCode}
+                            </div>
+                            {req.reasonDetail && (
+                              <div className="text-[10px] text-muted-foreground italic">
+                                {req.reasonDetail}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 text-center font-mono font-bold text-destructive">
+                            -{req.quantity}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="font-medium text-foreground">{req.requestedByName}</div>
+                            {req.requestedByRegistration && (
+                              <div className="text-[10px] font-mono text-muted-foreground">
+                                Matrícula: {req.requestedByRegistration}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            {req.status === 'PENDING' && (
+                              <Badge variant="warning" className="text-[10px]">
+                                Aguardando Aprovador de Baixa
+                              </Badge>
+                            )}
+                            {req.status === 'APPROVED' && (
+                              <div>
+                                <Badge variant="success" className="text-[10px] gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Aprovada e Baixada
+                                </Badge>
+                                {req.reviewedByName && (
+                                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                    Por {req.reviewedByName}
+                                    {req.reviewedByRegistration ? ` (${req.reviewedByRegistration})` : ''}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {req.status === 'REJECTED' && (
+                              <div>
+                                <Badge variant="danger" className="text-[10px] gap-1">
+                                  <XCircle className="h-3 w-3" /> Rejeitada
+                                </Badge>
+                                {req.reviewedByName && (
+                                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                                    Por {req.reviewedByName}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 text-right">
+                            {req.status === 'PENDING' ? (
+                              canApproveWriteoff ? (
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      reviewWriteoffMutation.mutate({
+                                        requestId: req.id,
+                                        decision: 'APPROVED',
+                                        reviewNotes: 'Autorizado pelo Aprovador de Baixa de Estoque',
+                                      })
+                                    }
+                                    isLoading={reviewWriteoffMutation.isPending}
+                                    className="h-7 text-[11px] px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                                  >
+                                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Autorizar Baixa
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() =>
+                                      reviewWriteoffMutation.mutate({
+                                        requestId: req.id,
+                                        decision: 'REJECTED',
+                                        reviewNotes: 'Rejeitado pelo Aprovador de Baixa',
+                                      })
+                                    }
+                                    isLoading={reviewWriteoffMutation.isPending}
+                                    className="h-7 text-[11px] px-2 text-danger border-danger/30 hover:bg-danger/10"
+                                  >
+                                    <XCircle className="h-3.5 w-3.5 mr-1" /> Rejeitar
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                  Restrito a Aprovador de Baixa
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-[10px] text-muted-foreground font-mono">
+                                {req.reviewedAt ? formatDateTime(req.reviewedAt) : 'Concluído'}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </ResponsiveTable>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Branch Stock Transfers View (Remessas para Filiais Sem Venda) */}
+      {activeTab === 'transfers' && (
+        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+          <div className="p-3 border-b border-border bg-muted/30 flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Truck className="h-4 w-4 text-primary" />
+              <div>
+                <div className="text-xs font-bold text-foreground">
+                  Remessas de Produtos entre Matriz e Filiais (Sem Necessidade de Venda)
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  Produtos transferidos têm seu saldo deduzido da loja de origem e entram automaticamente no estoque e catálogo da filial para venda lá.
+                </div>
+              </div>
+            </div>
+            {canTransferBranch && (
+              <Button
+                size="sm"
+                onClick={() => setIsBranchTransferModalOpen(true)}
+                className="h-8 text-xs px-3 font-semibold"
+              >
+                <Truck className="h-3.5 w-3.5 mr-1" /> Nova Remessa para Filial
+              </Button>
+            )}
+          </div>
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+            {loadingTransfers ? (
+              <div className="p-6">
+                <LoadingSkeleton count={4} className="h-10" />
+              </div>
+            ) : stockTransfers.length === 0 ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-muted-foreground">
+                <Truck className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                Nenhuma remessa entre filiais registrada para esta loja.
+              </div>
+            ) : (
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                <ResponsiveTable className="w-full text-left text-xs border-collapse">
+                  <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
+                    <tr>
+                      <th className="py-2.5 px-4 font-semibold">Código & Data</th>
+                      <th className="py-2.5 px-4 font-semibold">Origem &rarr; Filial Destino</th>
+                      <th className="py-2.5 px-4 font-semibold">Produtos Enviados</th>
+                      <th className="py-2.5 px-4 font-semibold text-right">Custo / Potencial Venda na Filial</th>
+                      <th className="py-2.5 px-4 font-semibold">Responsável</th>
+                      <th className="py-2.5 px-4 font-semibold text-center">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {stockTransfers.map((tr) => {
+                      const isOutbound = tr.fromStoreId === storeId
+                      return (
+                        <tr key={tr.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 px-4">
+                            <div className="font-mono font-bold text-primary text-xs">
+                              {tr.transferCode}
+                            </div>
+                            <div className="text-[10px] font-mono text-muted-foreground">
+                              {formatDateTime(tr.createdAt)}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                              <span>{tr.fromStoreName}</span>
+                              <span className="text-primary">&rarr;</span>
+                              <span className="inline-flex items-center gap-1 text-primary">
+                                <GitBranch className="h-3 w-3" /> {tr.toStoreName}
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {isOutbound
+                                ? 'Saída de remessa (Sem geração de venda na origem)'
+                                : 'Entrada de remessa recebida para venda nesta filial'}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="font-semibold text-foreground">
+                              {tr.totalItems} produto(s) • {tr.totalQuantity} un. totais
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {tr.items.slice(0, 4).map((it) => (
+                                <span
+                                  key={it.id}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-muted border border-border text-foreground"
+                                >
+                                  {it.productName}: <strong>{it.quantity} un</strong>
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4 text-right font-mono">
+                            <div className="font-semibold text-foreground">
+                              Custo: {formatCurrency(tr.totalCostValue)}
+                            </div>
+                            <div className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                              Venda Filial: {formatCurrency(tr.totalSellingValue)}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="font-medium text-foreground">
+                              {tr.approvedByName || tr.requestedByName || 'Administrador'}
+                            </div>
+                            {tr.notes && (
+                              <div className="text-[10px] text-muted-foreground italic truncate max-w-[14rem]">
+                                {tr.notes}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            <Badge variant="success" className="text-[10px]">
+                              {tr.status === 'COMPLETED' ? 'Transferido p/ Filial' : tr.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </ResponsiveTable>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Movement Modal */}
       <Modal
         isOpen={isMovementModalOpen}
@@ -1149,6 +1556,16 @@ export function InventoryPage() {
         isOpen={isBulkWriteoffModalOpen}
         onClose={() => setIsBulkWriteoffModalOpen(false)}
         selectedBalances={selectedBalances}
+        onSuccess={() => setSelectedBalanceIds([])}
+      />
+
+      {/* Remessa de Estoque para Filial Sem Venda */}
+      <StockBranchTransferModal
+        isOpen={isBranchTransferModalOpen}
+        onClose={() => setIsBranchTransferModalOpen(false)}
+        originStoreId={storeId}
+        originStoreName={currentStore?.storeName || 'Loja Matriz'}
+        preselectedBalances={selectedBalances}
         onSuccess={() => setSelectedBalanceIds([])}
       />
 

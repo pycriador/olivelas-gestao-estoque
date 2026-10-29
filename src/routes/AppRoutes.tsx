@@ -3,6 +3,7 @@ import { PublicLayout } from '@/layouts/PublicLayout'
 import { AuthLayout } from '@/layouts/AuthLayout'
 import { AppLayout } from '@/layouts/AppLayout'
 import { ProtectedRoute } from './ProtectedRoute'
+import { PermissionGate } from './PermissionGate'
 
 // Public Pages
 import { LandingPage } from '@/pages/LandingPage'
@@ -80,22 +81,127 @@ export function AppRoutes() {
             </ProtectedRoute>
           }
         />
-        <Route path="/stores" element={<StoresPage />} />
-        <Route path="/products" element={<ProductsPage />} />
-        <Route path="/categories" element={<CategoriesPage />} />
-        <Route path="/inventory" element={<InventoryPage />} />
-        <Route path="/expiration" element={<ExpirationPage />} />
-        <Route path="/sales" element={<SalesPage />} />
-        <Route path="/orders" element={<OrdersPage />} />
-        <Route path="/customers" element={<CustomersPage />} />
-        <Route path="/suppliers" element={<SuppliersPage />} />
-        <Route path="/purchases" element={<PurchasingPage />} />
-        <Route path="/reports" element={<ReportsPage />} />
+        <Route
+          path="/stores"
+          element={
+            <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
+              <StoresPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/products"
+          element={
+            <PermissionGate moduleCode="MOD_CATALOG_WA" showUpgradeScreen>
+              <ProductsPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <PermissionGate moduleCode="MOD_CATALOG_WA" showUpgradeScreen>
+              <CategoriesPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/inventory"
+          element={
+            <PermissionGate moduleCode="MOD_INVENTORY" showUpgradeScreen>
+              <InventoryPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/expiration"
+          element={
+            <PermissionGate moduleCode="MOD_EXPIRATION" showUpgradeScreen>
+              <ExpirationPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/sales"
+          element={
+            <PermissionGate moduleCode="MOD_POS_SALES" showUpgradeScreen>
+              <SalesPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/orders"
+          element={
+            <PermissionGate moduleCode="MOD_CATALOG_WA" showUpgradeScreen>
+              <OrdersPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/customers"
+          element={
+            <PermissionGate moduleCode="MOD_CUSTOMERS" showUpgradeScreen>
+              <CustomersPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/suppliers"
+          element={
+            <PermissionGate moduleCode="MOD_SUPPLIERS" showUpgradeScreen>
+              <SuppliersPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/purchases"
+          element={
+            <PermissionGate moduleCode="MOD_PURCHASING" showUpgradeScreen>
+              <PurchasingPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/reports"
+          element={
+            <PermissionGate moduleCode="MOD_REPORTS" showUpgradeScreen>
+              <ReportsPage />
+            </PermissionGate>
+          }
+        />
         <Route path="/notifications" element={<NotificationsPage />} />
-        <Route path="/audit" element={<AuditLogsPage />} />
-        <Route path="/team" element={<TeamPage />} />
-        <Route path="/integrations" element={<ApiIntegrationsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route
+          path="/audit"
+          element={
+            <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
+              <AuditLogsPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/team"
+          element={
+            <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
+              <TeamPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/integrations"
+          element={
+            <PermissionGate moduleCode="MOD_API_INTEGRATIONS" showUpgradeScreen>
+              <ApiIntegrationsPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
+              <SettingsPage />
+            </PermissionGate>
+          }
+        />
       </Route>
 
       {/* 5. 404 Catch-All */}

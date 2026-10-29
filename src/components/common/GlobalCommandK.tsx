@@ -2,6 +2,7 @@ import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Search, Package, Users, ShoppingBag, LayoutDashboard, X } from 'lucide-react'
 import { useTenant } from '@/hooks/useTenant'
+import { usePermissions } from '@/hooks/usePermissions'
 import { productService } from '@/services/productService'
 import { customerService } from '@/services/customerService'
 import { formatCurrency } from '@/utils/currency'
@@ -13,6 +14,7 @@ export function GlobalCommandK() {
   const [customers, setCustomers] = React.useState<any[]>([])
   const [isLoading, setIsLoading] = React.useState(false)
   const { storeId, hasActiveStore } = useTenant()
+  const { hasRouteAccess } = usePermissions()
   const navigate = useNavigate()
 
   const handleClose = () => {
@@ -142,24 +144,30 @@ export function GlobalCommandK() {
                 >
                   <LayoutDashboard className="h-4 w-4 text-primary" /> Dashboard
                 </button>
-                <button
-                  onClick={() => handleSelect('/products')}
-                  className="flex items-center gap-2 p-2 rounded-lg text-xs hover:bg-muted text-foreground transition-colors text-left"
-                >
-                  <Package className="h-4 w-4 text-primary" /> Produtos
-                </button>
-                <button
-                  onClick={() => handleSelect('/sales')}
-                  className="flex items-center gap-2 p-2 rounded-lg text-xs hover:bg-muted text-foreground transition-colors text-left"
-                >
-                  <ShoppingBag className="h-4 w-4 text-primary" /> Nova Venda (PDV)
-                </button>
-                <button
-                  onClick={() => handleSelect('/customers')}
-                  className="flex items-center gap-2 p-2 rounded-lg text-xs hover:bg-muted text-foreground transition-colors text-left"
-                >
-                  <Users className="h-4 w-4 text-primary" /> Clientes
-                </button>
+                {hasRouteAccess('/products') && (
+                  <button
+                    onClick={() => handleSelect('/products')}
+                    className="flex items-center gap-2 p-2 rounded-lg text-xs hover:bg-muted text-foreground transition-colors text-left"
+                  >
+                    <Package className="h-4 w-4 text-primary" /> Produtos
+                  </button>
+                )}
+                {hasRouteAccess('/sales') && (
+                  <button
+                    onClick={() => handleSelect('/sales')}
+                    className="flex items-center gap-2 p-2 rounded-lg text-xs hover:bg-muted text-foreground transition-colors text-left"
+                  >
+                    <ShoppingBag className="h-4 w-4 text-primary" /> Nova Venda (PDV)
+                  </button>
+                )}
+                {hasRouteAccess('/customers') && (
+                  <button
+                    onClick={() => handleSelect('/customers')}
+                    className="flex items-center gap-2 p-2 rounded-lg text-xs hover:bg-muted text-foreground transition-colors text-left"
+                  >
+                    <Users className="h-4 w-4 text-primary" /> Clientes
+                  </button>
+                )}
               </div>
             </div>
           )}

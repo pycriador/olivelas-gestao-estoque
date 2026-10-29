@@ -1,4 +1,5 @@
 import type { UserRole } from './database.types'
+import type { UserPermissionProfile } from './permissionGroup.types'
 
 export interface PlatformUserStoreRef {
   storeId: string
@@ -6,6 +7,13 @@ export interface PlatformUserStoreRef {
   storeSlug: string
   role: UserRole
   isActive: boolean
+  canApproveWriteoff?: boolean
+  jobTitle?: string | null
+  employeeRegistration?: string | null
+  customRoleId?: string | null
+  customRoleName?: string | null
+  grantedPermissions?: string[]
+  revokedPermissions?: string[]
 }
 
 export interface PlatformUser {
@@ -18,6 +26,22 @@ export interface PlatformUser {
   createdAt: string
   updatedAt?: string
   stores: PlatformUserStoreRef[]
+  permissionProfile?: UserPermissionProfile | null
+}
+
+export interface StoreCustomRole {
+  id: string
+  storeId: string
+  code: string
+  name: string
+  description: string | null
+  baseRole: UserRole
+  permissions: string[]
+  canApproveWriteoff: boolean
+  maxWriteoffValue: number | null
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface StoreMember {
@@ -32,4 +56,30 @@ export interface StoreMember {
   phone: string | null
   avatarUrl: string | null
   employeeRegistration?: string | null
+  jobTitle?: string | null
+  customRoleId?: string | null
+  customRoleName?: string | null
+  canApproveWriteoff?: boolean
+  hasApprovalPin?: boolean
+  approvalPin?: string | null
+  maxWriteoffValue?: number | null
+  grantedPermissions?: string[]
+  revokedPermissions?: string[]
+}
+
+export interface StoreMemberUpsertInput {
+  email: string
+  fullName?: string
+  phone?: string | null
+  password?: string
+  role: UserRole
+  jobTitle?: string | null
+  employeeRegistration?: string | null
+  customRoleId?: string | null
+  canApproveWriteoff?: boolean
+  approvalPin?: string | null
+  maxWriteoffValue?: number | null
+  grantedPermissions?: string[]
+  revokedPermissions?: string[]
+  isActive?: boolean
 }

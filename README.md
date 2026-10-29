@@ -23,12 +23,16 @@
 ## 🚀 1. Visão Geral do Projeto
 
 A plataforma **Olivelas** é uma solução completa multi-loja e multi-tenant concebida com isolamento estrito de dados através de **Row Level Security (RLS)** no PostgreSQL do Supabase. O frontend opera como uma SPA estática de alta performance hospedada no **GitHub Pages**, com suporte a:
-- **Gestão de Estoque Completa:** Saldos físicos, lotes com validade, movimentações, baixas em lote e valorização a custo e venda.
+- **Gestão de Estoque Completa & Aprovação de Baixas:** Saldos físicos, lotes com validade, movimentações, baixas em lote, valorização a custo e venda e fluxo estrito de **Aprovador de Baixa de Estoque (`STOCK_APPROVER`)** com fila de aprovação pendente e limite de alçada financeira.
+- **Cadastro de Filiais & Transferência de Estoque Sem Venda:** Criação de filiais vinculadas à Matriz (`parent_store_id`) e remessa atômica de lotes para filiais sem necessidade de registrar uma venda (`execute_stock_transfer_to_branch`), deixando os produtos prontos para venda no PDV da filial.
+- **Gestão de Funcionários & Papéis Granulares:** Controle detalhado de equipe pelo Administrador da Loja (`/team`) e Global Admin (`/global-admin?tab=users`), com papéis customizados por loja (`store_custom_roles`) e matriz de 36 permissões granulares para todos os recursos do sistema.
+- **Planos Comerciais SaaS, Grupos de Permissões em Tela & Faturamento:** Criação de pacotes comerciais com valores mensais/anuais, motor de grafo de dependências entre telas (alertando impactos ao desmarcar módulos como Vendas PDV, Estoque, Relatórios ou Compras), controle de assinaturas e histórico auditado de pagamentos.
+- **Integrador de APIs Estilo Postman (`/integrations`):** Request Builder completo (URL, Auth Bearer/Basic/API Key, Headers, Query Params, Body JSON) com vinculação visual de dados (*Service Binding*) para sincronizar Clientes, Categorias/Grupos, Produtos, Fornecedores e Estoque.
 - **Catálogo & Compras:** Desacoplamento de preço mestre vs lotes de entrada, cálculo dinâmico de margem e markup em compras.
 - **9 Relatórios Analíticos de Varejo:** Valorização & Margem, Curva ABC (80/15/5), Giro & Compra por Consumo (runout em dias), Ticket Médio por Cliente & LTV, Investimento de Capital & GMROI por Categoria, Compras, Perdas Operacionais, Rupturas e Vendas.
 - **Central de Backups Multi-Loja:** Dumps SQL relacionais com `INSERT INTO`, pacotes `.ZIP` de imagens com `manifest.json` e datasets `.JSON`.
 - **Integração com IA Externa & Tokens HBAC:** Gerenciador de chaves de API com escopos granulares (`products:*`, `inventory:*`, `orders:*`, `purchases:*`, `customers:*`, `reports:*`, `audit:*`) para agentes autônomos.
-- **Painel Global Admin:** Gestão de lojas, usuários com menus dropdown, explorador CRUD dinâmico de banco de dados e auditoria.
+- **Painel Global Admin:** Gestão de lojas, usuários, planos e assinaturas SaaS, explorador CRUD dinâmico de banco de dados e auditoria.
 
 ---
 
@@ -62,11 +66,13 @@ olivelas-gestao-estoque/
 │   └── 404.html                    # Script de resolução de subpaths SPA para GitHub Pages
 ├── src/
 │   ├── components/
-│   │   ├── admin/                  # GlobalBackupPanel, GlobalDbExplorerPanel, GlobalApiKeyHbacPanel
-│   │   ├── common/                 # ThemeToggle, LanguageSelector, CommandK, EmptyState, etc.
-│   │   ├── inventory/              # StockWriteoffModal, BulkStockWriteoffModal, StockImportModal
+│   │   ├── admin/                  # GlobalBackupPanel, GlobalDbExplorerPanel, GlobalApiKeyHbacPanel, GlobalSaasBillingPanel, SubscriptionGuardModal
+│   │   ├── common/                 # ThemeToggle, LanguageSelector, CommandK, EmptyState, ResponsiveTable, etc.
+│   │   ├── inventory/              # StockWriteoffModal, BulkStockWriteoffModal, StockBranchTransferModal, StockImportModal
 │   │   ├── products/               # ProductGalleryModal, BulkStockEntryModal
+│   │   ├── team/                   # EmployeeRolePermissionsModal, StoreCustomRolesModal
 │   │   └── ui/                     # Button, Input, Card, Badge, Modal, DropdownMenu, Pagination
+│   ├── constants/                  # featureDependencies, granularPermissions
 │   ├── hooks/                      # useAuth, useTenant, usePermissions, useRealtime, useTablePagination
 │   ├── i18n/                       # pt-BR, en-US, es-ES
 │   ├── layouts/                    # AppLayout, AuthLayout, PublicLayout

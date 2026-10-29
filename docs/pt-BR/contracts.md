@@ -76,6 +76,12 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 | `global_admin_delete` | `globalAdminService.ts` |
 | `global_admin_delete_platform_user` | `userService.ts` |
 | `get_ai_report` | Agentes externos / IA via REST (`GET`/`POST /rest/v1/rpc/get_ai_report`) e Explorador de Escopos em `GlobalApiKeyHbacPanel.tsx` |
+| `assign_user_permission_group` | `saasBillingService.ts` |
+| `record_subscription_payment` | `saasBillingService.ts` |
+| `upsert_store_employee` | `userService.ts` |
+| `can_user_approve_writeoff` | `inventoryService.ts` / validação interna em `apply_stock_movement` e `review_stock_writeoff_request` |
+| `review_stock_writeoff_request` | `inventoryService.ts` |
+| `execute_stock_transfer_to_branch` | `inventoryService.ts` |
 
 `create_order_with_stock`: pedido + itens + pagamento + baixa com `FOR UPDATE` (comentário e corpo em `20260926000009_atomic_order_creation.sql`).
 

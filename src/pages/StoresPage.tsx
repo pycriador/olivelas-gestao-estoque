@@ -20,6 +20,8 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { StockBranchTransferModal } from '@/components/inventory/StockBranchTransferModal'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
   Store as StoreIcon,
   Plus,
@@ -33,6 +35,9 @@ import {
   Mail,
   ArrowRight,
   ShieldCheck,
+  GitBranch,
+  Truck,
+  Building2,
 } from 'lucide-react'
 import type { Store } from '@/types/store.types'
 
@@ -48,11 +53,17 @@ interface StoreDisplayRow {
   role: string
   isActive: boolean
   isCurrentActive: boolean
+  isBranch: boolean
+  parentStoreId: string | null
+  parentStoreName: string | null
+  branchCode: string | null
+  managerName: string | null
 }
 
 export function StoresPage() {
   const { isGlobalAdmin } = useAuth()
-  const { storeId: activeStoreId, setActiveStore, userStores } = useTenant()
+  const { storeId: activeStoreId, activeStore: currentStore, setActiveStore, userStores } = useTenant()
+  const { canTransferBranch } = usePermissions()
   const { refreshStores } = useAuthStore()
   const queryClient = useQueryClient()
   const navigate = useNavigate()
@@ -76,9 +87,11 @@ export function StoresPage() {
   })
 
   const statusFilter = filters.status || 'ALL'
+  const unitTypeFilter = filters.unitType || 'ALL'
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = React.useState(false)
+  const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false)
   const [editingStore, setEditingStore] = React.useState<StoreDisplayRow | null>(null)
   const [togglingStore, setTogglingStore] = React.useState<StoreDisplayRow | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -92,6 +105,10 @@ export function StoresPage() {
     email: '',
     description: '',
     isActive: true,
+    isBranch: false,
+    parentStoreId: '',
+    branchCode: '',
+    managerName: '',
   })
 
   // Query stores based on user role (all stores for global admin, or list for regular tenant)
@@ -123,10 +140,12 @@ export function StoresPage() {
 
   // Map stores into unified display items
   const allDisplayRows: StoreDisplayRow[] = React.useMemo(() => {
+    const storeMap = new Map(rawStores.map((st) => [st.id, st.name]))
     return rawStores.map((st) => {
       const userLink = userStores.find((us) => us.storeId === st.id)
       const role = isGlobalAdmin ? 'GLOBAL_ADMIN' : userLink?.role || 'STORE_ADMIN'
       const isCurrentActive = st.id === activeStoreId
+      const parentId = st.parent_store_id || null
 
       return {
         id: st.id,
@@ -140,6 +159,11 @@ export function StoresPage() {
         role,
         isActive: st.is_active ?? true,
         isCurrentActive,
+        isBranch: Boolean(st.is_branch || st.parent_store_id),
+        parentStoreId: parentId,
+        parentStoreName: parentId ? storeMap.get(parentId) || 'Loja Matriz' : null,
+        branchCode: st.branch_code || null,
+        managerName: st.manager_name || null,
       }
     })
   }, [rawStores, userStores, isGlobalAdmin, activeStoreId])
@@ -154,6 +178,8 @@ export function StoresPage() {
         (s) =>
           (s.name || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q) ||
           (s.slug || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(q) ||
+          (s.branchCode && s.branchCode.toLowerCase().includes(q)) ||
+          (s.managerName && s.managerName.toLowerCase().includes(q)) ||
           (s.document && s.document.toLowerCase().includes(q)) ||
           (s.email && s.email.toLowerCase().includes(q))
       )
@@ -163,6 +189,12 @@ export function StoresPage() {
       result = result.filter((s) => s.isActive)
     } else if (statusFilter === 'INACTIVE') {
       result = result.filter((s) => !s.isActive)
+    }
+
+    if (unitTypeFilter === 'BRANCH') {
+      result = result.filter((s) => s.isBranch)
+    } else if (unitTypeFilter === 'HEADQUARTERS') {
+      result = result.filter((s) => !s.isBranch)
     }
 
     // Sort
@@ -179,7 +211,7 @@ export function StoresPage() {
     })
 
     return result
-  }, [allDisplayRows, search, statusFilter, sortBy, sortOrder])
+  }, [allDisplayRows, search, statusFilter, unitTypeFilter, sortBy, sortOrder])
 
   // Pagination Slice
   const totalItems = filteredStores.length
@@ -199,11 +231,16 @@ export function StoresPage() {
       whatsapp?: string
       email?: string
       description?: string
+      parent_store_id?: string | null
+      branch_code?: string | null
+      is_branch?: boolean
+      manager_name?: string | null
     }) => storeService.createStore(data),
     onSuccess: async () => {
       await refreshStores()
       queryClient.invalidateQueries({ queryKey: ['stores-list'] })
       queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['transfer-destination-stores'] })
       setIsModalOpen(false)
       resetForm()
     },
@@ -217,6 +254,7 @@ export function StoresPage() {
       await refreshStores()
       queryClient.invalidateQueries({ queryKey: ['stores-list'] })
       queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['transfer-destination-stores'] })
       setIsModalOpen(false)
       resetForm()
     },
@@ -245,12 +283,24 @@ export function StoresPage() {
       email: '',
       description: '',
       isActive: true,
+      isBranch: false,
+      parentStoreId: activeStoreId || '',
+      branchCode: '',
+      managerName: '',
     })
     setErrorMsg(null)
   }
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = (asBranch = false) => {
     resetForm()
+    if (asBranch) {
+      setFormData((prev) => ({
+        ...prev,
+        isBranch: true,
+        parentStoreId: activeStoreId || '',
+        branchCode: `FIL-0${allDisplayRows.filter((r) => r.isBranch).length + 1}`,
+      }))
+    }
     setIsModalOpen(true)
   }
 
@@ -265,6 +315,10 @@ export function StoresPage() {
       email: s.email || '',
       description: s.description || '',
       isActive: s.isActive,
+      isBranch: s.isBranch,
+      parentStoreId: s.parentStoreId || activeStoreId || '',
+      branchCode: s.branchCode || '',
+      managerName: s.managerName || '',
     })
     setErrorMsg(null)
     setIsModalOpen(true)
@@ -286,6 +340,10 @@ export function StoresPage() {
           email: formData.email || null,
           description: formData.description || null,
           is_active: formData.isActive,
+          is_branch: formData.isBranch,
+          parent_store_id: formData.isBranch ? formData.parentStoreId || activeStoreId || null : null,
+          branch_code: formData.isBranch ? formData.branchCode || null : null,
+          manager_name: formData.managerName || null,
         },
       })
     } else {
@@ -297,6 +355,10 @@ export function StoresPage() {
         whatsapp: formData.whatsapp || undefined,
         email: formData.email || undefined,
         description: formData.description || undefined,
+        is_branch: formData.isBranch,
+        parent_store_id: formData.isBranch ? formData.parentStoreId || activeStoreId || null : null,
+        branch_code: formData.isBranch ? formData.branchCode || null : null,
+        manager_name: formData.managerName || null,
       })
     }
   }
@@ -376,6 +438,21 @@ export function StoresPage() {
 
         <div className="flex items-center gap-2 flex-wrap ml-auto">
           <select
+            value={unitTypeFilter}
+            onChange={(e) => setFilter('unitType', e.target.value)}
+            aria-label="Filtrar por tipo de unidade"
+            className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
+          >
+            <option value="ALL">Todas as Unidades ({allDisplayRows.length})</option>
+            <option value="HEADQUARTERS">
+              Matrizes ({allDisplayRows.filter((r) => !r.isBranch).length})
+            </option>
+            <option value="BRANCH">
+              Filiais Vinculadas ({allDisplayRows.filter((r) => r.isBranch).length})
+            </option>
+          </select>
+
+          <select
             value={statusFilter}
             onChange={(e) => setFilter('status', e.target.value)}
             aria-label="Filtrar por status"
@@ -396,9 +473,30 @@ export function StoresPage() {
             <Download className="h-3.5 w-3.5 mr-1" /> Exportar
           </Button>
 
+          {canTransferBranch && activeStoreId && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsTransferModalOpen(true)}
+              className="h-8 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10 font-semibold"
+              title="Enviar produtos do estoque atual para uma filial sem necessidade de venda"
+            >
+              <Truck className="h-3.5 w-3.5 mr-1" /> Enviar Estoque p/ Filial
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenCreate(true)}
+            className="h-8 text-xs px-2.5 font-semibold"
+          >
+            <GitBranch className="h-3.5 w-3.5 mr-1" /> Nova Filial
+          </Button>
+
           <Button
             size="sm"
-            onClick={handleOpenCreate}
+            onClick={() => handleOpenCreate(false)}
             className="h-8 text-xs px-2.5 shadow-xs font-semibold"
           >
             <Plus className="h-3.5 w-3.5 mr-1" /> Nova Loja
@@ -415,12 +513,12 @@ export function StoresPage() {
             </div>
           ) : paginatedStores.length === 0 ? (
             <div className="flex-1 flex items-center justify-center p-8">
-              <EmptyState
+                    <EmptyState
                 icon={<StoreIcon className="h-10 w-10 text-primary" />}
                 title="Nenhuma loja encontrada"
                 description="Cadastre uma nova filial para gerenciar produtos, estoque, vendas e equipes separadamente."
                 actionLabel="Nova Loja"
-                onAction={handleOpenCreate}
+                onAction={() => handleOpenCreate(false)}
               />
             </div>
           ) : (
@@ -430,11 +528,12 @@ export function StoresPage() {
                   <tr>
                     <SortableHeader
                       column="name"
-                      label="Loja & Endereço Web"
+                      label="Loja / Filial & Endereço Web"
                       currentSortBy={sortBy}
                       currentSortOrder={sortOrder}
                       onSort={toggleSort}
                     />
+                    <th className="py-3 px-4">Tipo & Matriz</th>
                     <SortableHeader
                       column="document"
                       label="CNPJ / Documento"
@@ -442,7 +541,7 @@ export function StoresPage() {
                       currentSortOrder={sortOrder}
                       onSort={toggleSort}
                     />
-                    <th className="py-3 px-4">Contato</th>
+                    <th className="py-3 px-4">Contato / Gerente</th>
                     <th className="py-3 px-4">Seu Papel</th>
                     <th className="py-3 px-4">Catálogo Público</th>
                     <SortableHeader
@@ -469,11 +568,16 @@ export function StoresPage() {
                         <td className="py-2.5 px-4">
                           <div className="flex items-center gap-2.5">
                             <div className={`p-1.5 rounded-lg ${s.isCurrentActive ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
-                              <StoreIcon className="h-4 w-4" />
+                              {s.isBranch ? <GitBranch className="h-4 w-4" /> : <StoreIcon className="h-4 w-4" />}
                             </div>
                             <div>
-                              <div className="font-semibold text-foreground flex items-center gap-1.5">
+                              <div className="font-semibold text-foreground flex items-center gap-1.5 flex-wrap">
                                 {s.name}
+                                {s.branchCode && (
+                                  <span className="text-[10px] font-mono bg-muted px-1.5 py-0.5 rounded border border-border text-foreground">
+                                    {s.branchCode}
+                                  </span>
+                                )}
                                 {s.isCurrentActive && (
                                   <span className="inline-flex items-center text-[10px] bg-primary/15 text-primary px-1.5 py-0.2 rounded-full font-medium">
                                     <Check className="h-3 w-3 mr-0.5" /> Atual
@@ -487,6 +591,26 @@ export function StoresPage() {
                           </div>
                         </td>
 
+                        {/* Tipo & Matriz */}
+                        <td className="py-2.5 px-4">
+                          {s.isBranch ? (
+                            <div className="space-y-0.5">
+                              <Badge variant="secondary" className="text-[10px] gap-1">
+                                <GitBranch className="h-3 w-3 text-primary" /> Filial Vinculada
+                              </Badge>
+                              {s.parentStoreName && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  Matriz: <span className="font-semibold text-foreground">{s.parentStoreName}</span>
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] gap-1 border-primary/30 text-primary bg-primary/5">
+                              <Building2 className="h-3 w-3" /> Matriz / Independente
+                            </Badge>
+                          )}
+                        </td>
+
                         {/* CNPJ */}
                         <td className="py-2.5 px-4 text-muted-foreground font-mono">
                           {s.document || '-'}
@@ -495,6 +619,11 @@ export function StoresPage() {
                         {/* Contato */}
                         <td className="py-2.5 px-4 text-muted-foreground">
                           <div className="space-y-0.5 text-[11px]">
+                            {s.managerName && (
+                              <div className="font-semibold text-foreground">
+                                Resp: {s.managerName}
+                              </div>
+                            )}
                             {s.phone && (
                               <div className="flex items-center gap-1">
                                 <Phone className="h-3 w-3 text-muted-foreground" /> {s.phone}
@@ -505,7 +634,7 @@ export function StoresPage() {
                                 <Mail className="h-3 w-3 text-muted-foreground" /> {s.email}
                               </div>
                             )}
-                            {!s.phone && !s.email && <span>-</span>}
+                            {!s.managerName && !s.phone && !s.email && <span>-</span>}
                           </div>
                         </td>
 
@@ -702,6 +831,62 @@ export function StoresPage() {
             </div>
           </div>
 
+          {/* Tipo de Unidade: Matriz ou Filial */}
+          <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-3">
+            <label className="flex items-center gap-2 text-xs font-bold text-foreground cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.isBranch}
+                onChange={(e) => setFormData((prev) => ({ ...prev, isBranch: e.target.checked }))}
+                className="rounded border-input text-primary focus:ring-primary h-4 w-4"
+              />
+              <GitBranch className="h-3.5 w-3.5 text-primary" />
+              Esta unidade é uma Filial vinculada a uma Loja Matriz (recebe remessas de estoque sem venda)
+            </label>
+
+            {formData.isBranch && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-foreground">Loja Matriz *</label>
+                  <select
+                    value={formData.parentStoreId}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, parentStoreId: e.target.value }))}
+                    className="w-full h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground"
+                  >
+                    <option value="">Selecione a Matriz...</option>
+                    {allDisplayRows
+                      .filter((st) => st.id !== editingStore?.id)
+                      .map((st) => (
+                        <option key={st.id} value={st.id}>
+                          {st.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-foreground">Código da Filial</label>
+                  <Input
+                    placeholder="Ex: FIL-02"
+                    value={formData.branchCode}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, branchCode: e.target.value.toUpperCase() }))}
+                    className="h-8 text-xs font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-foreground">Gerente da Filial</label>
+                  <Input
+                    placeholder="Ex: Roberto Almeida"
+                    value={formData.managerName}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, managerName: e.target.value }))}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">Descrição / Informações Adicionais</label>
             <Input
@@ -772,6 +957,14 @@ export function StoresPage() {
         cancelText="Cancelar"
         variant={togglingStore?.isActive ? 'danger' : 'primary'}
         isLoading={toggleStatusMutation.isPending}
+      />
+
+      {/* Modal de Remessa de Estoque para Filial Sem Venda */}
+      <StockBranchTransferModal
+        isOpen={isTransferModalOpen}
+        onClose={() => setIsTransferModalOpen(false)}
+        originStoreId={activeStoreId || ''}
+        originStoreName={currentStore?.storeName || 'Loja Matriz'}
       />
     </div>
   )

@@ -17,6 +17,10 @@ export interface Store {
   address_city: string | null
   address_state: string | null
   address_zipcode: string | null
+  parent_store_id?: string | null
+  branch_code?: string | null
+  is_branch?: boolean
+  manager_name?: string | null
   is_active: boolean
   theme_config: {
     appTheme?: string

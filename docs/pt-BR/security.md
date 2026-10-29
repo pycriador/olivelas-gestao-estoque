@@ -86,7 +86,19 @@ Detalhe fino: abrir o arquivo `20260925000002_rls_policies.sql`. Não copiar USI
 
 ## Hard delete global
 
-`global_admin_delete` e `global_admin_delete_platform_user`: restritos a global admin (corpo SQL). Recusam exclusão quando há histórico comercial, conforme comentários da migration 10. Auditoria na mesma transação.
+| `global_admin_delete` e `global_admin_delete_platform_user`: restritos a global admin (corpo SQL). Recusam exclusão quando há histórico comercial, conforme comentários da migration 10. Auditoria na mesma transação.
+
+## Gestão de Funcionários, Papéis Granulares e Alçada de Baixa de Estoque (migration 23)
+
+- **Funcionários e Papéis (`public.upsert_store_employee`, `public.store_custom_roles`)**:
+  - Somente `STORE_ADMIN` da respectiva loja ou `is_global_admin()` podem criar/editar vínculos de funcionários em `public.store_users` e papéis customizados em `public.store_custom_roles`.
+  - Permissões efetivas de cada funcionário combinam o papel base (`role`), o papel customizado (`custom_role_id`), permissões extras concedidas (`granted_permissions`) e permissões revogadas (`revoked_permissions`), além do pacote SaaS ativo (`user_subscriptions`).
+- **Aprovador Exclusivo de Baixa de Estoque (`public.can_user_approve_writeoff`)**:
+  - A função `public.can_user_approve_writeoff(p_store_id, p_user_id, p_estimated_value)` valida no PostgreSQL se o usuário possui `role = 'STOCK_APPROVER'`, `can_approve_writeoff = true` ou a permissão `inventory.approve_writeoff` (sem revogação explícita) e se o valor financeiro da baixa respeita `max_writeoff_value`.
+  - `public.apply_stock_movement` recusa qualquer baixa direta (`LOSS` ou `ADJUSTMENT` negativo) se nem o operador nem o `approved_by` informado forem aprovadores válidos pela função `can_user_approve_writeoff`.
+  - Operadores sem alçada de aprovação registram solicitações em `public.stock_writeoff_requests` (`status = 'PENDING'`), que só podem ser aprovadas ou rejeitadas via RPC `public.review_stock_writeoff_request` por um aprovador autorizado.
+- **Transferência de Estoque para Filiais Sem Venda (`public.execute_stock_transfer_to_branch`)**:
+  - Restrita a `is_global_admin()`, `STORE_ADMIN`, `MANAGER`, `STOCK_APPROVER` ou portador de `inventory.transfer_branch` na loja de origem, exigindo vínculo válido entre Matriz e Filial (`parent_store_id` / mesma rede).
 
 ## Estoque
 

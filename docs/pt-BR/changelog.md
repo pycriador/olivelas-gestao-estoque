@@ -5,12 +5,35 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-10-29
 language: pt-BR
 classification: Confirmed
 ---
 
 # Changelog da documentação
+
+## 2026-10-29
+
+- **Cadastro de Funcionários, Papéis Granulares, Aprovador de Baixa de Estoque (`STOCK_APPROVER`) e Remessa de Estoque para Filiais Sem Venda** (`supabase/migrations/20261030000023_staff_roles_approvers_and_branches.sql`, `TeamPage.tsx`, `GlobalAdminDashboardPage.tsx`, `StoresPage.tsx`, `InventoryPage.tsx`, `EmployeeRolePermissionsModal.tsx`, `StoreCustomRolesModal.tsx`, `StockBranchTransferModal.tsx`, `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`):
+  - **Gestão Completa de Funcionários e Papéis Customizados (`/team` e `/global-admin?tab=users`)**:
+    - `STORE_ADMIN` e `GLOBAL_ADMIN` podem cadastrar/editar funcionários via RPC `public.upsert_store_employee`, definindo matrícula (`employee_code`), cargo (`job_title`), papel base (`STORE_ADMIN`, `STOCK_APPROVER`, `MANAGER`, `SELLER`, `CASHIER`, `INVENTORY`, `FINANCE`, `VIEWER`), papel customizado da loja (`public.store_custom_roles`) e matriz de permissões granulares individuais (`granted_permissions` e `revoked_permissions`) para todos os recursos do sistema.
+  - **Fluxo Exclusivo de Aprovador de Baixa de Estoque (`STOCK_APPROVER` / `inventory.approve_writeoff`)**:
+    - Função `public.can_user_approve_writeoff(p_store_id, p_user_id, p_estimated_value)` valida se o usuário possui alçada explícita de aprovação de baixa e se o valor financeiro está dentro do limite `max_writeoff_value`.
+    - `public.apply_stock_movement` endurecida para bloquear qualquer baixa direta (`LOSS` / `ADJUSTMENT`) cujo operador ou aprovador (`approved_by`) não possua alçada válida.
+    - Fila de solicitações de baixa (`public.stock_writeoff_requests`) e RPC `public.review_stock_writeoff_request`: operadores sem alçada enviam solicitações pendentes (`PENDING`), e somente aprovadores autorizados podem aprovar (efetuando a baixa atômica do lote) ou rejeitar com justificativa auditada.
+  - **Cadastro de Filiais e Transferência de Estoque Sem Venda (`/stores` e `/inventory`)**:
+    - Suporte a vínculo de unidades como Filial (`is_branch = true`, `parent_store_id`, `branch_code`, `manager_name`) em `public.stores`.
+    - Tabelas `public.stock_transfers` e `public.stock_transfer_items` + RPC atômica `public.execute_stock_transfer_to_branch`: transfere lotes da Matriz para a Filial (`TRANSFER_OUT` -> `TRANSFER_IN`) sem necessidade de venda, sincronizando categoria, produto mestre e lote com validade na filial para venda imediata no PDV da filial.
+
+- **Planos Comerciais SaaS, Grupos de Permissões em Tela com Grafo de Dependências e Controle Financeiro de Assinaturas** (`supabase/migrations/20261029000022_saas_permission_groups_and_billing.sql`, `GlobalSaasBillingPanel.tsx`, `SubscriptionGuardModal.tsx`, `featureDependencies.ts`, `saasBillingService.ts`, `usePermissions.ts`, `ProtectedRoute.tsx`, `AppLayout.tsx`):
+  - **Motor de Dependências entre Telas (`featureDependencies.ts`)**:
+    - Ao desmarcar um módulo para um usuário ou plano (mesmo que seja `STORE_ADMIN`), o sistema exibe alertas em tempo real sobre impactos funcionais em outros módulos (ex.: desativar `sales_pos` impacta `orders_management`; desativar `inventory_control` impacta `batches_expiration` e `purchases_suppliers`).
+  - **Grupos de Perfil com Precificação Comercial e Cobrança (`saas_permission_groups`, `user_subscriptions`, `subscription_payments`)**:
+    - Criação e edição de pacotes comerciais com valores mensais/anuais (ex.: *Catálogo WhatsApp*, *Controle de Estoque + Validades*, *PDV & Frente de Caixa*, *ERP Enterprise Completo*), atribuição direta a usuários com módulos customizados, bloqueio por inadimplência e histórico auditado de pagamentos.
+
+- **Integrador de APIs Estilo Postman & Vinculação com Serviços Internos (`/integrations`)** (`supabase/migrations/20261028000021_api_integrator_studio.sql`, `ApiIntegratorPage.tsx`, `apiIntegratorService.ts`, `CustomersPage.tsx`, `CategoriesPage.tsx`, `ProductsPage.tsx`, `SuppliersPage.tsx`):
+  - **Request Builder Completo**: Configuração de método HTTP, URL, autenticação (`Bearer`, `Basic`, `API Key`, `Custom Header`), query params, headers, body JSON/Form, variáveis de ambiente encriptadas e JSONPath Data Explorer.
+  - **Service Binding Engine**: Mapeamento visual ` Drag/Select` de campos JSON externos para os serviços internos de **Clientes**, **Grupos/Categorias**, **Produtos**, **Fornecedores** e **Estoque**, com botão de sincronização direta nas telas operacionais e logs de execução (`api_sync_logs`).
 
 ## 2026-10-19
 

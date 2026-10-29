@@ -48,22 +48,22 @@ source:
 | --- | --- | --- |
 | `/dashboard` | `DashboardPage` | |
 | `/global-admin` | `GlobalAdminDashboardPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
-| `/stores` | `StoresPage` | |
-| `/products` | `ProductsPage` | Catálogo mestre com entrada em lote e galeria |
-| `/categories` | `CategoriesPage` | |
-| `/inventory` | `InventoryPage` | Saldos, valorização a custo/venda, baixa em lote, lotes e movimentações |
-| `/expiration` | `ExpirationPage` | |
-| `/sales` | `SalesPage` | PDV |
-| `/orders` | `OrdersPage` | |
-| `/customers` | `CustomersPage` | |
-| `/suppliers` | `SuppliersPage` | |
-| `/purchases` | `PurchasingPage` | Ordens de compra com cálculo de markup e margem |
-| `/reports` | `ReportsPage` | 9 relatórios analíticos com paginação por URL e exportação CSV |
+| `/stores` | `StoresPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/products` | `ProductsPage` | Catálogo mestre com entrada em lote e galeria; `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
+| `/categories` | `CategoriesPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
+| `/inventory` | `InventoryPage` | Saldos, valorização a custo/venda, baixa em lote, lotes e movimentações; `PermissionGate` (`moduleCode="MOD_INVENTORY"`) |
+| `/expiration` | `ExpirationPage` | `PermissionGate` (`moduleCode="MOD_EXPIRATION"`) |
+| `/sales` | `SalesPage` | PDV; `PermissionGate` (`moduleCode="MOD_POS_SALES"`) |
+| `/orders` | `OrdersPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
+| `/customers` | `CustomersPage` | `PermissionGate` (`moduleCode="MOD_CUSTOMERS"`) |
+| `/suppliers` | `SuppliersPage` | `PermissionGate` (`moduleCode="MOD_SUPPLIERS"`) |
+| `/purchases` | `PurchasingPage` | Ordens de compra com cálculo de markup e margem; `PermissionGate` (`moduleCode="MOD_PURCHASING"`) |
+| `/reports` | `ReportsPage` | 9 relatórios analíticos com paginação por URL e exportação CSV; `PermissionGate` (`moduleCode="MOD_REPORTS"`) |
 | `/notifications` | `NotificationsPage` | |
-| `/audit` | `AuditLogsPage` | |
-| `/team` | `TeamPage` | |
-| `/integrations` | `ApiIntegrationsPage` | API Studio & Conector de Serviços estilo Postman (De → Para, Dry-Run, Upsert e cURL) |
-| `/settings` | `SettingsPage` | |
+| `/audit` | `AuditLogsPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/team` | `TeamPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/integrations` | `ApiIntegrationsPage` | API Studio & Conector de Serviços estilo Postman (De → Para, Dry-Run, Upsert e cURL); `PermissionGate` (`moduleCode="MOD_API_INTEGRATIONS"`) |
+| `/settings` | `SettingsPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `*` | `NotFoundPage` | fora dos layouts acima |
 
 ## Navegação do `AppLayout`
@@ -91,10 +91,12 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | `DashboardPage` | cards de métrica (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) + lista de pedidos recentes |
 | `SalesPage` | PDV: `grid-cols-1 lg:grid-cols-12` (catálogo 8 com miniaturas de `product_images` / carrinho 4 em `lg`) |
 | `ProductsPage` | catálogo mestre: tabela `hidden md:block` + lista `md:hidden` com miniaturas, seleção múltipla e `BulkStockEntryModal` |
-| `InventoryPage` | KPI de valorização a custo/venda + abas de saldos (com miniaturas de produtos), lotes, movimentações, centros de custo, motivos de perda e `BulkStockWriteoffModal` |
+| `InventoryPage` | KPI de valorização a custo/venda + abas de Saldos (com miniaturas de produtos), Movimentações, **Aprovação de Baixas** (`stock_writeoff_requests`) e **Remessas p/ Filiais** (`stock_transfers` sem venda), além de `StockWriteoffModal`, `BulkStockWriteoffModal` e `StockBranchTransferModal` |
+| `StoresPage` | Gestão de Lojas & Filiais: filtros Todas / Matrizes / Filiais, KPIs de unidades e remessas, cadastro de Filial vinculada à Matriz (`is_branch`, `branch_code`, `parent_store_id`, `manager_name`) e botão de envio de estoque para filial sem venda |
+| `TeamPage` | Gestão de Funcionários, Aprovadores de Baixa & Papéis: KPIs de equipe e aprovadores (`STOCK_APPROVER` / `can_approve_writeoff`), filtros por papel e alçada de baixa, `EmployeeRolePermissionsModal` (47 permissões granulares em 8 grupos) e `StoreCustomRolesModal` (`store_custom_roles`) |
 | `ExpirationPage` | KPIs de validade (Vencidos, `<= 7d`, `<= 30d`, No Prazo) + listagem de lotes com miniaturas de produtos e justificativas (`batch_dispositions`) |
 | `ReportsPage` | menu segmentado com 9 abas analíticas, KPI summary, barra contextual de filtros por categoria/status/classe/urgência/segmento, busca instantânea, sincronização de URL e exportação CSV |
-| `GlobalAdminDashboardPage` | métricas globais + abas de Lojas, Usuários, `GlobalDbExplorerPanel` (CRUD dinâmico), `GlobalBackupPanel` (Dumps SQL/ZIP/JSON) e `GlobalApiKeyHbacPanel` (Gestor de Chaves HBAC) |
+| `GlobalAdminDashboardPage` | métricas globais + abas de Lojas, Usuários (com colunas de Grupo/Telas Liberadas, Valor & Assinatura e modais de Permissões & Telas, Pagamentos e Catálogo de Grupos & Valores), `GlobalDbExplorerPanel` (CRUD dinâmico), `GlobalBackupPanel` (Dumps SQL/ZIP/JSON) e `GlobalApiKeyHbacPanel` (Gestor de Chaves HBAC) |
 | `ApiIntegrationsPage` | API Studio estilo Postman (`grid-cols-1 lg:grid-cols-12`): Request Builder HTTP, Importar/Exportar cURL, Templates Prontos, Mapeador Visual De → Para com Auto-Map, Simulação Dry-Run e Sincronização em lote com Clientes, Categorias, Produtos, Fornecedores e Estoque |
 | `PurchasingPage` | ordens de compra com cálculo de custo unitário, markup, preço de venda sugerido e lucro previsto |
 | Maioria cadastros | `ResponsiveTable` e/ou tabela + `Modal` CRUD; rodapé de modal `flex-col-reverse sm:flex-row` |
@@ -116,8 +118,9 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 
 | Pasta | Arquivos |
 | --- | --- |
-| `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx` |
-| `inventory/` | `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`, `StockImportModal.tsx` |
+| `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx`, `UserPermissionsAndPricingModal.tsx`, `UserBillingHistoryModal.tsx`, `PermissionGroupsManagerModal.tsx` |
+| `inventory/` | `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`, `StockBranchTransferModal.tsx`, `StockImportModal.tsx` |
+| `team/` | `EmployeeRolePermissionsModal.tsx`, `StoreCustomRolesModal.tsx` |
 | `products/` | `ProductGalleryModal.tsx`, `BulkStockEntryModal.tsx` |
 | `sales/` | `CustomerCombobox.tsx` |
 | `settings/` | `StoreThemeSelector.tsx` |
@@ -128,7 +131,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | --- | --- |
 | `useAuth` | wrapper do `authStore` |
 | `useTenant` | `storeId`, `storeName`, `storeSlug`, `role`, `setActiveStore` |
-| `usePermissions` | mapa local `ROLE_PERMISSIONS_MAP` + flags `canManageStore`, `canManageInventory`, `canSell`, `canViewReports` |
+| `usePermissions` | resolução híbrida das 47 permissões granulares (`src/constants/granularPermissions.ts`) combinando papel base (`UserRole`, incluindo `STOCK_APPROVER`), papel customizado da loja (`store_custom_roles`), `granted_permissions`, `revoked_permissions` e `can_approve_writeoff` + sobreposição dinâmica de `UserPermissionProfile` (`hasModuleAccess`, `hasRouteAccess`, `enforceOverStoreAdmin`) + flags `canApproveWriteoff`, `canRequestWriteoff`, `canTransferBranch`, `canManageBranches`, `canManageTeam`, `canManageStore`, `canManageInventory`, `canSell`, `canViewReports` |
 | `useRealtimeSubscriptions` | canais `stock_balances`, `orders`, `notifications` filtrados por `store_id` |
 | `useTablePagination` | `page`, `pageSize`, `search`, `sortBy`, `sortOrder` e filtros extras (`tab`, `category`, `status`) sincronizados na **query string da URL** |
 | `useI18n` | locale persistido `olivelas_preferred_locale` |
@@ -150,22 +153,23 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | Módulo | Métodos principais |
 | --- | --- |
 | `authService` | `getCurrentSession`, `getCurrentUser`, `getUserStores`, `signInWithEmail`, `signUpWithEmail`, `signInWithGoogle`, `resetPasswordForEmail`, `updatePassword`, `signOut` |
-| `storeService` | `getStoreBySlug`, `getStoreById`, `listAllStores`, `listStores`, `createStore`, `updateStore`, `softDeleteStore` |
+| `storeService` | `getStoreBySlug`, `getStoreById`, `listAllStores`, `listStores`, `listBranches`, `listTransferDestinationStores`, `createStore`, `updateStore`, `softDeleteStore` |
 | `productService` | `listProducts`, `listProductsForPOS`, `listPublicCatalogProducts`, `getProductById`, `createProduct`, `updateProduct`, `softDeleteProduct`, `listCategories`, `createCategory`, `importProductsBulk` |
 | `categoryService` | `listCategories`, `createCategory`, `updateCategory`, `deleteCategory` |
 | `productImageService` | listagem, upload biblioteca/produto, attach, primary, reorder, remove |
 | `storageService` | `uploadProductImage`, `deleteProductImage`, `uploadStoreLogo` |
-| `inventoryService` | saldos, valorização financeira, movimentos, lotes, `applyMovement` (RPC), centros de custo, motivos de perda, import, disposições de lote, baixa em lote (`writeoffBulkStock`), remoção de estoque zerado |
+| `inventoryService` | saldos, valorização financeira, movimentos, lotes, `applyMovement` (RPC com validação estrita de aprovador de baixa), solicitações de baixa (`listWriteoffRequests`, `createWriteoffRequest`, `reviewWriteoffRequest`), remessas para filiais sem venda (`listStockTransfers`, `executeStockTransferToBranch`), centros de custo, motivos de perda, import, disposições de lote, baixa em lote (`writeoffBulkStock`), remoção de estoque zerado |
 | `orderService` | `listOrders`, `createOrder` (RPC com resolução automática de `Cliente Genérico` e substituição resiliente em edições), `cancelOrder` (RPC `restore_sale_stock`), `updateOrderStatus` |
 | `customerService` | list/get/create/update/`softDeleteCustomer`, `getOrCreateGenericCustomer` |
 | `supplierService` | list/create/update/`softDeleteSupplier` |
 | `purchasingService` | list/create/`receivePurchaseOrder` (RPC), cálculo de lucratividade e sincronização de custos/preços com catálogo |
-| `userService` | usuários plataforma, membros da loja, convite, papéis, delete via RPC |
+| `userService` | usuários plataforma, membros da loja (`listStoreMembers`, `listStoreWriteoffApprovers`), cadastro seguro de funcionários (`upsertStoreEmployee` via RPC `upsert_store_employee`), papéis customizados (`listStoreCustomRoles`, `upsertStoreCustomRole`, `deleteStoreCustomRole`), delete via RPC |
 | `globalAdminService` | `listEntities`, `hardDelete` (RPC `global_admin_delete`) |
 | `dbManagerService` | `listTableData`, `createRow`, `updateRow`, `deleteRow` para CRUD dinâmico de 12 tabelas no painel admin |
 | `backupService` | `generateSqlDump`, `generateImagesZip`, `generateJsonBackup` (multi-loja e loja individual) |
 | `apiKeyService` | `listApiKeys`, `createApiKey`, `toggleApiKeyStatus`, `revokeApiKey`, validação e documentação interativa de escopos HBAC |
 | `apiIntegrationService` | `listIntegrations`, `saveIntegration`, `deleteIntegration`, `listLogs`, `executeHttpRequest`, `extractRecordsArray`, `simulateSync`, `executeSync`, `parseCurlCommand`, `generateCurlCommand`, `detectJsonArrays`, `autoMapFields` |
+| `permissionGroupService` | `listModules`, `updateModulePrice`, `listGroups`, `saveGroup`, `deleteGroup`, `listAllUserProfiles`, `getUserProfile`, `saveUserProfile`, `listUserPayments`, `createPayment`, `markPaymentAsPaid`, `updatePaymentStatus`, `listUserAuditLogs` |
 | `notificationService` | list, mark read, `generateStockAlerts` (RPC) |
 | `auditService` | `listAuditLogs`, `logAction` |
 | `reportService` | `getRetailSummaryKPIs`, `getValuationReport`, `getAbcCurveReport`, `getConsumptionDemandReport`, `getCustomerTicketReport`, `getCapitalInvestmentReport`, `getPurchasingReport`, `getLossesReport`, `getStockoutsReport`, `getSalesPerformanceReport`, `getAvailableReportsList`, `getGlobalAdminMetrics` |
@@ -177,7 +181,7 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 ## Tipos
 
 Reexport em `src/types/index.ts`: `database`, `auth`, `store`, `product`, `inventory`, `order`.
-Módulos dedicados: `report.types.ts`, `apiKey.types.ts`, `apiIntegration.types.ts`, `backup.types.ts`, `dbManager.types.ts`, `customer.types.ts`, `supplier.types.ts`, `purchasing.types.ts`, `user.types.ts`.
+Módulos dedicados: `report.types.ts`, `apiKey.types.ts`, `apiIntegration.types.ts`, `permissionGroup.types.ts`, `backup.types.ts`, `dbManager.types.ts`, `customer.types.ts`, `supplier.types.ts`, `purchasing.types.ts`, `user.types.ts`.
 
 ## i18n
 

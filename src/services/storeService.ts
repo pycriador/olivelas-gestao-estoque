@@ -5,6 +5,8 @@ import type { Store } from '@/types/store.types'
 export interface StoreListParams {
   search?: string
   status?: string
+  parentStoreId?: string
+  onlyBranches?: boolean
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   page?: number
@@ -51,10 +53,29 @@ export const storeService = {
     return (data || []) as Store[]
   },
 
+  /**
+   * List branches linked to a headquarters store or all active destination branches/stores
+   */
+  async listTransferDestinationStores(sourceStoreId: string): Promise<Store[]> {
+    const { data, error } = await supabase
+      .from('stores')
+      .select('*')
+      .is('deleted_at', null)
+      .eq('is_active', true)
+      .neq('id', sourceStoreId)
+      .order('is_branch', { ascending: false })
+      .order('name', { ascending: true })
+
+    if (error) throw error
+    return (data || []) as Store[]
+  },
+
   async listStores(params: StoreListParams = {}): Promise<{ data: Store[]; total: number }> {
     const {
       search,
       status,
+      parentStoreId,
+      onlyBranches,
       sortBy = 'name',
       sortOrder = 'asc',
       page = 1,
@@ -67,7 +88,9 @@ export const storeService = {
       .is('deleted_at', null)
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,slug.ilike.%${search}%,document.ilike.%${search}%`)
+      query = query.or(
+        `name.ilike.%${search}%,slug.ilike.%${search}%,document.ilike.%${search}%,branch_code.ilike.%${search}%`
+      )
     }
 
     if (status === 'ACTIVE') {
@@ -76,7 +99,17 @@ export const storeService = {
       query = query.eq('is_active', false)
     }
 
-    const orderCol = ['name', 'slug', 'document', 'is_active', 'created_at'].includes(sortBy)
+    if (parentStoreId) {
+      query = query.eq('parent_store_id', parentStoreId)
+    }
+
+    if (onlyBranches) {
+      query = query.eq('is_branch', true)
+    }
+
+    const orderCol = ['name', 'slug', 'document', 'is_active', 'created_at', 'branch_code'].includes(
+      sortBy
+    )
       ? sortBy
       : 'name'
 
@@ -103,11 +136,21 @@ export const storeService = {
     phone?: string
     whatsapp?: string
     description?: string
+    parent_store_id?: string | null
+    branch_code?: string | null
+    is_branch?: boolean
+    manager_name?: string | null
+    address_street?: string | null
+    address_number?: string | null
+    address_neighborhood?: string | null
+    address_city?: string | null
+    address_state?: string | null
+    address_zip?: string | null
   }): Promise<Store> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Usuário não autenticado')
 
-    // 1. Insert store
+    // 1. Insert store / branch
     const { data: store, error: storeError } = await supabase
       .from('stores')
       .insert({
@@ -118,6 +161,16 @@ export const storeService = {
         phone: storeData.phone || null,
         whatsapp: storeData.whatsapp || null,
         description: storeData.description || null,
+        parent_store_id: storeData.parent_store_id || null,
+        branch_code: storeData.branch_code?.trim().toUpperCase() || null,
+        is_branch: Boolean(storeData.is_branch || storeData.parent_store_id),
+        manager_name: storeData.manager_name?.trim() || null,
+        address_street: storeData.address_street || null,
+        address_number: storeData.address_number || null,
+        address_neighborhood: storeData.address_neighborhood || null,
+        address_city: storeData.address_city || null,
+        address_state: storeData.address_state || null,
+        address_zip: storeData.address_zip || null,
         is_active: true,
       })
       .select()
@@ -125,13 +178,14 @@ export const storeService = {
 
     if (storeError) throw storeError
 
-    // 2. Associate current user as STORE_ADMIN in store_users
+    // 2. Associate current user as STORE_ADMIN in store_users (with write-off approval enabled)
     const { error: userRelError } = await supabase
       .from('store_users')
       .insert({
         store_id: store.id,
         user_id: user.id,
         role: 'STORE_ADMIN',
+        can_approve_writeoff: true,
         is_active: true,
       })
 
@@ -141,10 +195,16 @@ export const storeService = {
 
     auditService.logAction({
       storeId: store.id,
-      action: 'STORE_CREATED',
+      action: store.is_branch ? 'BRANCH_CREATED' : 'STORE_CREATED',
       entity: 'stores',
       entityId: store.id,
-      afterData: { name: store.name, slug: store.slug },
+      afterData: {
+        name: store.name,
+        slug: store.slug,
+        isBranch: store.is_branch,
+        parentStoreId: store.parent_store_id,
+        branchCode: store.branch_code,
+      },
     })
 
     return store as Store

@@ -4,8 +4,11 @@ import { toast } from 'sonner'
 import {
   AlertTriangle,
   BadgeCheck,
+  Clock,
+  KeyRound,
   Package,
   ShieldAlert,
+  ShieldCheck,
   Sparkles,
   Trash2,
   UserCheck,
@@ -14,10 +17,14 @@ import { inventoryService } from '@/services/inventoryService'
 import { userService } from '@/services/userService'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
+import { isMemberStockApprover, ROLE_METADATA } from '@/constants/granularPermissions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { parseApiError } from '@/utils/errorHandler'
+import { formatCurrency } from '@/utils/currency'
+import { cn } from '@/utils/cn'
 import type { StockBalance } from '@/types/inventory.types'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -57,6 +64,7 @@ export function BulkStockWriteoffModal({
 }: BulkStockWriteoffModalProps) {
   const { storeId } = useTenant()
   const { user } = useAuth()
+  const { canApproveWriteoff } = usePermissions()
   const queryClient = useQueryClient()
 
   const [items, setItems] = React.useState<BulkStockWriteoffItem[]>([])
@@ -65,6 +73,8 @@ export function BulkStockWriteoffModal({
   const [reasonDetail, setReasonDetail] = React.useState('')
   const [costCenterId, setCostCenterId] = React.useState('')
   const [approvedBy, setApprovedBy] = React.useState('')
+  const [approverPin, setApproverPin] = React.useState('')
+  const [executionMode, setExecutionMode] = React.useState<'IMMEDIATE' | 'REQUEST'>('IMMEDIATE')
   const [notes, setNotes] = React.useState('')
   const [defaultQuantity, setDefaultQuantity] = React.useState<number>(1)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -80,11 +90,16 @@ export function BulkStockWriteoffModal({
           productSku: b.product_sku || '',
           currentStock: b.available_quantity,
           quantity: b.available_quantity > 0 ? b.available_quantity : 1,
+          unitCost: b.cost_price ?? 0,
         }))
       )
+      setExecutionMode(canApproveWriteoff ? 'IMMEDIATE' : 'REQUEST')
+      if (canApproveWriteoff && user?.id) {
+        setApprovedBy(user.id)
+      }
       setErrorMsg(null)
     }
-  }, [isOpen, selectedBalances])
+  }, [isOpen, selectedBalances, canApproveWriteoff, user?.id])
 
   const { data: costCenters = [] } = useQuery({
     queryKey: ['cost-centers', storeId],
@@ -105,7 +120,19 @@ export function BulkStockWriteoffModal({
   })
 
   const selectedReason = lossReasons.find((r) => r.code === reasonCode) || null
-  const approvers = members.filter((m) => m.isActive && m.userId !== user?.id)
+  // SOMENTE membros que possuem permissão/papel de Aprovador de Baixa de Estoque
+  const approvers = React.useMemo(
+    () => members.filter((m) => m.isActive && isMemberStockApprover(m)),
+    [members]
+  )
+
+  const selectedApproverMember = approvers.find((m) => m.userId === approvedBy) || null
+  const requiresPinFromSelectedApprover = Boolean(
+    executionMode === 'IMMEDIATE' &&
+      selectedApproverMember?.approvalPin &&
+      selectedApproverMember.userId !== user?.id
+  )
+
   const operatorRegistration =
     members.find((m) => m.userId === user?.id)?.employeeRegistration || null
 
@@ -113,7 +140,7 @@ export function BulkStockWriteoffModal({
     costCenters.find((c) => c.code === selectedReason?.default_cost_center_code)?.id || ''
   const effectiveCostCenterId = costCenterId || suggestedCostCenterId
 
-  const requiresApproval = selectedReason?.requires_approval ?? false
+  const requiresApproval = selectedReason?.requires_approval ?? true
   const isTargetQuantity = movementType === 'ADJUSTMENT'
 
   // Quick Action: Baixar todo o saldo de todos os itens
@@ -151,6 +178,31 @@ export function BulkStockWriteoffModal({
 
   const writeoffMutation = useMutation({
     mutationFn: async () => {
+      if (executionMode === 'REQUEST') {
+        let count = 0
+        for (const it of items) {
+          if (!it.quantity || it.quantity <= 0) continue
+          await inventoryService.createWriteoffRequest(storeId, {
+            productId: it.productId,
+            movementType,
+            quantity: it.quantity,
+            unitCost: it.unitCost ?? null,
+            reasonCode,
+            reasonDetail: reasonDetail || null,
+            costCenterId: effectiveCostCenterId,
+            notes: notes || null,
+          })
+          count++
+        }
+        return { mode: 'REQUEST' as const, successCount: count, errorCount: 0 }
+      }
+
+      if (requiresPinFromSelectedApprover) {
+        if (approverPin.trim() !== selectedApproverMember?.approvalPin) {
+          throw new Error('PIN do Aprovador de Baixa inválido.')
+        }
+      }
+
       const payload = items.map((it) => ({
         productId: it.productId,
         quantity: it.quantity,
@@ -159,29 +211,37 @@ export function BulkStockWriteoffModal({
         unitCost: it.unitCost || null,
       }))
 
-      return inventoryService.writeoffBulkStock(storeId, payload, {
+      const res = await inventoryService.writeoffBulkStock(storeId, payload, {
         movementType,
         reasonCode,
         reasonDetail: reasonDetail || null,
         costCenterId: effectiveCostCenterId,
-        approvedBy: approvedBy || null,
+        approvedBy: approvedBy || (canApproveWriteoff ? user?.id || null : null),
         notes: notes || null,
       })
+      return { mode: 'IMMEDIATE' as const, ...res }
     },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-movements', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-batches', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['writeoff-requests', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
 
-      if (result.successCount > 0) {
+      if (result.mode === 'REQUEST') {
         toast.success(
-          `${result.successCount} produto(s) tiveram a baixa registrada com sucesso!`
+          `${result.successCount} solicitação(ões) enviada(s) para aprovação do Aprovador de Baixa!`
         )
-      }
-      if (result.errorCount > 0) {
-        toast.error(`${result.errorCount} falha(s) ao registrar baixa.`)
+      } else {
+        if (result.successCount > 0) {
+          toast.success(
+            `${result.successCount} produto(s) tiveram a baixa autorizada e registrada!`
+          )
+        }
+        if (result.errorCount > 0) {
+          toast.error(`${result.errorCount} falha(s) ao registrar baixa.`)
+        }
       }
 
       onSuccess?.()
@@ -199,7 +259,8 @@ export function BulkStockWriteoffModal({
     items.length > 0 &&
     Boolean(reasonCode) &&
     Boolean(effectiveCostCenterId) &&
-    (!requiresApproval || Boolean(approvedBy)) &&
+    (executionMode === 'REQUEST' || !requiresApproval || Boolean(approvedBy)) &&
+    (!requiresPinFromSelectedApprover || approverPin.trim().length > 0) &&
     !hasInvalidQty
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -216,8 +277,8 @@ export function BulkStockWriteoffModal({
       setErrorMsg('Selecione o centro de custo de perda operacional.')
       return
     }
-    if (requiresApproval && !approvedBy) {
-      setErrorMsg('Este motivo exige a seleção de um aprovador.')
+    if (executionMode === 'IMMEDIATE' && requiresApproval && !approvedBy) {
+      setErrorMsg('Selecione um Aprovador de Baixa de Estoque ou envie para a fila de aprovação.')
       return
     }
     if (hasInvalidQty) {
@@ -300,7 +361,7 @@ export function BulkStockWriteoffModal({
               </span>
               {requiresApproval && (
                 <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                  · exige aprovação de um segundo responsável
+                  · exige autorização de um Aprovador de Baixa de Estoque
                 </span>
               )}
             </div>
@@ -342,10 +403,41 @@ export function BulkStockWriteoffModal({
 
         {/* 2. Responsáveis (Operador e Aprovador) */}
         <section className="space-y-3 pt-3 border-t border-border">
-          <SectionTitle
-            icon={<UserCheck className="h-3.5 w-3.5 text-primary" />}
-            text="2. Responsáveis pela Operação"
-          />
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <SectionTitle
+              icon={<UserCheck className="h-3.5 w-3.5 text-primary" />}
+              text="2. Autorização do Aprovador de Baixa"
+            />
+
+            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5">
+              <button
+                type="button"
+                onClick={() => setExecutionMode('IMMEDIATE')}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1',
+                  executionMode === 'IMMEDIATE'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                Autorização Imediata
+              </button>
+              <button
+                type="button"
+                onClick={() => setExecutionMode('REQUEST')}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1',
+                  executionMode === 'REQUEST'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Clock className="h-3 w-3 text-amber-500" />
+                Enviar p/ Fila de Aprovação
+              </button>
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -362,30 +454,66 @@ export function BulkStockWriteoffModal({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
-                Aprovador {requiresApproval ? '*' : '(opcional)'}
-              </label>
-              <select
-                value={approvedBy}
-                onChange={(e) => setApprovedBy(e.target.value)}
-                required={requiresApproval}
-                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">
-                  {approvers.length === 0
-                    ? 'Nenhum aprovador disponível'
-                    : 'Selecione o aprovador...'}
-                </option>
-                {approvers.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.fullName || m.email}
-                    {m.employeeRegistration ? ` (${m.employeeRegistration})` : ''}
+            {executionMode === 'IMMEDIATE' ? (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Aprovador de Baixa {requiresApproval ? '*' : '(opcional)'}</span>
+                  <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                    Somente Aprovadores ({approvers.length})
+                  </span>
+                </label>
+                <select
+                  value={approvedBy}
+                  onChange={(e) => {
+                    setApprovedBy(e.target.value)
+                    setApproverPin('')
+                  }}
+                  required={requiresApproval}
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">
+                    {approvers.length === 0
+                      ? 'Nenhum Aprovador de Baixa disponível'
+                      : 'Selecione o Aprovador de Baixa...'}
                   </option>
-                ))}
-              </select>
-            </div>
+                  {approvers.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.fullName || m.email} — {m.customRoleName || ROLE_METADATA[m.role]?.label || m.role}
+                      {m.userId === user?.id ? ' (Você)' : ''}
+                      {m.maxWriteoffValue ? ` [Alçada: ${formatCurrency(m.maxWriteoffValue)}]` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Fila de Aprovação</label>
+                <div className="h-10 px-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <span className="truncate font-medium">
+                    Aguardará autorização de um Aprovador de Baixa.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {requiresPinFromSelectedApprover && (
+            <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5 text-amber-500" />
+                PIN de Autorização de {selectedApproverMember?.fullName || selectedApproverMember?.email} *
+              </label>
+              <Input
+                type="password"
+                value={approverPin}
+                onChange={(e) => setApproverPin(e.target.value)}
+                placeholder="Digite o PIN do Aprovador..."
+                className="h-9 text-xs font-mono max-w-xs"
+                required
+              />
+            </div>
+          )}
         </section>
 
         {/* 3. Ações Rápidas e Itens Selecionados */}
@@ -557,12 +685,20 @@ export function BulkStockWriteoffModal({
           </Button>
           <Button
             type="submit"
-            variant="destructive"
+            variant={executionMode === 'REQUEST' ? 'default' : 'destructive'}
             className="w-full sm:w-auto h-10 sm:h-9 font-semibold"
             disabled={!canSubmit}
             isLoading={writeoffMutation.isPending}
           >
-            <ShieldAlert className="h-4 w-4 mr-1.5" /> Confirmar Baixa em Lote ({items.length} itens)
+            {executionMode === 'REQUEST' ? (
+              <>
+                <Clock className="h-4 w-4 mr-1.5" /> Solicitar Aprovação ({items.length} itens)
+              </>
+            ) : (
+              <>
+                <ShieldAlert className="h-4 w-4 mr-1.5" /> Autorizar Baixa em Lote ({items.length} itens)
+              </>
+            )}
           </Button>
         </div>
       </form>

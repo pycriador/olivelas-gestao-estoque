@@ -1,14 +1,18 @@
 import * as React from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import {
   AlertTriangle,
   BadgeCheck,
   Calendar,
+  Clock,
   Hash,
+  KeyRound,
   Loader2,
   Package,
   Search,
   ShieldAlert,
+  ShieldCheck,
   Trash2,
   UserCheck,
 } from 'lucide-react'
@@ -17,11 +21,14 @@ import { productService } from '@/services/productService'
 import { userService } from '@/services/userService'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
+import { isMemberStockApprover, ROLE_METADATA } from '@/constants/granularPermissions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { parseApiError } from '@/utils/errorHandler'
 import { formatDate } from '@/utils/dates'
+import { formatCurrency } from '@/utils/currency'
 import { cn } from '@/utils/cn'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -45,6 +52,7 @@ export interface StockWriteoffModalProps {
 export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoffModalProps) {
   const { storeId } = useTenant()
   const { user } = useAuth()
+  const { canApproveWriteoff } = usePermissions()
   const queryClient = useQueryClient()
 
   const [skuSearch, setSkuSearch] = React.useState('')
@@ -56,8 +64,19 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
   const [quantity, setQuantity] = React.useState<number>(1)
   const [costCenterId, setCostCenterId] = React.useState('')
   const [approvedBy, setApprovedBy] = React.useState('')
+  const [approverPin, setApproverPin] = React.useState('')
+  const [executionMode, setExecutionMode] = React.useState<'IMMEDIATE' | 'REQUEST'>('IMMEDIATE')
   const [notes, setNotes] = React.useState('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setExecutionMode(canApproveWriteoff ? 'IMMEDIATE' : 'REQUEST')
+      if (canApproveWriteoff && user?.id) {
+        setApprovedBy(user.id)
+      }
+    }
+  }, [isOpen, canApproveWriteoff, user?.id])
 
   // ---------------------------------------------------------------- dados
   const handleClose = React.useCallback(() => {
@@ -69,6 +88,7 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
     setQuantity(1)
     setCostCenterId('')
     setApprovedBy('')
+    setApproverPin('')
     setNotes('')
     setSkuSearch('')
     setErrorMsg(null)
@@ -122,7 +142,20 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
   const selectedProduct = products.find((p) => p.id === productIdValue) || null
   const selectedBatch = productBatches.find((b) => b.id === batchId) || null
   const selectedReason = lossReasons.find((r) => r.code === reasonCode) || null
-  const approvers = members.filter((m) => m.isActive && m.userId !== user?.id)
+
+  // SOMENTE quem é Aprovador de Baixa de Estoque pode autorizar a baixa
+  const approvers = React.useMemo(
+    () => members.filter((m) => m.isActive && isMemberStockApprover(m)),
+    [members]
+  )
+
+  const selectedApproverMember = approvers.find((m) => m.userId === approvedBy) || null
+  const requiresPinFromSelectedApprover = Boolean(
+    executionMode === 'IMMEDIATE' &&
+      selectedApproverMember?.approvalPin &&
+      selectedApproverMember.userId !== user?.id
+  )
+
   const operatorRegistration =
     members.find((m) => m.userId === user?.id)?.employeeRegistration || null
 
@@ -139,10 +172,39 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
   const isOverBalance = !isTargetQuantity && quantity > availableStock
   const isOverBatch = Boolean(selectedBatch) && !isTargetQuantity && quantity > maxBatchQty
 
+  const estimatedLossValue = quantity * (Number(selectedProduct?.cost_price) || 0)
+  const isOverApproverLimit = Boolean(
+    executionMode === 'IMMEDIATE' &&
+      selectedApproverMember?.maxWriteoffValue !== null &&
+      selectedApproverMember?.maxWriteoffValue !== undefined &&
+      estimatedLossValue > selectedApproverMember.maxWriteoffValue
+  )
+
   // ---------------------------------------------------------------- submit
   const writeoffMutation = useMutation({
-    mutationFn: () =>
-      inventoryService.applyMovement({
+    mutationFn: async () => {
+      if (executionMode === 'REQUEST') {
+        await inventoryService.createWriteoffRequest(storeId, {
+          productId: productIdValue,
+          batchId: batchId || null,
+          movementType,
+          quantity,
+          unitCost: Number(selectedProduct?.cost_price) || null,
+          reasonCode,
+          reasonDetail: reasonDetail || null,
+          costCenterId: effectiveCostCenterId,
+          notes: notes || null,
+        })
+        return 'REQUEST'
+      }
+
+      if (requiresPinFromSelectedApprover) {
+        if (approverPin.trim() !== selectedApproverMember?.approvalPin) {
+          throw new Error('PIN do Aprovador de Baixa inválido. Verifique com o responsável.')
+        }
+      }
+
+      await inventoryService.applyMovement({
         productId: productIdValue,
         movementType,
         quantity,
@@ -154,15 +216,25 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
         reasonDetail: reasonDetail || null,
         costCenterId: effectiveCostCenterId || null,
         notes: notes || null,
-        approvedBy: approvedBy || null,
-      }),
-    onSuccess: () => {
+        approvedBy: approvedBy || (canApproveWriteoff ? user?.id || null : null),
+      })
+      return 'IMMEDIATE'
+    },
+    onSuccess: (mode) => {
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-movements', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-batches', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['writeoff-requests', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })
-      onClose()
+      if (mode === 'REQUEST') {
+        toast.success(
+          'Solicitação enviada para a fila! Um Aprovador de Baixa de Estoque precisará autorizá-la.'
+        )
+      } else {
+        toast.success('Baixa de estoque autorizada e concluída com sucesso!')
+      }
+      handleClose()
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
@@ -171,7 +243,9 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
     Boolean(productIdValue) &&
     Boolean(reasonCode) &&
     Boolean(effectiveCostCenterId) &&
-    (!requiresApproval || Boolean(approvedBy)) &&
+    (executionMode === 'REQUEST' || !requiresApproval || Boolean(approvedBy)) &&
+    (!requiresPinFromSelectedApprover || approverPin.trim().length > 0) &&
+    !isOverApproverLimit &&
     quantity > 0 &&
     !isOverBalance &&
     !isOverBatch
@@ -188,7 +262,7 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
       isOpen={isOpen}
       onClose={handleClose}
       title="Baixa de Estoque"
-      description="Saída por perda ou ajuste de inventário com rastreabilidade"
+      description="Saída por perda ou ajuste de inventário — autorização exclusiva por Aprovador de Baixa"
       maxWidth="3xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4 pt-1">
@@ -216,7 +290,8 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
                     </span>
                     <span className="font-mono text-[10px] text-muted-foreground">
                       {selectedProduct.sku} · saldo {availableStock}{' '}
-                      {selectedProduct.unit || 'UN'}
+                      {selectedProduct.unit || 'UN'} · custo{' '}
+                      {formatCurrency(Number(selectedProduct.cost_price) || 0)}
                     </span>
                   </div>
                   <Button
@@ -354,8 +429,8 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
                 Lançamento registrado como <b className="text-foreground">{selectedReason.label}</b>
               </span>
               {requiresApproval && (
-                <span className="text-amber-600 dark:text-amber-400">
-                  · exige aprovação de um segundo responsável
+                <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                  · exige autorização exclusiva de um Aprovador de Baixa de Estoque
                 </span>
               )}
             </div>
@@ -397,7 +472,7 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
                   <span>
                     {isTargetQuantity
                       ? `Saldo atual: ${availableStock}`
-                      : `Disponível: ${availableStock} ${selectedProduct.unit || 'UN'}`}
+                      : `Disponível: ${availableStock} ${selectedProduct.unit || 'UN'} · Impacto: ${formatCurrency(estimatedLossValue)}`}
                   </span>
                   {!isTargetQuantity && availableStock > 0 && (
                     <button
@@ -450,14 +525,55 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
 
         {/* ------------------------------------------------ 4. Operador e aprovador */}
         <section className="space-y-3 pt-3 border-t border-border">
-          <SectionTitle
-            icon={<UserCheck className="h-3.5 w-3.5" />}
-            text="Operador e aprovador"
-          />
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <SectionTitle
+              icon={<UserCheck className="h-3.5 w-3.5" />}
+              text="Autorização do Aprovador de Baixa de Estoque"
+            />
+
+            {/* Modo: Autorização Imediata vs Solicitar na Fila */}
+            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5">
+              <button
+                type="button"
+                onClick={() => setExecutionMode('IMMEDIATE')}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1',
+                  executionMode === 'IMMEDIATE'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <ShieldCheck className="h-3 w-3 text-emerald-500" />
+                Autorização Imediata
+              </button>
+              <button
+                type="button"
+                onClick={() => setExecutionMode('REQUEST')}
+                className={cn(
+                  'px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all flex items-center gap-1',
+                  executionMode === 'REQUEST'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                <Clock className="h-3 w-3 text-amber-500" />
+                Enviar p/ Fila de Aprovação
+              </button>
+            </div>
+          </div>
+
+          {!canApproveWriteoff && (
+            <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 shrink-0" />
+              <span>
+                Seu perfil atual não possui permissão de <b>Aprovador de Baixa de Estoque</b>. Para dar baixa imediata, selecione um Aprovador habilitado abaixo ou envie a solicitação para a <b>Fila de Aprovação</b>.
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">Operador *</label>
+              <label className="text-xs font-semibold text-foreground">Operador Solicitante *</label>
               <div className="h-10 px-3 rounded-lg border border-input bg-muted/40 text-xs flex flex-col justify-center">
                 <span className="font-semibold text-foreground truncate">
                   {user?.fullName || user?.email || 'Usuário atual'}
@@ -466,42 +582,77 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
                   {operatorRegistration
                     ? `Matrícula ${operatorRegistration}`
                     : 'Sem matrícula cadastrada'}
+                  {canApproveWriteoff ? ' · Aprovador Habilitado' : ''}
                 </span>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                Registrado automaticamente a partir da sessão.
-              </p>
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-foreground">
-                Aprovador {requiresApproval ? '*' : '(opcional)'}
-              </label>
-              <select
-                value={approvedBy}
-                onChange={(e) => setApprovedBy(e.target.value)}
-                required={requiresApproval}
-                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">
-                  {approvers.length === 0
-                    ? 'Nenhum aprovador disponível'
-                    : 'Selecione o aprovador...'}
-                </option>
-                {approvers.map((m) => (
-                  <option key={m.userId} value={m.userId}>
-                    {m.fullName || m.email}
-                    {m.employeeRegistration ? ` (${m.employeeRegistration})` : ''}
+            {executionMode === 'IMMEDIATE' ? (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground flex items-center justify-between">
+                  <span>Aprovador de Baixa {requiresApproval ? '*' : '(opcional)'}</span>
+                  <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400">
+                    Somente Aprovadores habilitados ({approvers.length})
+                  </span>
+                </label>
+                <select
+                  value={approvedBy}
+                  onChange={(e) => {
+                    setApprovedBy(e.target.value)
+                    setApproverPin('')
+                  }}
+                  required={requiresApproval}
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">
+                    {approvers.length === 0
+                      ? 'Nenhum Aprovador de Baixa cadastrado na loja'
+                      : 'Selecione o Aprovador de Baixa...'}
                   </option>
-                ))}
-              </select>
-              {requiresApproval && !approvedBy && (
-                <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                  Aprovador obrigatório e não pode ser o próprio operador.
-                </p>
-              )}
-            </div>
+                  {approvers.map((m) => (
+                    <option key={m.userId} value={m.userId}>
+                      {m.fullName || m.email} — {m.customRoleName || ROLE_METADATA[m.role]?.label || m.role}
+                      {m.userId === user?.id ? ' (Você)' : ''}
+                      {m.maxWriteoffValue ? ` [Alçada: ${formatCurrency(m.maxWriteoffValue)}]` : ''}
+                    </option>
+                  ))}
+                </select>
+                {isOverApproverLimit && (
+                  <p className="text-[10px] text-danger font-semibold">
+                    O valor desta baixa ({formatCurrency(estimatedLossValue)}) excede a alçada máxima deste aprovador (
+                    {formatCurrency(selectedApproverMember?.maxWriteoffValue || 0)}).
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-foreground">Fluxo de Aprovação</label>
+                <div className="h-10 px-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                  <Clock className="h-4 w-4 shrink-0" />
+                  <span className="truncate font-medium">
+                    Ficará pendente na aba &ldquo;Aprovações de Baixa&rdquo; até um Aprovador autorizar.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
+
+          {requiresPinFromSelectedApprover && (
+            <div className="p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-1.5">
+              <label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                <KeyRound className="h-3.5 w-3.5 text-amber-500" />
+                PIN de Autorização de {selectedApproverMember?.fullName || selectedApproverMember?.email} *
+              </label>
+              <Input
+                type="password"
+                value={approverPin}
+                onChange={(e) => setApproverPin(e.target.value)}
+                placeholder="Digite o PIN do Aprovador para autorizar imediatamente..."
+                className="h-9 text-xs font-mono max-w-xs"
+                required
+              />
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">Observações</label>
@@ -525,12 +676,20 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
           </Button>
           <Button
             type="submit"
-            variant="destructive"
+            variant={executionMode === 'REQUEST' ? 'default' : 'destructive'}
             className="w-full sm:w-auto h-11 sm:h-10 font-semibold"
             isLoading={writeoffMutation.isPending}
             disabled={!canSubmit}
           >
-            <Trash2 className="h-4 w-4 mr-2" /> Confirmar baixa
+            {executionMode === 'REQUEST' ? (
+              <>
+                <Clock className="h-4 w-4 mr-2" /> Solicitar Aprovação de Baixa
+              </>
+            ) : (
+              <>
+                <Trash2 className="h-4 w-4 mr-2" /> Autorizar e Confirmar Baixa
+              </>
+            )}
           </Button>
         </div>
       </form>

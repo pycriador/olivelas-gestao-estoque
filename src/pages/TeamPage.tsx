@@ -1,12 +1,19 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 import { userService } from '@/services/userService'
 import { useTenant } from '@/hooks/useTenant'
 import { useTablePagination } from '@/hooks/useTablePagination'
+import {
+  isMemberStockApprover,
+  ROLE_METADATA,
+  resolveEmployeePermissions,
+} from '@/constants/granularPermissions'
+import { EmployeeRolePermissionsModal } from '@/components/team/EmployeeRolePermissionsModal'
+import { StoreCustomRolesModal } from '@/components/team/StoreCustomRolesModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
-import { Modal } from '@/components/ui/modal'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -19,48 +26,17 @@ import {
   Search,
   KeyRound,
   Trash2,
-  Edit2,
   Power,
-  UserPlus,
-  Send,
+  Shield,
+  ShieldCheck,
+  SlidersHorizontal,
+  Lock,
 } from 'lucide-react'
 import { formatDateTime } from '@/utils/dates'
+import { formatCurrency } from '@/utils/currency'
 import { parseApiError } from '@/utils/errorHandler'
+import { cn } from '@/utils/cn'
 import type { StoreMember } from '@/types/user.types'
-import type { UserRole } from '@/types/database.types'
-
-const ROLE_LABELS: Record<UserRole, { label: string; variant: 'default' | 'outline' | 'secondary' | 'success'; description: string }> = {
-  STORE_ADMIN: {
-    label: 'Administrador',
-    variant: 'default',
-    description: 'Acesso total a produtos, vendas, relatórios, configurações e equipe.',
-  },
-  FINANCE: {
-    label: 'Gerente / Financeiro',
-    variant: 'success',
-    description: 'Acesso a vendas, compras, relatórios, contas e gestão de estoque.',
-  },
-  SELLER: {
-    label: 'Vendedor / Caixa',
-    variant: 'secondary',
-    description: 'Acesso ao PDV (Frente de Caixa), pedidos e catálogo.',
-  },
-  INVENTORY: {
-    label: 'Estoquista',
-    variant: 'outline',
-    description: 'Acesso a movimentações de estoque, lotes e validades.',
-  },
-  VIEWER: {
-    label: 'Visualizador',
-    variant: 'outline',
-    description: 'Apenas leitura de informações.',
-  },
-  GLOBAL_ADMIN: {
-    label: 'Global Admin',
-    variant: 'default',
-    description: 'Acesso administrativo irrestrito a todo o sistema.',
-  },
-};
 
 export function TeamPage() {
   const { storeId, storeName, hasActiveStore } = useTenant()
@@ -79,21 +55,11 @@ export function TeamPage() {
   const statusFilter = filters.status || 'ALL'
 
   // Modal states
-  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false)
+  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = React.useState(false)
+  const [isCustomRolesModalOpen, setIsCustomRolesModalOpen] = React.useState(false)
   const [editingMember, setEditingMember] = React.useState<StoreMember | null>(null)
   const [removingMember, setRemovingMember] = React.useState<StoreMember | null>(null)
   const [togglingMember, setTogglingMember] = React.useState<StoreMember | null>(null)
-  const [modalMode, setModalMode] = React.useState<'create' | 'invite'>('create')
-
-  const [formData, setFormData] = React.useState({
-    fullName: '',
-    email: '',
-    password: '',
-    role: 'SELLER' as UserRole,
-  })
-
-  const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
 
   // Query members of this store
   const { data: members = [], isLoading } = useQuery({
@@ -102,118 +68,110 @@ export function TeamPage() {
     enabled: Boolean(hasActiveStore),
   })
 
-  // Mutations
-  const addMemberMutation = useMutation({
-    mutationFn: (data: typeof formData) =>
-      userService.inviteOrAddStoreMember(storeId, {
-        email: data.email,
-        fullName: data.fullName || undefined,
-        role: data.role,
-        password: data.password || undefined,
-      }),
-    onSuccess: (newMember) => {
-      queryClient.invalidateQueries({ queryKey: ['store-members', storeId] })
-      setIsAddModalOpen(false)
-      resetForm()
-      setSuccessMessage(`Funcionário ${newMember.email} vinculado à loja com sucesso!`)
-    },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+  const { data: customRoles = [] } = useQuery({
+    queryKey: ['store-custom-roles', storeId],
+    queryFn: () => userService.listStoreCustomRoles(storeId),
+    enabled: Boolean(hasActiveStore),
   })
 
+  // Mutations
   const updateRoleMutation = useMutation({
-    mutationFn: ({ id, role, isActive }: { id: string; role?: UserRole; isActive?: boolean }) =>
-      userService.updateStoreMemberRole(id, { role, isActive }),
+    mutationFn: ({
+      id,
+      isActive,
+      canApproveWriteoff,
+    }: {
+      id: string
+      isActive?: boolean
+      canApproveWriteoff?: boolean
+    }) => userService.updateStoreMemberRole(id, { isActive, canApproveWriteoff }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-members', storeId] })
-      setEditingMember(null)
-      setSuccessMessage('Papel do funcionário atualizado!')
+      window.dispatchEvent(new CustomEvent('olivelas:employee-permissions-updated'))
+      toast.success('Cadastro do funcionário atualizado!')
     },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+    onError: (err) => toast.error(parseApiError(err)),
   })
 
   const removeMemberMutation = useMutation({
     mutationFn: (id: string) => userService.removeStoreMember(id, storeId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-members', storeId] })
-      setSuccessMessage('Membro removido da equipe.')
+      toast.success('Funcionário removido da equipe da loja.')
     },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+    onError: (err) => toast.error(parseApiError(err)),
   })
 
   const resetPasswordMutation = useMutation({
     mutationFn: (email: string) => userService.sendPasswordReset(email),
     onSuccess: () => {
-      setSuccessMessage('Link de redefinição de senha enviado por e-mail!')
+      toast.success('Link de redefinição de senha enviado por e-mail!')
     },
-    onError: (err) => setErrorMessage(parseApiError(err)),
+    onError: (err) => toast.error(parseApiError(err)),
   })
 
-  const resetForm = () => {
-    setFormData({
-      fullName: '',
-      email: '',
-      password: '',
-      role: 'SELLER',
-    })
-    setEditingMember(null)
-    setErrorMessage(null)
-  }
-
   const handleOpenAdd = () => {
-    resetForm()
-    setModalMode('create')
-    setIsAddModalOpen(true)
+    setEditingMember(null)
+    setIsEmployeeModalOpen(true)
   }
 
   const handleOpenEdit = (m: StoreMember) => {
     setEditingMember(m)
-    setFormData({
-      fullName: m.fullName || '',
-      email: m.email,
-      password: '',
-      role: m.role,
-    })
-    setErrorMessage(null)
-    setIsAddModalOpen(true)
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!formData.email) return
-    setErrorMessage(null)
-
-    if (editingMember) {
-      updateRoleMutation.mutate({
-        id: editingMember.id,
-        role: formData.role,
-      })
-      setIsAddModalOpen(false)
-    } else {
-      addMemberMutation.mutate(formData)
-    }
+    setIsEmployeeModalOpen(true)
   }
 
   // Filtered members list
   const filteredMembers = members.filter((m) => {
-    const q = search.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    const normEmail = (m.email || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    const normName = (m.fullName || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    const matchSearch = !q || normEmail.includes(q) || normName.includes(q)
-    const matchRole = roleFilter === 'ALL' || roleFilter === 'all' || m.role === roleFilter
+    const q = search
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+    const normEmail = (m.email || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+    const normName = (m.fullName || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+    const normReg = (m.employeeRegistration || '').toLowerCase()
+    const normJob = (m.jobTitle || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+
+    const matchSearch =
+      !q ||
+      normEmail.includes(q) ||
+      normName.includes(q) ||
+      normReg.includes(q) ||
+      normJob.includes(q)
+
+    const matchRole =
+      roleFilter === 'ALL' ||
+      roleFilter === 'all' ||
+      (roleFilter === 'APPROVER_ONLY' && isMemberStockApprover(m)) ||
+      m.role === roleFilter
+
     const matchStatus =
       statusFilter === 'ALL' ||
       statusFilter === 'all' ||
       (statusFilter === 'ACTIVE' && m.isActive) ||
       (statusFilter === 'INACTIVE' && !m.isActive)
+
     return matchSearch && matchRole && matchStatus
   })
+
+  const totalApprovers = members.filter((m) => m.isActive && isMemberStockApprover(m)).length
+  const totalActive = members.filter((m) => m.isActive).length
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
-      <PageHeader title="Equipe da Loja">
+      <PageHeader title="Funcionários & Papéis da Loja">
         <Input
-          placeholder="Buscar funcionário por nome, e-mail..."
+          placeholder="Buscar por nome, e-mail, matrícula ou cargo..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 text-xs bg-background/90"
@@ -221,27 +179,66 @@ export function TeamPage() {
         />
       </PageHeader>
 
-      {/* Success Banner */}
-      {successMessage && (
-        <div className="p-2.5 rounded-lg bg-success/15 border border-success/30 flex items-center justify-between text-xs text-foreground animate-in fade-in flex-shrink-0">
-          <span>{successMessage}</span>
-          <button
-            onClick={() => setSuccessMessage(null)}
-            className="text-xs text-muted-foreground hover:text-foreground font-bold px-1"
-          >
-            ✕
-          </button>
+      {/* KPI Summary Strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 flex-shrink-0">
+        <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase text-muted-foreground">
+              Total na Equipe
+            </div>
+            <div className="text-base font-extrabold text-foreground">
+              {members.length} funcionários
+            </div>
+          </div>
+          <Users className="h-5 w-5 text-primary opacity-80" />
         </div>
-      )}
+
+        <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/5 flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase text-amber-600 dark:text-amber-400">
+              Aprovadores de Baixa
+            </div>
+            <div className="text-base font-extrabold text-foreground">
+              {totalApprovers} habilitados
+            </div>
+          </div>
+          <ShieldCheck className="h-5 w-5 text-amber-500" />
+        </div>
+
+        <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase text-muted-foreground">
+              Papéis Customizados
+            </div>
+            <div className="text-base font-extrabold text-foreground">
+              {customRoles.length} perfis
+            </div>
+          </div>
+          <Shield className="h-5 w-5 text-primary opacity-80" />
+        </div>
+
+        <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-bold uppercase text-muted-foreground">
+              Acessos Ativos
+            </div>
+            <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
+              {totalActive} ativos
+            </div>
+          </div>
+          <SlidersHorizontal className="h-5 w-5 text-emerald-500 opacity-80" />
+        </div>
+      </div>
 
       {/* Toolbar & Filters */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5">
-            {filteredMembers.length} {filteredMembers.length === 1 ? 'membro' : 'membros'}
+            {filteredMembers.length} {filteredMembers.length === 1 ? 'funcionário' : 'funcionários'}
           </Badge>
           <span className="hidden sm:inline text-xs text-muted-foreground">
-            | Equipe e permissões de acesso da loja <b>{storeName}</b>
+            | Gestão de colaboradores, Aprovadores de Baixa de Estoque e permissões granulares de{' '}
+            <b>{storeName}</b>
           </span>
         </div>
 
@@ -253,11 +250,13 @@ export function TeamPage() {
             className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
           >
             <option value="ALL">Todos os Papéis</option>
-            <option value="STORE_ADMIN">Administrador</option>
-            <option value="FINANCE">Gerente / Financeiro</option>
-            <option value="SELLER">Vendedor / Caixa</option>
-            <option value="INVENTORY">Estoquista</option>
-            <option value="VIEWER">Visualizador</option>
+            <option value="APPROVER_ONLY">★ Somente Aprovadores de Baixa</option>
+            <option value="STORE_ADMIN">Administrador da Loja</option>
+            <option value="STOCK_APPROVER">Aprovador de Baixa de Estoque</option>
+            <option value="INVENTORY">Estoquista / Almoxarifado</option>
+            <option value="SELLER">Vendedor / Operador de PDV</option>
+            <option value="FINANCE">Gerente / Financeiro & Compras</option>
+            <option value="VIEWER">Visualizador / Auditor</option>
           </select>
 
           <select
@@ -272,11 +271,20 @@ export function TeamPage() {
           </select>
 
           <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCustomRolesModalOpen(true)}
+            className="h-8 text-xs px-2.5 font-semibold"
+          >
+            <Shield className="h-3.5 w-3.5 mr-1 text-primary" /> Papéis da Loja
+          </Button>
+
+          <Button
             size="sm"
             onClick={handleOpenAdd}
             className="h-8 text-xs px-2.5 shadow-xs font-semibold"
           >
-            <Plus className="h-3.5 w-3.5 mr-1" /> Convidar / Novo Funcionário
+            <Plus className="h-3.5 w-3.5 mr-1" /> Cadastrar Funcionário
           </Button>
         </div>
       </div>
@@ -292,9 +300,9 @@ export function TeamPage() {
             <div className="flex-1 flex items-center justify-center p-8">
               <EmptyState
                 icon={<Users className="h-10 w-10 text-primary" />}
-                title="Nenhum membro encontrado"
-                description="Convide os funcionários da sua loja para operar o PDV, estoque, compras ou financeiro com permissões isoladas."
-                actionLabel="Convidar Funcionário"
+                title="Nenhum funcionário encontrado"
+                description="Cadastre os funcionários da loja e defina seus papéis (como Aprovador de Baixa de Estoque, Estoquista ou Vendedor PDV) com permissões granulares."
+                actionLabel="Cadastrar Funcionário"
                 onAction={handleOpenAdd}
               />
             </div>
@@ -303,20 +311,26 @@ export function TeamPage() {
               <ResponsiveTable className="w-full text-xs text-left">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                   <tr>
-                    <th className="py-2.5 px-4">Funcionário</th>
-                    <th className="py-2.5 px-4">Papel na Loja</th>
+                    <th className="py-2.5 px-4">Funcionário & Matrícula</th>
+                    <th className="py-2.5 px-4">Papel & Cargo</th>
+                    <th className="py-2.5 px-4">Autorização de Baixa de Estoque</th>
+                    <th className="py-2.5 px-4">Permissões Granulares</th>
                     <th className="py-2.5 px-4 text-center">Status</th>
-                    <th className="py-2.5 px-4">Data de Vínculo</th>
                     <th className="py-2.5 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {filteredMembers.map((m) => {
-                    const roleInfo = ROLE_LABELS[m.role] || {
-                      label: m.role,
-                      variant: 'outline' as const,
-                      description: '',
-                    }
+                    const roleMeta = ROLE_METADATA[m.role] || ROLE_METADATA.VIEWER
+                    const isApprover = isMemberStockApprover(m)
+                    const customRole = customRoles.find((r) => r.id === m.customRoleId)
+                    const resolvedPerms = resolveEmployeePermissions({
+                      role: m.role,
+                      customRolePermissions: customRole?.permissions,
+                      grantedPermissions: m.grantedPermissions,
+                      revokedPermissions: m.revokedPermissions,
+                      canApproveWriteoff: isApprover,
+                    })
 
                     return (
                       <tr key={m.id} className="hover:bg-muted/30 transition-colors">
@@ -326,7 +340,14 @@ export function TeamPage() {
                               {m.fullName?.slice(0, 2) || m.email.slice(0, 2)}
                             </div>
                             <div>
-                              <div>{m.fullName || 'Funcionário'}</div>
+                              <div className="flex items-center gap-1.5">
+                                <span>{m.fullName || 'Funcionário'}</span>
+                                {m.employeeRegistration && (
+                                  <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                                    {m.employeeRegistration}
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-[11px] text-muted-foreground font-normal">
                                 {m.email}
                               </div>
@@ -335,13 +356,78 @@ export function TeamPage() {
                         </td>
 
                         <td className="py-2.5 px-4">
-                          <div>
-                            <Badge variant={roleInfo.variant} className="text-[10px] px-2 py-0.5">
-                              {roleInfo.label}
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-1">
+                              <span
+                                className={cn(
+                                  'text-[10px] font-bold px-2 py-0.5 rounded-md border',
+                                  roleMeta.badgeClass
+                                )}
+                              >
+                                {roleMeta.label}
+                              </span>
+                              {m.customRoleName && (
+                                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                                  {m.customRoleName}
+                                </span>
+                              )}
+                            </div>
+                            {m.jobTitle && (
+                              <div className="text-[11px] text-muted-foreground">
+                                Cargo: <b className="text-foreground">{m.jobTitle}</b>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="py-2.5 px-4">
+                          {isApprover ? (
+                            <div className="space-y-1">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                <ShieldCheck className="h-3.5 w-3.5" />
+                                Aprovador Autorizado
+                              </span>
+                              <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                                <span>
+                                  Alçada:{' '}
+                                  <b>
+                                    {m.maxWriteoffValue
+                                      ? formatCurrency(m.maxWriteoffValue)
+                                      : 'Ilimitada'}
+                                  </b>
+                                </span>
+                                {m.approvalPin && (
+                                  <span className="inline-flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-mono">
+                                    <Lock className="h-2.5 w-2.5" /> PIN Ativo
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-[11px] text-muted-foreground">
+                              Sem alçada de aprovação de baixa
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-2.5 px-4">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <Badge variant="outline" className="text-[10px] font-mono">
+                              {resolvedPerms.effectivePermissions.length} recursos ativos
                             </Badge>
-                            <p className="text-[10px] text-muted-foreground mt-0.5 max-w-xs">
-                              {roleInfo.description}
-                            </p>
+                            {(m.grantedPermissions?.length || 0) > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                +{m.grantedPermissions?.length} extra
+                              </span>
+                            )}
+                            {(m.revokedPermissions?.length || 0) > 0 && (
+                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-danger/15 text-danger font-semibold">
+                                -{m.revokedPermissions?.length} bloq.
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">
+                            Vínculo: {formatDateTime(m.createdAt)}
                           </div>
                         </td>
 
@@ -354,36 +440,32 @@ export function TeamPage() {
                           </Badge>
                         </td>
 
-                        <td className="py-2.5 px-4 text-muted-foreground text-[11px]">
-                          {formatDateTime(m.createdAt)}
-                        </td>
-
                         <td className="py-2.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5 flex-wrap">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 text-xs font-semibold px-2.5"
-                              onClick={() => resetPasswordMutation.mutate(m.email)}
-                              title="Resetar Senha (Enviar link por e-mail)"
-                            >
-                              <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset Senha
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2.5"
+                              className="h-8 text-xs font-semibold px-2.5 border-primary/30 text-primary hover:bg-primary/10"
                               onClick={() => handleOpenEdit(m)}
-                              title="Editar Papel"
+                              title="Configurar Papel, Aprovação de Baixa e Permissões Granulares"
                             >
-                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                              <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Papel & Permissões
                             </Button>
 
                             <Button
                               variant="outline"
                               size="sm"
-                              className={`h-8 text-xs font-semibold px-2.5 ${
+                              className="h-8 text-xs font-semibold px-2"
+                              onClick={() => resetPasswordMutation.mutate(m.email)}
+                              title="Enviar link de redefinição de senha"
+                            >
+                              <KeyRound className="h-3.5 w-3.5" />
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className={`h-8 text-xs font-semibold px-2 ${
                                 m.isActive
                                   ? 'text-warning hover:bg-warning/10 border-warning/30'
                                   : 'text-success hover:bg-success/10 border-success/30'
@@ -391,17 +473,17 @@ export function TeamPage() {
                               onClick={() => setTogglingMember(m)}
                               title={m.isActive ? 'Desativar Acesso' : 'Ativar Acesso'}
                             >
-                              <Power className="h-3.5 w-3.5 mr-1" /> {m.isActive ? 'Desativar' : 'Ativar'}
+                              <Power className="h-3.5 w-3.5" />
                             </Button>
 
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
+                              className="h-8 text-xs font-semibold px-2 text-danger hover:bg-danger/10 border-danger/30"
                               onClick={() => setRemovingMember(m)}
                               title="Remover da Loja"
                             >
-                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Remover
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>
@@ -415,158 +497,25 @@ export function TeamPage() {
         </CardContent>
       </Card>
 
-      {/* MODAL: ADD / INVITE EMPLOYEE */}
-      <Modal
-        isOpen={isAddModalOpen}
+      {/* Modal: Cadastrar / Editar Funcionário & Permissões Granulares */}
+      <EmployeeRolePermissionsModal
+        isOpen={isEmployeeModalOpen}
         onClose={() => {
-          setIsAddModalOpen(false)
-          resetForm()
+          setIsEmployeeModalOpen(false)
+          setEditingMember(null)
         }}
-        title={editingMember ? 'Editar Permissões do Funcionário' : 'Adicionar / Convidar Funcionário'}
-        description={
-          editingMember
-            ? `Alteração de papel de acesso para ${editingMember.email} na loja ${storeName}`
-            : `Cadastre ou convide um novo colaborador para fazer parte da equipe de ${storeName}`
-        }
-        maxWidth="md"
-      >
-        <form onSubmit={handleSubmit} className="space-y-3 pt-1">
-          {errorMessage && (
-            <div className="p-2.5 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
-              {errorMessage}
-            </div>
-          )}
+        storeId={storeId}
+        storeName={storeName}
+        member={editingMember}
+      />
 
-          {!editingMember && (
-            <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border mb-2">
-              <button
-                type="button"
-                onClick={() => setModalMode('create')}
-                className={`flex-1 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  modalMode === 'create'
-                    ? 'bg-card text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <UserPlus className="h-3.5 w-3.5 inline mr-1" /> Cadastro Direto com Senha
-              </button>
-              <button
-                type="button"
-                onClick={() => setModalMode('invite')}
-                className={`flex-1 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-                  modalMode === 'invite'
-                    ? 'bg-card text-foreground shadow-xs'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                <Send className="h-3.5 w-3.5 inline mr-1" /> Convidar por E-mail
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-foreground">Nome do Funcionário *</label>
-            <Input
-              placeholder="Ex: Carlos Eduardo"
-              value={formData.fullName}
-              disabled={Boolean(editingMember)}
-              onChange={(e) => setFormData((prev) => ({ ...prev, fullName: e.target.value }))}
-              required={modalMode === 'create' && !editingMember}
-              className="h-8 text-xs"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-foreground">E-mail Corporativo ou Pessoal *</label>
-            <Input
-              type="email"
-              placeholder="carlos@empresa.com"
-              value={formData.email}
-              disabled={Boolean(editingMember)}
-              onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-              required
-              className="h-8 text-xs"
-            />
-          </div>
-
-          {!editingMember && modalMode === 'create' && (
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-foreground">
-                Senha Provisória (Opcional - mínimo 6 dígitos)
-              </label>
-              <Input
-                type="password"
-                placeholder="Gerada automaticamente caso deixe em branco"
-                value={formData.password}
-                onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
-                className="h-8 text-xs"
-              />
-            </div>
-          )}
-
-          <div className="space-y-1.5 pt-1">
-            <label className="text-xs font-semibold text-foreground">Papel / Nível de Acesso na Loja *</label>
-            <div className="grid grid-cols-1 gap-2">
-              {[
-                { role: 'SELLER' as UserRole, label: 'Vendedor / Operador de Caixa (PDV)', desc: 'Realiza vendas, emite comprovantes e consulta estoque.' },
-                { role: 'INVENTORY' as UserRole, label: 'Estoquista', desc: 'Controla entradas, saídas, contagem de inventário e lotes.' },
-                { role: 'FINANCE' as UserRole, label: 'Gerente / Financeiro', desc: 'Gerencia vendas, estoque, compras de fornecedores, contas e relatórios.' },
-                { role: 'STORE_ADMIN' as UserRole, label: 'Administrador da Loja', desc: 'Acesso irrestrito a todos os módulos e equipe desta loja.' },
-                { role: 'VIEWER' as UserRole, label: 'Visualizador (Somente Leitura)', desc: 'Consulta dados sem permissão de gravação ou alteração.' },
-              ].map((item) => (
-                <label
-                  key={item.role}
-                  className={`flex items-start gap-2.5 p-2 rounded-lg border transition-colors cursor-pointer ${
-                    formData.role === item.role
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                      : 'border-border bg-card hover:bg-muted/30'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="memberRole"
-                    value={item.role}
-                    checked={formData.role === item.role}
-                    onChange={() => setFormData((prev) => ({ ...prev, role: item.role }))}
-                    className="mt-0.5 text-primary focus:ring-primary"
-                  />
-                  <div>
-                    <div className="text-xs font-semibold text-foreground">{item.label}</div>
-                    <div className="text-[10px] text-muted-foreground">{item.desc}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full sm:w-auto h-8 text-xs"
-              onClick={() => {
-                setIsAddModalOpen(false)
-                resetForm()
-              }}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              className="w-full sm:w-auto h-8 text-xs font-semibold"
-              isLoading={addMemberMutation.isPending || updateRoleMutation.isPending}
-            >
-              {editingMember
-                ? 'Salvar Papel'
-                : modalMode === 'invite'
-                ? 'Enviar Convite'
-                : 'Cadastrar Funcionário'}
-            </Button>
-          </div>
-        </form>
-      </Modal>
+      {/* Modal: Papéis Customizados da Loja */}
+      <StoreCustomRolesModal
+        isOpen={isCustomRolesModalOpen}
+        onClose={() => setIsCustomRolesModalOpen(false)}
+        storeId={storeId}
+        storeName={storeName}
+      />
 
       {/* Confirm Remove Member Modal */}
       <ConfirmModal
@@ -579,7 +528,7 @@ export function TeamPage() {
           }
         }}
         title="Remover Funcionário da Loja"
-        description={`Tem certeza que deseja desvincular o funcionário "${removingMember?.fullName || removingMember?.email}" desta loja? Ele perderá o acesso às rotinas da filial imediatamente.`}
+        description={`Tem certeza que deseja desvincular o funcionário "${removingMember?.fullName || removingMember?.email}" desta loja? Ele perderá o acesso imediatamente.`}
         confirmText="Sim, Remover"
         cancelText="Cancelar"
         variant="danger"
@@ -599,7 +548,11 @@ export function TeamPage() {
             setTogglingMember(null)
           }
         }}
-        title={togglingMember?.isActive ? 'Desativar Acesso do Funcionário' : 'Ativar Acesso do Funcionário'}
+        title={
+          togglingMember?.isActive
+            ? 'Desativar Acesso do Funcionário'
+            : 'Ativar Acesso do Funcionário'
+        }
         description={
           togglingMember?.isActive
             ? `Deseja suspender temporariamente o acesso de "${togglingMember?.fullName || togglingMember?.email}" à loja?`

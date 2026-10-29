@@ -9,6 +9,9 @@ import type {
   StockBatch,
   StockMovement,
   StockMovementInput,
+  StockTransfer,
+  StockTransferCreateInput,
+  StockWriteoffRequest,
 } from '@/types/inventory.types'
 import type { StockMovementType } from '@/types/database.types'
 
@@ -1078,5 +1081,312 @@ export const inventoryService = {
     }
 
     return { successCount, errorCount: errors.length, errors }
+  },
+
+  /**
+   * Lista solicitações de baixa de estoque (pendentes, aprovadas ou rejeitadas)
+   */
+  async listWriteoffRequests(
+    storeId: string,
+    status: 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED' = 'ALL'
+  ): Promise<StockWriteoffRequest[]> {
+    let query = supabase
+      .from('stock_writeoff_requests')
+      .select(`
+        *,
+        products ( name, sku, unit ),
+        stock_batches ( lot_number, expiration_date ),
+        cost_centers ( code, name ),
+        requester:requested_by ( full_name, email ),
+        reviewer:reviewed_by ( full_name )
+      `)
+      .eq('store_id', storeId)
+      .order('created_at', { ascending: false })
+
+    if (status && status !== 'ALL') {
+      query = query.eq('status', status)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+
+    return (data || []).map((row: any) => {
+      const lotNum = row.lot_number || row.stock_batches?.lot_number || null
+      const expDate = row.expiration_date || row.stock_batches?.expiration_date || null
+      const prodName = row.products?.name || 'Produto'
+      const prodSku = row.products?.sku || ''
+      const reqByName = row.requester?.full_name || 'Operador'
+      const revByName = row.reviewer?.full_name || null
+      return {
+        id: row.id,
+        store_id: row.store_id,
+        product_id: row.product_id,
+        batch_id: row.batch_id,
+        lot_number: lotNum,
+        expiration_date: expDate,
+        movement_type: row.movement_type,
+        quantity: Number(row.quantity),
+        unit_cost: row.unit_cost !== null ? Number(row.unit_cost) : null,
+        reason_code: row.reason_code,
+        reason_detail: row.reason_detail ?? null,
+        cost_center_id: row.cost_center_id,
+        notes: row.notes ?? null,
+        status: row.status,
+        requested_by: row.requested_by,
+        requested_by_name: reqByName,
+        requested_by_registration: row.requested_by_registration ?? null,
+        reviewed_by: row.reviewed_by,
+        reviewed_by_name: revByName,
+        reviewed_by_registration: row.reviewed_by_registration ?? null,
+        reviewed_at: row.reviewed_at ?? null,
+        rejection_reason: row.rejection_reason ?? null,
+        movement_id: row.movement_id ?? null,
+        created_at: row.created_at,
+        product_name: prodName,
+        product_sku: prodSku,
+        product_unit: row.products?.unit || 'UN',
+        cost_center_code: row.cost_centers?.code || '',
+        cost_center_name: row.cost_centers?.name || '',
+        // CamelCase fields
+        productName: prodName,
+        productSku: prodSku,
+        batchLotNumber: lotNum,
+        movementType: row.movement_type,
+        reasonCode: row.reason_code,
+        reasonDetail: row.reason_detail ?? null,
+        requestedByName: reqByName,
+        requestedByRegistration: row.requested_by_registration ?? null,
+        reviewedByName: revByName,
+        reviewedByRegistration: row.reviewed_by_registration ?? null,
+        createdAt: row.created_at,
+        reviewedAt: row.reviewed_at ?? null,
+      }
+    })
+  },
+
+  /**
+   * Registra uma solicitação de baixa de estoque para aprovação posterior por um STOCK_APPROVER
+   */
+  async createWriteoffRequest(
+    storeId: string,
+    input: {
+      productId: string
+      batchId?: string | null
+      movementType?: StockMovementType
+      quantity: number
+      unitCost?: number | null
+      reasonCode: string
+      reasonDetail?: string | null
+      costCenterId: string
+      notes?: string | null
+    }
+  ): Promise<StockWriteoffRequest> {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Usuário não autenticado')
+
+    const { data, error } = await supabase
+      .from('stock_writeoff_requests')
+      .insert({
+        store_id: storeId,
+        product_id: input.productId,
+        batch_id: input.batchId || null,
+        movement_type: input.movementType || 'LOSS',
+        quantity: Math.abs(input.quantity),
+        unit_cost: input.unitCost ?? null,
+        reason_code: input.reasonCode,
+        reason_detail: input.reasonDetail?.trim() || null,
+        cost_center_id: input.costCenterId,
+        notes: input.notes?.trim() || null,
+        status: 'PENDING',
+        requested_by: user.id,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    auditService.logAction({
+      storeId,
+      action: 'STOCK_WRITEOFF_REQUEST_CREATED',
+      entity: 'stock_writeoff_requests',
+      entityId: data.id,
+      afterData: input,
+    })
+
+    return data as StockWriteoffRequest
+  },
+
+  /**
+   * Aprova ou rejeita uma solicitação de baixa de estoque pendente.
+   * Somente usuários com permissão de aprovador de baixa (`can_user_approve_writeoff`) podem executar.
+   */
+  async reviewWriteoffRequest(params: {
+    requestId: string
+    decision: 'APPROVED' | 'REJECTED'
+    approverPin?: string | null
+    rejectionReason?: string | null
+  }): Promise<{ status: string; movement_id: string | null }> {
+    const { data, error } = await supabase.rpc('review_stock_writeoff_request', {
+      p_request_id: params.requestId,
+      p_decision: params.decision,
+      p_approver_pin: params.approverPin?.trim() || null,
+      p_rejection_reason: params.rejectionReason?.trim() || null,
+    })
+
+    if (error) throw error
+    return data as { status: string; movement_id: string | null }
+  },
+
+  /**
+   * Lista transferências / remessas de estoque entre lojas/filiais (sem venda)
+   */
+  async listStockTransfers(storeId: string): Promise<StockTransfer[]> {
+    const { data, error } = await supabase
+      .from('stock_transfers')
+      .select(`
+        *,
+        source_store:source_store_id ( id, name, branch_code ),
+        destination_store:destination_store_id ( id, name, branch_code ),
+        creator:created_by ( full_name ),
+        stock_transfer_items (
+          id,
+          transfer_id,
+          source_product_id,
+          destination_product_id,
+          product_sku,
+          product_name,
+          unit,
+          source_batch_id,
+          destination_batch_id,
+          lot_number,
+          expiration_date,
+          quantity,
+          unit_cost,
+          selling_price,
+          created_at
+        )
+      `)
+      .or(`source_store_id.eq.${storeId},destination_store_id.eq.${storeId}`)
+      .order('created_at', { ascending: false })
+
+    if (error) throw error
+
+    return (data || []).map((row: any) => {
+      const code = row.transfer_number || row.transfer_code || 'TRF'
+      const fromName = row.source_store?.name || 'Matriz'
+      const toName = row.destination_store?.name || 'Filial'
+      const totalItems = Number(row.total_items) || 0
+      const totalQty = Number(row.total_quantity) || 0
+      const totalCost = Number(row.total_cost_value) || 0
+      const totalSelling = Number(row.total_selling_value) || 0
+      const creatorName = row.creator?.full_name || 'Administrador'
+
+      return {
+        id: row.id,
+        transfer_number: code,
+        source_store_id: row.source_store_id,
+        source_store_name: fromName,
+        destination_store_id: row.destination_store_id,
+        destination_store_name: toName,
+        destination_branch_code: row.destination_store?.branch_code || null,
+        status: row.status,
+        total_items: totalItems,
+        total_quantity: totalQty,
+        total_cost_value: totalCost,
+        total_selling_value: totalSelling,
+        notes: row.notes ?? null,
+        driver_or_carrier: row.driver_or_carrier ?? null,
+        created_by: row.created_by ?? null,
+        created_by_name: creatorName,
+        approved_by: row.approved_by ?? null,
+        received_by: row.received_by ?? null,
+        created_at: row.created_at,
+        completed_at: row.completed_at ?? null,
+        // CamelCase convenience fields
+        transferCode: code,
+        fromStoreId: row.source_store_id,
+        fromStoreName: fromName,
+        toStoreId: row.destination_store_id,
+        toStoreName: toName,
+        totalItems,
+        totalQuantity: totalQty,
+        totalCostValue: totalCost,
+        totalSellingValue: totalSelling,
+        createdAt: row.created_at,
+        approvedByName: creatorName,
+        requestedByName: creatorName,
+        items: (row.stock_transfer_items || []).map((it: any) => ({
+          id: it.id,
+          transfer_id: it.transfer_id,
+          source_product_id: it.source_product_id,
+          destination_product_id: it.destination_product_id,
+          product_sku: it.product_sku || '',
+          product_name: it.product_name || 'Produto',
+          unit: it.unit || 'UN',
+          source_batch_id: it.source_batch_id,
+          destination_batch_id: it.destination_batch_id,
+          lot_number: it.lot_number ?? null,
+          expiration_date: it.expiration_date ?? null,
+          quantity: Number(it.quantity),
+          unit_cost: Number(it.unit_cost) || 0,
+          selling_price: Number(it.selling_price) || 0,
+          created_at: it.created_at,
+          productName: it.product_name || 'Produto',
+          productSku: it.product_sku || '',
+        })),
+      }
+    })
+  },
+
+  /**
+   * Executa remessa/transferência de produtos do estoque para uma filial sem necessidade de venda.
+   * O produto é debitado da loja de origem e creditado automaticamente na filial de destino para venda lá.
+   */
+  async executeStockTransferToBranch(
+    sourceStoreId: string,
+    input: StockTransferCreateInput
+  ): Promise<{
+    transfer_id: string
+    transfer_code: string
+    total_items: number
+    total_cost_value: number
+  }> {
+    const carrierInfo = [
+      input.driverOrCarrier,
+      input.driverName,
+      input.vehiclePlate ? `Placa: ${input.vehiclePlate.trim().toUpperCase()}` : null,
+    ]
+      .filter(Boolean)
+      .join(' • ')
+
+    const { data, error } = await supabase.rpc('execute_stock_transfer_to_branch', {
+      p_source_store_id: sourceStoreId,
+      p_destination_store_id: input.destinationStoreId,
+      p_items: input.items.map((i) => ({
+        productId: i.productId,
+        batchId: i.batchId || null,
+        lotNumber: i.lotNumber || null,
+        expirationDate: i.expirationDate || null,
+        quantity: Number(i.quantity),
+        unitCost: i.unitCost ?? null,
+        sellingPrice: i.sellingPrice ?? null,
+      })),
+      p_notes: input.notes?.trim() || null,
+      p_driver_or_carrier: carrierInfo || null,
+    })
+
+    if (error) throw error
+
+    const totalCost = input.items.reduce(
+      (sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.unitCost) || 0),
+      0
+    )
+
+    return {
+      transfer_id: String(data),
+      transfer_code: `TRF-${String(data).slice(0, 6).toUpperCase()}`,
+      total_items: input.items.length,
+      total_cost_value: totalCost,
+    }
   },
 }

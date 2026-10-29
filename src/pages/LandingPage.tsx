@@ -57,23 +57,23 @@ export function LandingPage() {
     },
     {
       icon: Store,
-      title: 'Gestão de Múltiplas Lojas e Filiais',
+      title: 'Gestão de Filiais & Remessa Sem Venda',
       description:
-        'Administre uma ou várias unidades de forma independente e segura. Alterne entre filiais com um clique e tenha visão consolidada.',
+        'Cadastre filiais vinculadas à Matriz e envie produtos e lotes do estoque diretamente para a filial sem precisar registrar uma venda, deixando tudo pronto para o PDV da filial.',
       badge: 'Multi-Filiais',
     },
     {
       icon: BarChart3,
-      title: 'Relatórios de Desempenho & Vendas',
+      title: '9 Relatórios Analíticos de Varejo',
       description:
-        'Descubra seus produtos mais vendidos, margens de lucro, faturamento diário e mensal, além de exportação rápida para Excel/CSV e impressão.',
+        'Valorização de Estoque, Curva ABC (80/15/5), Giro & Sugestão de Compra, LTV de Clientes, GMROI por Categoria, Rupturas e Perdas com exportação CSV e impressão.',
       badge: 'Decisões Inteligentes',
     },
     {
       icon: ShieldCheck,
-      title: 'Segurança Total & Controle de Equipe',
+      title: 'Funcionários, Papéis & Aprovador de Baixa',
       description:
-        'Defina o que cada colaborador pode ver ou alterar (Administrador, Caixa, Estoquista, Vendedor) com registro completo de auditoria.',
+        'Permissões granulares por colaborador, criação de papéis customizados e trava exclusiva de Aprovador de Baixa de Estoque com fila de aprovação e limite de alçada.',
       badge: 'Segurança Máxima',
     },
   ]
@@ -134,12 +134,12 @@ export function LandingPage() {
       a: 'Sua loja ganha um endereço exclusivo (exemplo: /store/sua-loja). Seus clientes podem acessar pelo celular ou computador sem precisar instalar nada, visualizar fotos e preços dos produtos, montar o carrinho e clicar em "Finalizar no WhatsApp". Você recebe a mensagem pronta com todos os itens, quantidades e valores calculados.',
     },
     {
-      q: 'Consigo gerenciar mais de uma loja ou filial?',
-      a: 'Sim! Você pode criar e gerenciar múltiplas unidades com total isolamento de dados. Cada loja possui seus próprios produtos, estoques, operadores e histórico de vendas, com facilidade para alternar entre elas no menu superior.',
+      q: 'Consigo gerenciar mais de uma loja ou enviar estoque para filiais sem fazer venda?',
+      a: 'Sim! Você pode cadastrar filiais vinculadas à sua Loja Matriz e realizar remessas diretas de estoque (transferência de lotes e validades sem necessidade de venda). O produto é sincronizado automaticamente na filial e já fica disponível para ser vendido no PDV da filial.',
     },
     {
-      q: 'Posso cadastrar colaboradores com diferentes permissões?',
-      a: 'Sim. Você pode convidar membros da sua equipe e atribuir funções específicas, como Administrador, Vendedor (acesso a vendas/PDV), Estoquista (gestão de entradas e lotes) e Financeiro, garantindo que cada colaborador acesse apenas o que é necessário.',
+      q: 'Como funciona o papel de Aprovador de Baixa de Estoque e permissões de funcionários?',
+      a: 'Tanto o Administrador da Loja quanto o Global Admin podem cadastrar funcionários, criar papéis customizados e configurar permissões granulares para cada recurso do sistema. Somente colaboradores habilitados como Aprovadores de Baixa de Estoque podem autorizar baixas por perda ou avaria — operadores comuns enviam uma solicitação que fica aguardando aprovação na fila.',
     },
     {
       q: 'É fácil importar produtos de outros sistemas ou planilhas?',

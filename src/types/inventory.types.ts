@@ -113,6 +113,129 @@ export interface StockMovementInput {
   approvedBy?: string | null
 }
 
+export interface StockWriteoffRequest {
+  id: string
+  store_id: string
+  product_id: string
+  product_name?: string
+  product_sku?: string
+  product_unit?: string
+  batch_id: string | null
+  lot_number: string | null
+  expiration_date: string | null
+  movement_type: StockMovementType
+  quantity: number
+  unit_cost: number | null
+  reason_code: string
+  reason_label?: string
+  reason_detail: string | null
+  cost_center_id: string | null
+  cost_center_code?: string | null
+  cost_center_name?: string | null
+  notes: string | null
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED'
+  requested_by: string | null
+  requested_by_name?: string | null
+  requested_by_registration: string | null
+  reviewed_by: string | null
+  reviewed_by_name?: string | null
+  reviewed_by_registration: string | null
+  rejection_reason: string | null
+  movement_id: string | null
+  created_at: string
+  reviewed_at: string | null
+  // CamelCase convenience fields
+  productName?: string
+  productSku?: string
+  batchLotNumber?: string | null
+  movementType: StockMovementType
+  reasonCode: string
+  reasonDetail: string | null
+  requestedByName?: string | null
+  requestedByRegistration: string | null
+  reviewedByName?: string | null
+  reviewedByRegistration: string | null
+  createdAt: string
+  reviewedAt: string | null
+}
+
+export interface StockTransferItem {
+  id: string
+  transfer_id: string
+  source_product_id: string
+  destination_product_id: string | null
+  product_sku: string
+  product_name: string
+  unit: string
+  source_batch_id: string | null
+  destination_batch_id: string | null
+  lot_number: string | null
+  expiration_date: string | null
+  quantity: number
+  unit_cost: number
+  selling_price: number
+  created_at: string
+  // CamelCase convenience fields
+  productName: string
+  productSku: string
+}
+
+export interface StockTransfer {
+  id: string
+  transfer_number: string
+  source_store_id: string
+  source_store_name?: string
+  destination_store_id: string
+  destination_store_name?: string
+  destination_branch_code?: string | null
+  status: 'DRAFT' | 'IN_TRANSIT' | 'COMPLETED' | 'CANCELLED'
+  total_items: number
+  total_quantity: number
+  total_cost_value: number
+  total_selling_value: number
+  notes: string | null
+  driver_or_carrier: string | null
+  created_by: string | null
+  created_by_name?: string | null
+  approved_by: string | null
+  received_by: string | null
+  created_at: string
+  completed_at: string | null
+  items: StockTransferItem[]
+  // CamelCase convenience fields
+  transferCode: string
+  fromStoreId: string
+  fromStoreName: string
+  toStoreId: string
+  toStoreName: string
+  totalItems: number
+  totalQuantity: number
+  totalCostValue: number
+  totalSellingValue: number
+  createdAt: string
+  approvedByName?: string | null
+  requestedByName?: string | null
+}
+
+export interface StockTransferCreateInput {
+  sourceStoreId?: string
+  destinationStoreId: string
+  notes?: string | null
+  driverOrCarrier?: string | null
+  driverName?: string | null
+  vehiclePlate?: string | null
+  items: {
+    productId: string
+    batchId?: string | null
+    lotNumber?: string | null
+    expirationDate?: string | null
+    quantity: number
+    unitCost?: number | null
+    sellingPrice?: number | null
+    notes?: string | null
+  }[]
+}
+
 export interface ProductStockTraceability {
   product: {
     id: string
@@ -147,4 +270,3 @@ export interface ProductStockTraceability {
     expiration_date: string | null
   }[]
 }
-

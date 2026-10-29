@@ -23,6 +23,12 @@ import { GlobalDeletePanel } from '@/components/admin/GlobalDeletePanel'
 import { GlobalBackupPanel } from '@/components/admin/GlobalBackupPanel'
 import { GlobalDbExplorerPanel } from '@/components/admin/GlobalDbExplorerPanel'
 import { GlobalApiKeyHbacPanel } from '@/components/admin/GlobalApiKeyHbacPanel'
+import { UserPermissionsAndPricingModal } from '@/components/admin/UserPermissionsAndPricingModal'
+import { UserBillingHistoryModal } from '@/components/admin/UserBillingHistoryModal'
+import { PermissionGroupsManagerModal } from '@/components/admin/PermissionGroupsManagerModal'
+import { EmployeeRolePermissionsModal } from '@/components/team/EmployeeRolePermissionsModal'
+import { DEFAULT_PERMISSION_MODULES } from '@/constants/screenDependencies'
+import { formatCurrency } from '@/utils/currency'
 import {
   Store,
   Search,
@@ -40,11 +46,16 @@ import {
   HardDrive,
   Database,
   Sparkles,
+  Sliders,
+  CreditCard,
+  Layers,
+  Lock,
+  UserCheck,
 } from 'lucide-react'
 import { formatDate, formatDateTime } from '@/utils/dates'
 import { parseApiError } from '@/utils/errorHandler'
 import type { Store as StoreType } from '@/types/store.types'
-import type { PlatformUser } from '@/types/user.types'
+import type { PlatformUser, StoreMember } from '@/types/user.types'
 
 export type GlobalAdminTab = 'stores' | 'users' | 'backups' | 'db-explorer' | 'api-hbac' | 'delete'
 
@@ -113,6 +124,18 @@ export function GlobalAdminDashboardPage() {
   // Transfer ownership modal states
   const [transferModalStore, setTransferModalStore] = React.useState<StoreType | null>(null)
   const [selectedNewOwnerId, setSelectedNewOwnerId] = React.useState('')
+
+  // Permission Groups, Pricing & Billing modal states
+  const [permissionsModalUser, setPermissionsModalUser] = React.useState<PlatformUser | null>(null)
+  const [billingModalUser, setBillingModalUser] = React.useState<PlatformUser | null>(null)
+  const [isGroupsManagerModalOpen, setIsGroupsManagerModalOpen] = React.useState(false)
+  const [employeeRoleModalContext, setEmployeeRoleModalContext] = React.useState<{
+    storeId: string
+    storeName: string
+    member: StoreMember | null
+    defaultEmail?: string
+    defaultFullName?: string
+  } | null>(null)
 
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
@@ -516,16 +539,26 @@ export function GlobalAdminDashboardPage() {
           )}
 
           {activeTab === 'users' && (
-            <select
-              value={userRoleFilter}
-              onChange={(e) => setFilter('userRole', e.target.value)}
-              aria-label="Filtrar tipo de usuário"
-              className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-            >
-              <option value="ALL">Todos os Usuários</option>
-              <option value="GLOBAL_ADMIN">Apenas Global Admins</option>
-              <option value="STANDARD">Usuários Padrão</option>
-            </select>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsGroupsManagerModalOpen(true)}
+                className="h-8 px-3 text-xs font-semibold gap-1.5 border-primary/40 bg-primary/5 text-primary hover:bg-primary/10"
+              >
+                <Layers className="h-3.5 w-3.5" /> Catálogo de Grupos & Valores
+              </Button>
+              <select
+                value={userRoleFilter}
+                onChange={(e) => setFilter('userRole', e.target.value)}
+                aria-label="Filtrar tipo de usuário"
+                className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+              >
+                <option value="ALL">Todos os Usuários</option>
+                <option value="GLOBAL_ADMIN">Apenas Global Admins</option>
+                <option value="STANDARD">Usuários Padrão</option>
+              </select>
+            </>
           )}
 
           {/* Quick Actions Dropdown Menu */}
@@ -549,6 +582,15 @@ export function GlobalAdminDashboardPage() {
                 onSelect: () => {
                   resetUserForm()
                   setIsUserModalOpen(true)
+                },
+              },
+              {
+                key: 'permission-groups-catalog',
+                label: 'Catálogo de Grupos & Valores (R$)',
+                icon: <Layers className="h-3.5 w-3.5 text-indigo-500" />,
+                onSelect: () => {
+                  selectTab('users')
+                  setIsGroupsManagerModalOpen(true)
                 },
               },
               {
@@ -854,7 +896,6 @@ export function GlobalAdminDashboardPage() {
                         currentSortOrder={sortOrder}
                         onSort={toggleSort}
                       />
-                      <th className="py-2.5 px-4">Telefone</th>
                       <SortableHeader
                         column="is_global_admin"
                         label="Acesso Global"
@@ -864,6 +905,8 @@ export function GlobalAdminDashboardPage() {
                         className="text-center"
                       />
                       <th className="py-2.5 px-4">Lojas Vinculadas</th>
+                      <th className="py-2.5 px-4">Grupo / Telas Liberadas</th>
+                      <th className="py-2.5 px-4">Valor & Assinatura</th>
                       <SortableHeader
                         column="created_at"
                         label="Cadastro em"
@@ -875,87 +918,291 @@ export function GlobalAdminDashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {userList.map((u) => (
-                      <tr key={u.id} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-2.5 px-4 font-semibold text-foreground">
-                          <div className="flex items-center gap-2">
-                            <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
-                              {u.fullName?.slice(0, 2) || u.email.slice(0, 2)}
-                            </div>
-                            <div>
-                              <div>{u.fullName || 'Sem nome cadastrado'}</div>
-                              <div className="text-[11px] text-muted-foreground font-normal">
-                                {u.email}
+                    {userList.map((u) => {
+                      const prof = u.permissionProfile
+                      const totalModulesCount = DEFAULT_PERMISSION_MODULES.length
+                      const enabledCount = prof?.enabledModules?.length ?? totalModulesCount
+                      const hasStoreAdminStore = u.stores.some((s) => s.role === 'STORE_ADMIN')
+                      const isRestricted =
+                        !u.isGlobalAdmin &&
+                        prof &&
+                        enabledCount < totalModulesCount &&
+                        (!hasStoreAdminStore || prof.enforceOverStoreAdmin)
+
+                      const paymentStatusBadge = () => {
+                        if (u.isGlobalAdmin) {
+                          return (
+                            <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-primary/30 text-primary">
+                              Superusuário
+                            </Badge>
+                          )
+                        }
+                        const st = prof?.paymentStatus || 'EXEMPT'
+                        if (st === 'ACTIVE') {
+                          return (
+                            <Badge variant="success" className="text-[9px] px-1.5 py-0">
+                              Em Dia
+                            </Badge>
+                          )
+                        }
+                        if (st === 'TRIAL') {
+                          return (
+                            <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              Trial / Teste
+                            </Badge>
+                          )
+                        }
+                        if (st === 'PAST_DUE') {
+                          return (
+                            <Badge variant="destructive" className="text-[9px] px-1.5 py-0">
+                              Em Atraso
+                            </Badge>
+                          )
+                        }
+                        if (st === 'SUSPENDED' || st === 'CANCELLED') {
+                          return (
+                            <Badge variant="destructive" className="text-[9px] px-1.5 py-0">
+                              {st === 'SUSPENDED' ? 'Suspenso' : 'Cancelado'}
+                            </Badge>
+                          )
+                        }
+                        return (
+                          <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground">
+                            Isento / Cortesia
+                          </Badge>
+                        )
+                      }
+
+                      return (
+                        <tr key={u.id} className="hover:bg-muted/30 transition-colors">
+                          <td className="py-2.5 px-4 font-semibold text-foreground">
+                            <div className="flex items-center gap-2">
+                              <div className="h-7 w-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                                {u.fullName?.slice(0, 2) || u.email.slice(0, 2)}
+                              </div>
+                              <div>
+                                <div>{u.fullName || 'Sem nome cadastrado'}</div>
+                                <div className="text-[11px] text-muted-foreground font-normal">
+                                  {u.email}
+                                  {u.phone ? ` • ${u.phone}` : ''}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-4 text-muted-foreground">
-                          {u.phone || '-'}
-                        </td>
-                        <td className="py-2.5 px-4 text-center">
-                          {u.isGlobalAdmin ? (
-                            <Badge className="text-[10px] px-2 py-0.5 gap-1 bg-primary text-primary-foreground font-semibold shadow-xs">
-                              <Shield className="h-2.5 w-2.5" /> Global Admin
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground">
-                              Usuário Padrão
-                            </Badge>
-                          )}
-                        </td>
-                        <td className="py-2.5 px-4">
-                          <div className="flex flex-wrap gap-1 max-w-xs">
-                            {u.stores.length === 0 ? (
-                              <span className="text-muted-foreground text-[11px]">Nenhuma loja</span>
+                          </td>
+                          <td className="py-2.5 px-4 text-center">
+                            {u.isGlobalAdmin ? (
+                              <Badge className="text-[10px] px-2 py-0.5 gap-1 bg-primary text-primary-foreground font-semibold shadow-xs">
+                                <Shield className="h-2.5 w-2.5" /> Global Admin
+                              </Badge>
                             ) : (
-                              u.stores.map((st) => (
-                                <Badge
-                                  key={st.storeId}
-                                  variant="outline"
-                                  className="text-[9px] px-1.5 py-0 gap-1 border-primary/20 bg-primary/5"
-                                >
-                                  {st.storeName} ({st.role})
-                                </Badge>
-                              ))
+                              <Badge variant="outline" className="text-[10px] px-2 py-0.5 text-muted-foreground">
+                                Usuário Padrão
+                              </Badge>
                             )}
-                          </div>
-                        </td>
-                        <td className="py-2.5 px-4 text-muted-foreground text-[11px]">
-                          {formatDateTime(u.createdAt)}
-                        </td>
-                        <td className="py-2.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2.5"
-                              onClick={() => handleOpenEditUser(u)}
-                            >
-                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2.5"
-                              onClick={() => resetPasswordMutation.mutate(u.email)}
-                              title="Enviar Redefinição de Senha"
-                            >
-                              <KeyRound className="h-3.5 w-3.5 mr-1" /> Reset Senha
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2.5 text-danger hover:bg-danger/10 border-danger/30"
-                              onClick={() => setDeletingUser(u)}
-                              title="Remover Usuário"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 mr-1" /> Excluir
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="flex flex-wrap gap-1 max-w-xs">
+                              {u.stores.length === 0 ? (
+                                <span className="text-muted-foreground text-[11px]">Nenhuma loja</span>
+                              ) : (
+                                u.stores.map((st) => (
+                                  <button
+                                    key={st.storeId}
+                                    type="button"
+                                    onClick={() =>
+                                      setEmployeeRoleModalContext({
+                                        storeId: st.storeId,
+                                        storeName: st.storeName,
+                                        member: {
+                                          id: st.storeId,
+                                          userId: u.id,
+                                          storeId: st.storeId,
+                                          role: st.role,
+                                          isActive: true,
+                                          employeeRegistration: st.employeeRegistration || null,
+                                          jobTitle: st.jobTitle || null,
+                                          customRoleId: st.customRoleId || null,
+                                          customRoleName: st.customRoleName || null,
+                                          canApproveWriteoff: Boolean(st.canApproveWriteoff),
+                                          grantedPermissions: st.grantedPermissions || [],
+                                          revokedPermissions: st.revokedPermissions || [],
+                                          createdAt: u.createdAt,
+                                          email: u.email,
+                                          phone: u.phone,
+                                          fullName: u.fullName,
+                                          avatarUrl: u.avatarUrl,
+                                        },
+                                      })
+                                    }
+                                    title="Clique para editar Papel na Loja, Aprovador de Baixa e Permissões Granulares"
+                                    className="inline-flex items-center text-[9px] px-1.5 py-0.5 rounded-md gap-1 border border-primary/25 bg-primary/5 hover:bg-primary/15 transition-colors cursor-pointer font-medium"
+                                  >
+                                    <span>
+                                      {st.storeName} ({st.customRoleName || st.role})
+                                    </span>
+                                    {(st.canApproveWriteoff || st.role === 'STOCK_APPROVER' || st.role === 'STORE_ADMIN') && (
+                                      <span className="text-emerald-600 dark:text-emerald-400 font-bold" title="Aprovador de Baixa de Estoque">
+                                        ✓Baixa
+                                      </span>
+                                    )}
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            {u.isGlobalAdmin ? (
+                              <div className="text-[11px] text-primary font-semibold">
+                                Irrestrito (Global Admin)
+                              </div>
+                            ) : prof ? (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <Badge
+                                    variant="outline"
+                                    className="text-[10px] px-2 py-0 font-semibold border-primary/30 bg-primary/5 text-foreground"
+                                  >
+                                    {prof.customPlanName || prof.permissionGroup?.name || 'Personalizado Sob Medida'}
+                                  </Badge>
+                                  <span
+                                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                      isRestricted
+                                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                        : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                                    }`}
+                                  >
+                                    {enabledCount}/{totalModulesCount} telas
+                                  </span>
+                                </div>
+                                {hasStoreAdminStore && prof.enforceOverStoreAdmin && (
+                                  <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                                    <Lock className="h-2.5 w-2.5 shrink-0" /> Limita STORE_ADMIN
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="space-y-0.5">
+                                <span className="text-[11px] text-muted-foreground">
+                                  Padrão do Cargo ({totalModulesCount}/{totalModulesCount} telas)
+                                </span>
+                                <div className="text-[10px] text-muted-foreground/80">
+                                  Clique em Permissões para limitar
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-foreground text-xs">
+                                  {formatCurrency(prof?.agreedMonthlyValue ?? 0)}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground">/mês</span>
+                                {paymentStatusBadge()}
+                              </div>
+                              {prof?.nextDueDate && (
+                                <div className="text-[10px] text-muted-foreground">
+                                  Venc.: {formatDate(prof.nextDueDate)}
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-4 text-muted-foreground text-[11px]">
+                            {formatDateTime(u.createdAt)}
+                          </td>
+                          <td className="py-2.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs font-semibold px-2.5 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+                                onClick={() => {
+                                  const firstStore = u.stores[0]
+                                  const fallbackStore = allStoresRaw[0]
+                                  const targetStoreId = firstStore?.storeId || fallbackStore?.id || ''
+                                  const targetStoreName = firstStore?.storeName || fallbackStore?.name || 'Loja'
+                                  if (!targetStoreId) return
+                                  setEmployeeRoleModalContext({
+                                    storeId: targetStoreId,
+                                    storeName: targetStoreName,
+                                    member: firstStore
+                                      ? {
+                                          id: firstStore.storeId,
+                                          userId: u.id,
+                                          storeId: firstStore.storeId,
+                                          role: firstStore.role,
+                                          isActive: true,
+                                          employeeRegistration: firstStore.employeeRegistration || null,
+                                          jobTitle: firstStore.jobTitle || null,
+                                          customRoleId: firstStore.customRoleId || null,
+                                          customRoleName: firstStore.customRoleName || null,
+                                          canApproveWriteoff: Boolean(firstStore.canApproveWriteoff),
+                                          grantedPermissions: firstStore.grantedPermissions || [],
+                                          revokedPermissions: firstStore.revokedPermissions || [],
+                                          createdAt: u.createdAt,
+                                          email: u.email,
+                                          phone: u.phone,
+                                          fullName: u.fullName,
+                                          avatarUrl: u.avatarUrl,
+                                        }
+                                      : null,
+                                    defaultEmail: u.email,
+                                    defaultFullName: u.fullName || '',
+                                  })
+                                }}
+                                title="Gerenciar Papel na Loja, Credencial de Aprovador de Baixa de Estoque e Permissões Granulares"
+                              >
+                                <UserCheck className="h-3.5 w-3.5 mr-1" /> Papel & Aprovador
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs font-semibold px-2.5 border-primary/30 text-primary hover:bg-primary/10"
+                                onClick={() => setPermissionsModalUser(u)}
+                                title="Configurar Grupo de Permissões, Telas Liberadas e Preço"
+                              >
+                                <Sliders className="h-3.5 w-3.5 mr-1" /> Permissões & Telas
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs font-semibold px-2.5 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                                onClick={() => setBillingModalUser(u)}
+                                title="Controle de Pagamentos, Faturas e Histórico Financeiro"
+                              >
+                                <CreditCard className="h-3.5 w-3.5 mr-1" /> Pagamentos
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs font-semibold px-2.5"
+                                onClick={() => handleOpenEditUser(u)}
+                              >
+                                <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
+                              </Button>
+                              <DropdownMenu
+                                triggerLabel="Mais"
+                                items={[
+                                  {
+                                    key: 'reset-password',
+                                    label: 'Enviar Redefinição de Senha',
+                                    icon: <KeyRound className="h-3.5 w-3.5 text-amber-500" />,
+                                    onSelect: () => resetPasswordMutation.mutate(u.email),
+                                  },
+                                  {
+                                    key: 'delete-user',
+                                    label: 'Excluir Usuário',
+                                    icon: <Trash2 className="h-3.5 w-3.5" />,
+                                    variant: 'danger',
+                                    onSelect: () => setDeletingUser(u),
+                                  },
+                                ]}
+                              />
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </ResponsiveTable>
               </div>
@@ -1323,6 +1570,37 @@ export function GlobalAdminDashboardPage() {
         variant={togglingStore?.is_active ? 'danger' : 'primary'}
         isLoading={toggleStoreStatusMutation.isPending}
       />
+
+      {/* MODAL 4: USER PERMISSIONS, SCREEN DEPENDENCIES & COMMERCIAL PRICING */}
+      <UserPermissionsAndPricingModal
+        isOpen={Boolean(permissionsModalUser)}
+        onClose={() => setPermissionsModalUser(null)}
+        user={permissionsModalUser}
+      />
+
+      {/* MODAL 5: USER BILLING, INVOICE SETTLEMENT & AUDIT TRAIL */}
+      <UserBillingHistoryModal
+        isOpen={Boolean(billingModalUser)}
+        onClose={() => setBillingModalUser(null)}
+        user={billingModalUser}
+      />
+
+      {/* MODAL 6: COMMERCIAL PERMISSION GROUPS & MODULE PRICING CATALOG */}
+      <PermissionGroupsManagerModal
+        isOpen={isGroupsManagerModalOpen}
+        onClose={() => setIsGroupsManagerModalOpen(false)}
+      />
+
+      {/* MODAL 7: EMPLOYEE STORE ROLE, WRITEOFF APPROVER & GRANULAR PERMISSIONS */}
+      {employeeRoleModalContext && (
+        <EmployeeRolePermissionsModal
+          isOpen={Boolean(employeeRoleModalContext)}
+          onClose={() => setEmployeeRoleModalContext(null)}
+          storeId={employeeRoleModalContext.storeId}
+          storeName={employeeRoleModalContext.storeName}
+          member={employeeRoleModalContext.member}
+        />
+      )}
     </div>
   )
 }

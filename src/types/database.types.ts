@@ -9,6 +9,7 @@ export type Json =
 export type UserRole =
   | 'GLOBAL_ADMIN'
   | 'STORE_ADMIN'
+  | 'STOCK_APPROVER'
   | 'FINANCE'
   | 'SELLER'
   | 'INVENTORY'

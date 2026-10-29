@@ -38,12 +38,14 @@ Ordem incremental observada (arquivos datados):
 19. `20261019000019_allow_delete_cancelled_orders_on_edit.sql`
 20. `20261028000020_hbac_api_integration.sql`
 21. `20261029000021_external_api_integrator.sql`
+22. `20261030000022_permission_groups_and_billing.sql`
+23. `20261030000023_staff_roles_approvers_and_branches.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
-## Enums (`initial_schema`)
+## Enums (`initial_schema` e posteriores)
 
-`user_role_enum`, `order_status_enum`, `order_channel_enum`, `payment_method_enum`, `payment_status_enum`, `stock_movement_type_enum`, `batch_status_enum`, `purchase_order_status_enum`.
+`user_role_enum` (`GLOBAL_ADMIN`, `STORE_ADMIN`, `STOCK_APPROVER`, `FINANCE`, `SELLER`, `INVENTORY`, `VIEWER`), `order_status_enum`, `order_channel_enum`, `payment_method_enum`, `payment_status_enum`, `stock_movement_type_enum`, `batch_status_enum`, `purchase_order_status_enum`.
 
 Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCARDED`, `KEPT`, `ON_HOLD`) em `20260926000007`.
 
@@ -54,17 +56,23 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | Tabela | Papel |
 | --- | --- |
 | `profiles` | 1:1 `auth.users`; `is_global_admin` |
-| `stores` | tenant; `slug` único; `theme_config`; `deleted_at` |
-| `store_users` | membership `store_id` + `user_id` + `role` |
-| `roles`, `permissions`, `role_permissions` | catálogo de permissões (seed) |
+| `stores` | tenant; `slug` único; `theme_config`; `deleted_at`; hierarquia de filiais (`parent_store_id`, `branch_code`, `is_branch`, `manager_name`) |
+| `store_users` | membership `store_id` + `user_id` + `role` + credenciais granulares de funcionário (`job_title`, `employee_registration`, `custom_role_id`, `can_approve_writeoff`, `approval_pin`, `max_writeoff_value`, `granted_permissions`, `revoked_permissions`) |
+| `store_custom_roles` | papéis operacionais customizados por loja (`code`, `name`, `base_role`, `permissions`, `can_approve_writeoff`, `max_writeoff_value`) |
+| `roles`, `permissions`, `role_permissions` | catálogo de permissões (seed + 24 permissões granulares adicionais na migration 23) |
+| `permission_modules` | catálogo de módulos de tela comercializáveis com preço mensal (`monthly_price`) |
+| `permission_groups` | pacotes comerciais de permissões (ex.: Catálogo WhatsApp, Controle de Estoque, ERP Completo) com preços base |
+| `user_permission_profiles` | perfil efetivo de permissões e assinatura por usuário (`enabled_modules`, `enforce_over_store_admin`, `agreed_monthly_value`, `payment_status`, `next_due_date`) |
+| `subscription_payments` | livro-razão de faturas e histórico de pagamentos SaaS por usuário (`reference_month`, `amount`, `paid_amount`, `payment_method`, `status`, `due_date`, `paid_at`) |
+| `permission_billing_audit_logs` | trilha de auditoria imutável de alterações de grupo, módulos, preços e baixas de pagamento |
 
 ### Cadastro
 
 `categories`, `brands`, `manufacturers`, `suppliers`, `supplier_contacts`, `customers`, `customer_addresses`, `products`, `product_images`, `media_library` (migration 05).
 
-### Estoque
+### Estoque & Filiais
 
-`stock_balances` (`available_quantity` gerada), `stock_batches`, `stock_movements`, `inventory_counts`, `inventory_count_items`, `cost_centers`, `loss_reasons` (writeoff 06), `batch_dispositions` (07).
+`stock_balances` (`available_quantity` gerada), `stock_batches`, `stock_movements`, `stock_writeoff_requests` (fila de aprovação de baixas de estoque pendentes/aprovadas/rejeitadas na migration 23), `stock_transfers` e `stock_transfer_items` (remessas/transferências de produtos entre Matriz e Filiais sem venda na migration 23), `inventory_counts`, `inventory_count_items`, `cost_centers`, `loss_reasons` (writeoff 06), `batch_dispositions` (07).
 
 ### Comercial
 
@@ -97,7 +105,10 @@ Usadas pelo frontend (`supabase.rpc`):
 | `create_order_with_stock` | `orderService.createOrder` |
 | `restore_sale_stock` | `orderService.cancelOrder` |
 | `receive_purchase_order_stock` | `purchasingService.receivePurchaseOrder` |
-| `apply_stock_movement` | `inventoryService.applyMovement` |
+| `apply_stock_movement` | `inventoryService.applyMovement` (endurecida na migration 23 com validação estrita `can_user_approve_writeoff` e alçada `max_writeoff_value`) |
+| `review_stock_writeoff_request` | `inventoryService.reviewWriteoffRequest` (aprova ou rejeita solicitações pendentes de baixa, restrito a aprovadores de baixa de estoque) |
+| `execute_stock_transfer_to_branch` | `inventoryService.executeStockTransferToBranch` (transfere produtos e lotes do estoque para uma filial sem venda, sincronizando catálogo, imagens e saldos no destino) |
+| `upsert_store_employee` | `userService.upsertStoreEmployee` (cria/atualiza funcionário na loja com papel, matrícula, credencial de aprovador de baixa e permissões granulares sem deslogar o admin atual) |
 | `set_batch_disposition` | `inventoryService.setBatchDisposition` |
 | `clear_batch_disposition` | `inventoryService.clearBatchDisposition` |
 | `generate_stock_alerts` | `notificationService.generateStockAlerts` |
@@ -117,6 +128,7 @@ Definidas no SQL e **não** listadas acima como chamada direta no `src/services`
 | `fn_revoke_default_function_exec` | 11 / 16 (revoke de EXECUTE em funções novas) |
 | `sync_stock_movement_from_api` | 20 (`BEFORE INSERT` trigger em `stock_movements` que preenche `previous_quantity`/`new_quantity` e sincroniza `stock_balances` em inserções diretas via REST) |
 | `get_ai_report` | 20 (RPC analítica consolidada para agentes externos/IA via `GET`/`POST /rest/v1/rpc/get_ai_report`) |
+| `user_has_effective_module` | 22 (verifica no banco se o usuário possui acesso efetivo ao módulo de tela considerando `user_permission_profiles` e `enforce_over_store_admin`) |
 
 ## Storage
 
