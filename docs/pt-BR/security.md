@@ -5,7 +5,7 @@ type: Security
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-28
+updated: 2026-10-28
 language: pt-BR
 classification: Confirmed
 source:
@@ -16,6 +16,7 @@ source:
   - supabase/migrations/20260927000014_global_admin_delete_auth_user.sql
   - supabase/migrations/20260927000015_revoke_internal_helpers_from_authenticated.sql
   - supabase/migrations/20260927000016_close_authenticated_default_on_new_functions.sql
+  - supabase/migrations/20261028000020_hbac_api_integration.sql
   - src/routes/ProtectedRoute.tsx
   - src/hooks/usePermissions.ts
 ---
@@ -75,7 +76,11 @@ Qualquer “esconder botão” é UX. Operações indevidas devem falhar no RLS/
 - **Pedidos INSERT:** staff **ou** checkout público (condição na policy; o catálogo atual usa WhatsApp).
 - **Pedidos DELETE (migration 19):** policy `"Orders delete cancelled: tenant staff"` permite que staff da loja (`STORE_ADMIN`, `SELLER`, `FINANCE`) ou `is_global_admin()` removam pedidos exclusivamente quando `status = 'CANCELLED'`, viabilizando substituição limpa ao editar pedidos no PDV.
 - **Catálogos:** SELECT público; modify store admin.
-- **Notificações:** destinatário ou staff da loja.
+- **Notificações:** destinatário, staff da loja ou token HBAC da loja com `audit:read` / `reports:read`.
+- **Tokens de API & HBAC (migration 20):**
+  - Removeu a policy permissiva `anon_read_active_tokens` em `public.api_tokens` (que permitia dump anônimo de tokens ativos) e revogou escrita de `anon` na tabela.
+  - Hook `pgrst.db_pre_request` (`public.check_hbac_pre_request`) valida o cabeçalho `X-HBAC-Token`, status `is_active`, `expires_at`, vínculo de loja (`X-Store-ID` vs `api_tokens.store_id`) e escopo mínimo exigido para cada tabela/método HTTP antes da execução da query.
+  - RLS por linha (`public.has_hbac_scope(store_id, required_scopes)`) aplica isolamento de tenant para agentes externos usando `X-HBAC-Token`.
 
 Detalhe fino: abrir o arquivo `20260925000002_rls_policies.sql`. Não copiar USING clauses da memória.
 

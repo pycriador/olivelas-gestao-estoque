@@ -14,6 +14,10 @@ dist-ssr
 .env
 .env.*
 !.env.example
+.curl
+.curl.*
+.sql
+.sql.*
 
 # Editor directories and files
 .vscode/*

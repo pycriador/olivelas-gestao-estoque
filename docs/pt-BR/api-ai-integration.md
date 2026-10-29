@@ -5,7 +5,7 @@ type: Reference
 status: Confirmed
 owner: project-maintainers
 created: 2026-10-02
-updated: 2026-10-02
+updated: 2026-10-28
 language: pt-BR
 classification: Confirmed
 ---
@@ -27,13 +27,20 @@ Este documento descreve os endpoints REST, cabeçalhos de autenticação, tokens
 
 ## 2. Autenticação & Cabeçalhos Obrigatórios
 
-Todas as requisições REST devem incluir os seguintes cabeçalhos HTTP:
+Todas as requisições REST de agentes externos ao PostgREST devem incluir os seguintes cabeçalhos HTTP:
 
 ```http
 apikey: sb_publishable_NfhTi2u06ypAJzlqHms5ug_MW_8bLlQ
-Authorization: Bearer <TOKEN_HBAC_OU_CHAVE_API>
+Authorization: Bearer sb_publishable_NfhTi2u06ypAJzlqHms5ug_MW_8bLlQ
+X-HBAC-Token: olv_live_<SEU_TOKEN_HBAC>
+X-Store-ID: f8fdfd0e-a13a-44a6-ba98-53e61be300db
 Content-Type: application/json
 ```
+
+> **Como funciona a validação (Migration `20261028000020_hbac_api_integration.sql`):**
+> 1. O hook `public.check_hbac_pre_request` (registrado em `pgrst.db_pre_request`) intercepta toda requisição que envia `X-HBAC-Token`, validando se o token existe, está ativo (`is_active = true`), não expirou (`expires_at`), pertence à loja enviada em `X-Store-ID` e possui o escopo exigido pelo endpoint e método HTTP (`GET`, `POST`, `PATCH`, `DELETE`).
+> 2. As políticas RLS (`public.has_hbac_scope(store_id, required_scopes)`) garantem isolamento por linha para que cada token acesse exclusivamente os registros da sua filial.
+> 3. Em inserções diretas em `/stock_movements` (`POST`), o trigger `trg_api_stock_movement_sync` calcula automaticamente `previous_quantity` e `new_quantity` e sincroniza o saldo físico em `stock_balances`.
 
 ---
 
@@ -84,9 +91,15 @@ Todos os endpoints utilizam a convenção PostgREST. Para filtrar por loja, incl
 
 ---
 
-## 5. Catálogo de Relatórios Disponíveis via API para IA Externa
+## 5. Catálogo de Relatórios Disponíveis via API para IA Externa (`/rpc/get_ai_report`)
 
-Abaixo estão os relatórios processados e consolidados pelo sistema, prontos para consumo por modelos de IA:
+A API expõe a RPC consolidada `public.get_ai_report(p_report, p_store_id)`, que pode ser chamada via `GET` ou `POST`:
+
+- **Via `GET`:** `GET /rest/v1/rpc/get_ai_report?p_report=<alias_ou_id>&p_store_id=f8fdfd0e-a13a-44a6-ba98-53e61be300db`
+- **Via `POST`:** `POST /rest/v1/rpc/get_ai_report` com body `{"p_report": "<alias_ou_id>", "p_store_id": "f8fdfd0e-a13a-44a6-ba98-53e61be300db"}`
+- **Catálogo de relatórios disponíveis:** `GET /rest/v1/rpc/get_ai_report?p_report=list&p_store_id=f8fdfd0e-a13a-44a6-ba98-53e61be300db`
+
+Abaixo estão os relatórios processados e consolidados pelo banco, prontos para consumo por modelos de IA:
 
 ### 1. `retail_summary_kpis` (Métricas Executivas Consolidadas)
 - **Descrição:** Indicadores macro de saúde financeira do estoque e vendas.
@@ -143,6 +156,8 @@ SUPABASE_KEY = "sb_publishable_NfhTi2u06ypAJzlqHms5ug_MW_8bLlQ"
 headers = {
     "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
+    "X-HBAC-Token": API_TOKEN,
+    "X-Store-ID": STORE_ID,
     "Content-Type": "application/json"
 }
 
@@ -156,9 +171,16 @@ def get_stock_balances():
     response = requests.get(url, headers=headers)
     return response.json()
 
+def get_executive_kpis():
+    url = f"{BASE_URL}/rpc/get_ai_report?p_report=kpis&p_store_id={STORE_ID}"
+    response = requests.get(url, headers=headers)
+    return response.json()
+
 if __name__ == "__main__":
     products = get_store_products()
     balances = get_stock_balances()
+    kpis = get_executive_kpis()
     print(f"Total de produtos resgatados: {len(products)}")
     print(f"Total de saldos resgatados: {len(balances)}")
+    print(f"KPIs executivos: {kpis}")
 ```

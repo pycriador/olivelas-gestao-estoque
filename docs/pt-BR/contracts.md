@@ -5,7 +5,7 @@ type: Contract
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-02
+updated: 2026-10-28
 language: pt-BR
 classification: Confirmed
 source:
@@ -43,10 +43,18 @@ Via `authService`: email/senha (`signInWithPassword` / `signUp`), `signInWithOAu
 
 ## Tokens de API & Controle de Acesso HBAC
 
-Via `apiKeyService` e tabela `public.api_keys`:
+Via `apiKeyService` e tabela `public.api_tokens` (migrations 17 e 20):
 - Formato do token exposto: `olv_live_<32_hex_chars>`.
-- Armazenamento seguro: hash SHA-256 no banco de dados (`key_hash`), prefixo visível para auditoria (`key_prefix`), escopos em `jsonb` (`scopes`).
-- Escopos HBAC disponíveis: `*` (Full Admin), `products:*`, `inventory:*`, `orders:*`, `purchases:*`, `customers:*`, `reports:*`, `audit:*`.
+- Armazenamento e auditoria: token completo em `token`, prefixo mascarado em `key_prefix`, escopos em `jsonb` (`scopes`), controle de expiração (`expires_at`), status (`is_active`) e carimbo de último uso (`last_used_at`).
+- Cabeçalhos HTTP enviados por agentes externos ao PostgREST:
+  - `apikey: <SUPABASE_PUBLISHABLE_OR_ANON_KEY>`
+  - `Authorization: Bearer <SUPABASE_PUBLISHABLE_OR_ANON_KEY>`
+  - `X-HBAC-Token: olv_live_...`
+  - `X-Store-ID: <UUID_DA_LOJA>`
+- Validação em duas camadas no PostgreSQL:
+  1. Hook `pgrst.db_pre_request` (`public.check_hbac_pre_request()`): bloqueia imediatamente tokens inexistentes/expirados (`28000`), inativos (`42501`), divergência de `X-Store-ID` (`42501`) ou escopo incompatível com o endpoint/método HTTP (`42501`).
+  2. RLS por linha (`public.has_hbac_scope(store_id, required_scopes)`): garante isolamento estrito por `store_id` em todas as tabelas de negócio (`products`, `categories`, `stock_balances`, `stock_batches`, `stock_movements`, `orders`, `order_items`, `payments`, `purchase_orders`, `purchase_order_items`, `suppliers`, `customers`, `customer_addresses`, `audit_logs`, `notifications`).
+- Escopos HBAC disponíveis: `*` (Full Admin), `products:read|write|delete`, `inventory:read|write|adjust`, `orders:read|write|cancel`, `purchases:read|write`, `customers:read|write`, `reports:read|list|kpis|valuation|abc|stockouts|purchases|losses|sales`, `audit:read`.
 - Isolamento: `store_id` (loja específica) ou `null` (token de alcance global multi-loja).
 
 ## Tabelas (PostgREST)
@@ -67,6 +75,7 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 | `generate_stock_alerts` | `notificationService.ts` |
 | `global_admin_delete` | `globalAdminService.ts` |
 | `global_admin_delete_platform_user` | `userService.ts` |
+| `get_ai_report` | Agentes externos / IA via REST (`GET`/`POST /rest/v1/rpc/get_ai_report`) e Explorador de Escopos em `GlobalApiKeyHbacPanel.tsx` |
 
 `create_order_with_stock`: pedido + itens + pagamento + baixa com `FOR UPDATE` (comentário e corpo em `20260926000009_atomic_order_creation.sql`).
 
