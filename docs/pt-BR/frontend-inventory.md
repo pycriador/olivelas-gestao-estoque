@@ -46,7 +46,7 @@ source:
 
 | Path | Page | Extra |
 | --- | --- | --- |
-| `/dashboard` | `DashboardPage` | |
+| `/dashboard` | `DashboardPage` | Painel analítico multi-loja (`Matriz` & `Filiais`), vendas mensais (12 meses), top produtos mais vendidos, filtros de período/tempo/canal e exportação CSV/JSON/PDF |
 | `/global-admin` | `GlobalAdminDashboardPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
 | `/global-admin/stores/new` | `GlobalAdminStoreEditPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
 | `/global-admin/stores/:storeId/edit` | `GlobalAdminStoreEditPage` | Edição completa da loja, filiação (`Matriz` / `Filial`), `STORE_ADMIN`s e equipe |
@@ -101,7 +101,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 
 | Page | Padrão principal |
 | --- | --- |
-| `DashboardPage` | cards de métrica (`grid-cols-1 sm:grid-cols-2 lg:grid-cols-4`) + lista de pedidos recentes |
+| `DashboardPage` | Painel executivo de Business Intelligence: barra de filtros de período (`Hoje`, `7d`, `30d`, `90d`, `Este Mês`, `Mês Passado`, `Este Ano`, `Tudo`, `De/Até`), filtro por loja (`Todas as Lojas`, `Matriz`, `Filial`) e canal (`PDV`, `WhatsApp`, `Online`), 8 KPIs com variação `%` vs. período anterior, gráfico de evolução temporal (**Vendas Mensais 12 Meses** ou **Evolução no Período** diária/semanal/mensal), comparativo **Desempenho por Loja (Matriz vs. Filiais)** com drill-down em 1 clique, **Ranking de Produtos Mais Vendidos** com foto/margem/alerta de estoque, gráficos de acompanhamento (Donut SVG de Categorias, Canais, Meios de Pagamento e Ritmo Semanal), tabela de pedidos do período e menu `Baixar Dados do Período` (CSV, JSON e Relatório PDF/Impressão) |
 | `SalesPage` | PDV: `grid-cols-1 lg:grid-cols-12` (catálogo 8 com miniaturas de `product_images` / carrinho 4 em `lg`) |
 | `ProductsPage` | catálogo mestre: tabela `hidden md:block` + lista `md:hidden` com miniaturas, seleção múltipla e `BulkStockEntryModal` |
 | `InventoryPage` | KPI de valorização a custo/venda + abas de Saldos (com miniaturas de produtos), Movimentações, **Aprovação de Baixas** (`stock_writeoff_requests`) e **Remessas p/ Filiais** (`stock_transfers` sem venda), além de `StockWriteoffModal`, `BulkStockWriteoffModal` e `StockBranchTransferModal` |

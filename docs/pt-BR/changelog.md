@@ -14,6 +14,22 @@ classification: Confirmed
 
 ## 2026-10-29
 
+- **Dashboard Executivo Completo (`/dashboard`) com Gráficos por Loja, Top Produtos Mais Vendidos, Vendas Mensais (12 Meses), Filtros de Período/Tempo e Exportação de Dados (CSV, JSON e PDF)** (`src/pages/DashboardPage.tsx`, `src/services/reportService.ts`, `src/types/report.types.ts`):
+  - **Barra de Filtros Dinâmica com Sincronização na URL (`?period=30d&from=...&to=...&store=ALL&channel=ALL&granularity=day`)**:
+    - Presets rápidos de período (`Hoje`, `7 Dias`, `30 Dias`, `90 Dias`, `Este Mês`, `Mês Passado`, `Este Ano`, `Tudo`), seletores customizados `De / Até`, seletor de unidade (`Todas as Lojas Consolidado` ou `Matriz` / `Filial` específica), filtro por canal (`PDV`, `WhatsApp`, `Online`) e granularidade do gráfico (`Diário`, `Semanal`, `Mensal`).
+  - **8 KPIs Executivos com Comparativo vs. Período Anterior (`%`)**:
+    - Receita Bruta, Lucro Bruto & Margem Média (`%`), Pedidos Concluídos, Ticket Médio, Unidades Vendidas, Patrimônio em Estoque (custo e venda estimada), Alertas de Ruptura e Lotes Críticos (`<= 30d`).
+  - **Gráficos de Vendas Mensais e Evolução Temporal Interativos**:
+    - Alternância em 1 clique entre **Vendas Mensais (Últimos 12 Meses)** e **Evolução no Período Selecionado**, exibindo barras duplas de Receita e Lucro Estimado, linha de tendência, tooltips detalhados e indicadores de Pico e Média.
+  - **Gráfico Comparativo por Loja (`Matriz vs. Filiais`)**:
+    - Comparativo visual de faturamento, lucro bruto, margem, pedidos, itens vendidos, valor em estoque e participação (`% Share`) de cada unidade, permitindo clicar em qualquer loja para filtrar todo o Dashboard instantaneamente.
+  - **Ranking de Produtos Mais Vendidos (`Top Produtos`)**:
+    - Lista visual com miniatura do produto, SKU, categoria, unidades vendidas, faturamento, lucro bruto, margem (`%`), participação nas vendas e alerta de estoque atual, ordenável por **Faturamento (`R$`)**, **Quantidade (`un.`)** ou **Lucro Bruto (`R$`)**.
+  - **Gráficos de Acompanhamento Operacional**:
+    - Gráfico Donut SVG de **Vendas por Categoria**, distribuição por **Canal de Venda** (`PDV`, `WhatsApp`, `Catálogo Online`), **Meios de Pagamento** (`PIX`, `Cartão`, `Dinheiro`) e **Ritmo por Dia da Semana** (`Dom` a `Sáb`).
+  - **Exportação Completa do Período Selecionado (`DropdownMenu`)**:
+    - Download imediato em **CSV (Excel)** de Pedidos do Período, Produtos Mais Vendidos, Desempenho por Loja e Vendas Mensais (12m), além de **JSON Completo** e **Relatório Executivo para Impressão / PDF**.
+
 - **Hierarquia Matriz → Filiais, Dropdown Único de Ações Rápidas, Licenciamento de 10 Funcionários Grátis por Loja, Área Financeiro no Global Admin e Separação de Modais em Páginas Dedicadas com URLs Próprias** (`supabase/migrations/20261030000024_global_finance_licensing_rules.sql`, `AppRoutes.tsx`, `GlobalAdminDashboardPage.tsx`, `StoresPage.tsx`, `TeamPage.tsx`, `dropdown-menu.tsx`, `GlobalAdminStoreEditPage.tsx`, `StoreEmployeeEditPage.tsx`, `GlobalAdminUserEditPage.tsx`, `GlobalAdminUserPermissionsPage.tsx`, `GlobalAdminUserBillingPage.tsx`, `GlobalAdminFinanceRulesPage.tsx`, `GlobalAdminFinancePlansPage.tsx`, `GlobalAdminFinancePaymentsPage.tsx`):
   - **Exibição Hierárquica Matriz → Filiais (`/global-admin?tab=stores` e `/stores`)**:
     - As lojas filiais (`is_branch = true` ou `parent_store_id != null`) são agrupadas e renderizadas imediatamente abaixo de sua respectiva Matriz como linhas filhas indentadas (`└─ Filial`), exibindo o código da filial, vínculo com a matriz, administradores (`STORE_ADMIN`) e consumo de licenças de equipe.

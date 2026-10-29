@@ -152,3 +152,184 @@ export interface CapitalInvestmentReportItem {
   shareOfTotalInvestment: number
   gmroi: number
 }
+
+export type DashboardPeriodPreset =
+  | 'TODAY'
+  | '7D'
+  | '30D'
+  | '90D'
+  | 'THIS_MONTH'
+  | 'LAST_MONTH'
+  | 'THIS_YEAR'
+  | 'ALL_TIME'
+  | 'CUSTOM'
+
+export type DashboardGranularity = 'DAY' | 'WEEK' | 'MONTH'
+
+export interface DashboardStoreOption {
+  id: string
+  name: string
+  slug: string
+  isBranch?: boolean
+  branchCode?: string | null
+  parentStoreId?: string | null
+}
+
+export interface DashboardAnalyticsParams {
+  selectedStoreId: string // 'ALL' or specific store UUID
+  accessibleStores: DashboardStoreOption[]
+  dateFrom: string // YYYY-MM-DD
+  dateTo: string // YYYY-MM-DD
+  channel?: string // 'ALL' | 'IN_STORE' | 'WHATSAPP' | 'ECOMMERCE'
+  granularity?: DashboardGranularity
+}
+
+export interface DashboardMonthlyPoint {
+  monthKey: string
+  monthLabel: string
+  revenue: number
+  profit: number
+  ordersCount: number
+  unitsSold: number
+  averageTicket: number
+}
+
+export interface DashboardTimelinePoint {
+  bucketKey: string
+  label: string
+  revenue: number
+  profit: number
+  ordersCount: number
+  unitsSold: number
+  averageTicket: number
+}
+
+export interface DashboardStorePerformanceItem {
+  storeId: string
+  storeName: string
+  storeSlug: string
+  isBranch: boolean
+  branchCode: string | null
+  parentStoreId: string | null
+  revenue: number
+  profit: number
+  marginPercent: number
+  ordersCount: number
+  unitsSold: number
+  averageTicket: number
+  sharePercent: number
+  stockCostValue: number
+  stockSellingValue: number
+  lowStockCount: number
+  outOfStockCount: number
+}
+
+export interface DashboardTopProductItem {
+  productId: string
+  productName: string
+  productSku: string
+  categoryName: string
+  unit: string
+  imageUrl: string | null
+  storeId: string
+  storeName: string
+  quantitySold: number
+  revenue: number
+  costTotal: number
+  profit: number
+  marginPercent: number
+  ordersCount: number
+  shareOfRevenuePercent: number
+  currentStock: number
+  minStock: number
+}
+
+export interface DashboardCategoryBreakdownItem {
+  categoryName: string
+  revenue: number
+  profit: number
+  quantitySold: number
+  ordersCount: number
+  sharePercent: number
+}
+
+export interface DashboardChannelBreakdownItem {
+  channel: string
+  channelLabel: string
+  revenue: number
+  ordersCount: number
+  averageTicket: number
+  sharePercent: number
+}
+
+export interface DashboardPaymentBreakdownItem {
+  method: string
+  methodLabel: string
+  amount: number
+  transactionsCount: number
+  sharePercent: number
+}
+
+export interface DashboardWeekdayItem {
+  dayIndex: number
+  dayLabel: string
+  revenue: number
+  ordersCount: number
+  averageTicket: number
+}
+
+export interface DashboardPeriodOrderItem {
+  id: string
+  orderNumber: string
+  storeId: string
+  storeName: string
+  customerName: string
+  channel: string
+  paymentMethod: string
+  status: string
+  itemsCount: number
+  subtotal: number
+  discountAmount: number
+  totalAmount: number
+  estimatedProfit: number
+  createdAt: string
+}
+
+export interface DashboardAnalyticsData {
+  kpis: {
+    periodRevenue: number
+    previousPeriodRevenue: number
+    revenueGrowthPercent: number
+    periodProfit: number
+    periodMarginPercent: number
+    periodOrdersCount: number
+    previousPeriodOrdersCount: number
+    ordersGrowthPercent: number
+    averageTicket: number
+    previousAverageTicket: number
+    ticketGrowthPercent: number
+    periodUnitsSold: number
+    salesTodayTotal: number
+    salesMonthTotal: number
+    pendingOrdersCount: number
+    cancelledOrdersCount: number
+    cancelledAmount: number
+    stockCostValuation: number
+    stockSellingValuation: number
+    lowStockCount: number
+    outOfStockCount: number
+    expiring30dCount: number
+    expiredCount: number
+    activeCustomersCount: number
+    totalProductsCount: number
+  }
+  monthlySalesSeries: DashboardMonthlyPoint[]
+  timelineSeries: DashboardTimelinePoint[]
+  storeComparison: DashboardStorePerformanceItem[]
+  topProducts: DashboardTopProductItem[]
+  categoryBreakdown: DashboardCategoryBreakdownItem[]
+  channelBreakdown: DashboardChannelBreakdownItem[]
+  paymentBreakdown: DashboardPaymentBreakdownItem[]
+  weekdayBreakdown: DashboardWeekdayItem[]
+  periodOrders: DashboardPeriodOrderItem[]
+}

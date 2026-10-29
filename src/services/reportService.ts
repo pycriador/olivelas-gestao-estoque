@@ -10,6 +10,17 @@ import type {
   ConsumptionDemandReportItem,
   CustomerTicketReportItem,
   CapitalInvestmentReportItem,
+  DashboardAnalyticsParams,
+  DashboardAnalyticsData,
+  DashboardMonthlyPoint,
+  DashboardTimelinePoint,
+  DashboardStorePerformanceItem,
+  DashboardTopProductItem,
+  DashboardCategoryBreakdownItem,
+  DashboardChannelBreakdownItem,
+  DashboardPaymentBreakdownItem,
+  DashboardWeekdayItem,
+  DashboardPeriodOrderItem,
 } from '@/types/report.types'
 
 export const reportService = {
@@ -795,6 +806,915 @@ export const reportService = {
       activeStores: activeStores || 0,
       totalUsers: totalUsers || 0,
       totalOrders: totalOrders || 0,
+    }
+  },
+
+  /**
+   * Analytics Executivo Completo do Dashboard (Gráficos por Loja, Produtos Mais Vendidos,
+   * Vendas Mensais, Série Temporal do Período, Categorias, Canais, Meios de Pagamento e Exportação)
+   */
+  async getDashboardAnalytics(params: DashboardAnalyticsParams): Promise<DashboardAnalyticsData> {
+    const {
+      selectedStoreId,
+      accessibleStores,
+      dateFrom,
+      dateTo,
+      channel = 'ALL',
+      granularity = 'DAY',
+    } = params
+
+    const allStoreIds = accessibleStores.map((s) => s.id).filter(Boolean)
+    const targetStoreIds =
+      selectedStoreId === 'ALL' || !selectedStoreId
+        ? allStoreIds
+        : [selectedStoreId]
+
+    const storeNameMap = new Map<string, string>()
+    const storeMetaMap = new Map<
+      string,
+      { name: string; slug: string; isBranch: boolean; branchCode: string | null; parentStoreId: string | null }
+    >()
+
+    for (const s of accessibleStores) {
+      storeNameMap.set(s.id, s.name)
+      storeMetaMap.set(s.id, {
+        name: s.name,
+        slug: s.slug,
+        isBranch: Boolean(s.isBranch),
+        branchCode: s.branchCode || null,
+        parentStoreId: s.parentStoreId || null,
+      })
+    }
+
+    // Parse period boundaries
+    const startIso = dateFrom ? `${dateFrom}T00:00:00.000Z` : '2020-01-01T00:00:00.000Z'
+    const endIso = dateTo ? `${dateTo}T23:59:59.999Z` : new Date().toISOString()
+
+    const startMs = new Date(startIso).getTime()
+    const endMs = new Date(endIso).getTime()
+    const periodSpanMs = Math.max(86400000, endMs - startMs)
+    const prevStartIso = new Date(startMs - periodSpanMs).toISOString()
+    const prevEndIso = new Date(startMs - 1).toISOString()
+
+    // 12 months window for the Monthly Sales Chart
+    const now = new Date()
+    const twelveMonthsAgoDate = new Date(now.getFullYear(), now.getMonth() - 11, 1)
+    const earliestFetchIso =
+      new Date(prevStartIso) < twelveMonthsAgoDate
+        ? prevStartIso
+        : twelveMonthsAgoDate.toISOString()
+
+    if (allStoreIds.length === 0) {
+      return {
+        kpis: {
+          periodRevenue: 0,
+          previousPeriodRevenue: 0,
+          revenueGrowthPercent: 0,
+          periodProfit: 0,
+          periodMarginPercent: 0,
+          periodOrdersCount: 0,
+          previousPeriodOrdersCount: 0,
+          ordersGrowthPercent: 0,
+          averageTicket: 0,
+          previousAverageTicket: 0,
+          ticketGrowthPercent: 0,
+          periodUnitsSold: 0,
+          salesTodayTotal: 0,
+          salesMonthTotal: 0,
+          pendingOrdersCount: 0,
+          cancelledOrdersCount: 0,
+          cancelledAmount: 0,
+          stockCostValuation: 0,
+          stockSellingValuation: 0,
+          lowStockCount: 0,
+          outOfStockCount: 0,
+          expiring30dCount: 0,
+          expiredCount: 0,
+          activeCustomersCount: 0,
+          totalProductsCount: 0,
+        },
+        monthlySalesSeries: [],
+        timelineSeries: [],
+        storeComparison: [],
+        topProducts: [],
+        categoryBreakdown: [],
+        channelBreakdown: [],
+        paymentBreakdown: [],
+        weekdayBreakdown: [],
+        periodOrders: [],
+      }
+    }
+
+    // Fetch Orders with Items, Products, Categories, Customers, and Payments across all accessible stores
+    // so we can render both the Store Comparison Chart and the scoped Dashboard Analytics in a single pass
+    const [
+      ordersRes,
+      stockBalancesRes,
+      batchesRes,
+      customersRes,
+    ] = await Promise.all([
+      supabase
+        .from('orders')
+        .select(`
+          id,
+          store_id,
+          order_number,
+          channel,
+          status,
+          subtotal,
+          discount_amount,
+          shipping_amount,
+          total_amount,
+          created_at,
+          customers ( name ),
+          payments ( method, amount, status ),
+          order_items (
+            id,
+            product_id,
+            quantity,
+            unit_price,
+            unit_cost,
+            discount,
+            total_price,
+            products (
+              id,
+              name,
+              sku,
+              unit,
+              cost_price,
+              selling_price,
+              min_stock,
+              categories ( name ),
+              product_images ( public_url, is_primary )
+            )
+          )
+        `)
+        .in('store_id', allStoreIds)
+        .gte('created_at', earliestFetchIso)
+        .order('created_at', { ascending: false }),
+
+      supabase
+        .from('stock_balances')
+        .select(`
+          store_id,
+          product_id,
+          quantity,
+          products!inner (
+            id,
+            name,
+            sku,
+            min_stock,
+            cost_price,
+            selling_price,
+            deleted_at
+          )
+        `)
+        .in('store_id', allStoreIds)
+        .is('products.deleted_at', null),
+
+      supabase
+        .from('stock_batches')
+        .select('store_id, expiration_date, quantity')
+        .in('store_id', targetStoreIds)
+        .gt('quantity', 0),
+
+      supabase
+        .from('customers')
+        .select('id, store_id, status')
+        .in('store_id', targetStoreIds)
+        .eq('status', 'ACTIVE')
+        .is('deleted_at', null),
+    ])
+
+    const rawOrders = ((ordersRes.data || []) as any[]).filter(
+      (o) => !String(o.order_number || '').includes('-SUB-')
+    )
+    const rawStockBalances = (stockBalancesRes.data || []) as any[]
+    const rawBatches = (batchesRes.data || []) as any[]
+    const activeCustomersCount = (customersRes.data || []).length
+
+    // Index current stock by storeId:productId and productId
+    const stockByStoreProduct = new Map<string, number>()
+    const stockByProductAgg = new Map<string, { qty: number; minStock: number }>()
+
+    const storeStockSummaryMap = new Map<
+      string,
+      { costVal: number; sellVal: number; lowStock: number; outOfStock: number; productsCount: number }
+    >()
+
+    for (const sId of allStoreIds) {
+      storeStockSummaryMap.set(sId, {
+        costVal: 0,
+        sellVal: 0,
+        lowStock: 0,
+        outOfStock: 0,
+        productsCount: 0,
+      })
+    }
+
+    for (const row of rawStockBalances) {
+      const sId = row.store_id
+      const prod = Array.isArray(row.products) ? row.products[0] : row.products
+      if (!prod) continue
+      const pId = prod.id || row.product_id
+      const qty = Number(row.quantity) || 0
+      const min = Number(prod.min_stock) || 0
+      const cost = Number(prod.cost_price) || 0
+      const sell = Number(prod.selling_price) || 0
+
+      stockByStoreProduct.set(`${sId}:${pId}`, qty)
+
+      // Update per-store stock summary
+      const stSum = storeStockSummaryMap.get(sId)
+      if (stSum) {
+        stSum.productsCount += 1
+        if (qty > 0) {
+          stSum.costVal += qty * cost
+          stSum.sellVal += qty * sell
+        }
+        if (qty <= 0) {
+          stSum.outOfStock += 1
+        } else if (qty <= min) {
+          stSum.lowStock += 1
+        }
+      }
+
+      // If in targetStoreIds, aggregate for top products & KPIs
+      if (targetStoreIds.includes(sId)) {
+        const prev = stockByProductAgg.get(pId) || { qty: 0, minStock: min }
+        prev.qty += qty
+        stockByProductAgg.set(pId, prev)
+      }
+    }
+
+    let stockCostValuation = 0
+    let stockSellingValuation = 0
+    let lowStockCount = 0
+    let outOfStockCount = 0
+    let totalProductsCount = 0
+
+    for (const sId of targetStoreIds) {
+      const stSum = storeStockSummaryMap.get(sId)
+      if (stSum) {
+        stockCostValuation += stSum.costVal
+        stockSellingValuation += stSum.sellVal
+        lowStockCount += stSum.lowStock
+        outOfStockCount += stSum.outOfStock
+        totalProductsCount += stSum.productsCount
+      }
+    }
+
+    // Batches expiration counts for targetStoreIds
+    const in30d = new Date()
+    in30d.setDate(in30d.getDate() + 30)
+    let expiredCount = 0
+    let expiring30dCount = 0
+
+    for (const b of rawBatches) {
+      if (!b.expiration_date) continue
+      const exp = new Date(b.expiration_date)
+      if (exp < now) {
+        expiredCount++
+      } else if (exp <= in30d) {
+        expiring30dCount++
+      }
+    }
+
+    // Helper to calculate order estimated cost & profit & units
+    const computeOrderMetrics = (order: any) => {
+      const items = (order.order_items || []) as any[]
+      let units = 0
+      let totalCost = 0
+      for (const it of items) {
+        const prod = Array.isArray(it.products) ? it.products[0] : it.products
+        const q = Number(it.quantity) || 0
+        const uCost =
+          it.unit_cost !== null && it.unit_cost !== undefined && Number(it.unit_cost) > 0
+            ? Number(it.unit_cost)
+            : Number(prod?.cost_price) || 0
+        units += q
+        totalCost += q * uCost
+      }
+      const rev = Number(order.total_amount) || 0
+      const profit = rev - totalCost
+      return { units, totalCost, profit, rev }
+    }
+
+    // Filter by channel if requested
+    const matchesChannel = (order: any) => {
+      if (!channel || channel === 'ALL') return true
+      return order.channel === channel
+    }
+
+    // 1. Build Store Comparison across ALL accessible stores for the selected date range & channel
+    const storePerfAcc = new Map<
+      string,
+      { revenue: number; profit: number; ordersCount: number; unitsSold: number }
+    >()
+    for (const sId of allStoreIds) {
+      storePerfAcc.set(sId, { revenue: 0, profit: 0, ordersCount: 0, unitsSold: 0 })
+    }
+
+    for (const o of rawOrders) {
+      if (!matchesChannel(o)) continue
+      if (o.status === 'CANCELLED') continue
+      const createdMs = new Date(o.created_at).getTime()
+      if (createdMs < startMs || createdMs > endMs) continue
+
+      const acc = storePerfAcc.get(o.store_id)
+      if (acc) {
+        const { rev, profit, units } = computeOrderMetrics(o)
+        acc.revenue += rev
+        acc.profit += profit
+        acc.ordersCount += 1
+        acc.unitsSold += units
+      }
+    }
+
+    const totalAllStoresRevenue = Array.from(storePerfAcc.values()).reduce(
+      (sum, item) => sum + item.revenue,
+      0
+    )
+
+    const storeComparison: DashboardStorePerformanceItem[] = accessibleStores
+      .map((st) => {
+        const perf = storePerfAcc.get(st.id) || {
+          revenue: 0,
+          profit: 0,
+          ordersCount: 0,
+          unitsSold: 0,
+        }
+        const stStock = storeStockSummaryMap.get(st.id) || {
+          costVal: 0,
+          sellVal: 0,
+          lowStock: 0,
+          outOfStock: 0,
+          productsCount: 0,
+        }
+        const avgTicket = perf.ordersCount > 0 ? perf.revenue / perf.ordersCount : 0
+        const marginPct = perf.revenue > 0 ? (perf.profit / perf.revenue) * 100 : 0
+        const sharePct =
+          totalAllStoresRevenue > 0 ? (perf.revenue / totalAllStoresRevenue) * 100 : 0
+
+        return {
+          storeId: st.id,
+          storeName: st.name,
+          storeSlug: st.slug,
+          isBranch: Boolean(st.isBranch),
+          branchCode: st.branchCode || null,
+          parentStoreId: st.parentStoreId || null,
+          revenue: Number(perf.revenue.toFixed(2)),
+          profit: Number(perf.profit.toFixed(2)),
+          marginPercent: Number(marginPct.toFixed(1)),
+          ordersCount: perf.ordersCount,
+          unitsSold: Number(perf.unitsSold.toFixed(2)),
+          averageTicket: Number(avgTicket.toFixed(2)),
+          sharePercent: Number(sharePct.toFixed(1)),
+          stockCostValue: Number(stStock.costVal.toFixed(2)),
+          stockSellingValue: Number(stStock.sellVal.toFixed(2)),
+          lowStockCount: stStock.lowStock,
+          outOfStockCount: stStock.outOfStock,
+        }
+      })
+      .sort((a, b) => b.revenue - a.revenue || b.stockSellingValue - a.stockSellingValue)
+
+    // 2. Scoped orders (only targetStoreIds and matching channel)
+    const scopedOrders = rawOrders.filter(
+      (o) => targetStoreIds.includes(o.store_id) && matchesChannel(o)
+    )
+
+    const todayPrefix = now.toISOString().slice(0, 10)
+    const currentMonthPrefix = now.toISOString().slice(0, 7)
+
+    let salesTodayTotal = 0
+    let salesMonthTotal = 0
+    let pendingOrdersCount = 0
+
+    let periodRevenue = 0
+    let periodProfit = 0
+    let periodOrdersCount = 0
+    let periodUnitsSold = 0
+    let cancelledOrdersCount = 0
+    let cancelledAmount = 0
+
+    let previousPeriodRevenue = 0
+    let previousPeriodOrdersCount = 0
+
+    const prevStartMs = new Date(prevStartIso).getTime()
+    const prevEndMs = new Date(prevEndIso).getTime()
+
+    // Monthly Sales Map (Last 12 Months)
+    const MONTH_NAMES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+    const monthlyMap = new Map<
+      string,
+      { monthKey: string; monthLabel: string; revenue: number; profit: number; ordersCount: number; unitsSold: number }
+    >()
+
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const y = d.getFullYear()
+      const m = String(d.getMonth() + 1).padStart(2, '0')
+      const key = `${y}-${m}`
+      const label = `${MONTH_NAMES[d.getMonth()]}/${String(y).slice(-2)}`
+      monthlyMap.set(key, {
+        monthKey: key,
+        monthLabel: label,
+        revenue: 0,
+        profit: 0,
+        ordersCount: 0,
+        unitsSold: 0,
+      })
+    }
+
+    // Timeline Buckets Map for Selected Period
+    const timelineMap = new Map<
+      string,
+      { bucketKey: string; label: string; revenue: number; profit: number; ordersCount: number; unitsSold: number }
+    >()
+
+    const getTimelineBucket = (isoDate: string): { key: string; label: string } => {
+      const d = new Date(isoDate)
+      if (granularity === 'MONTH') {
+        const y = d.getFullYear()
+        const m = String(d.getMonth() + 1).padStart(2, '0')
+        return {
+          key: `${y}-${m}`,
+          label: `${MONTH_NAMES[d.getMonth()]}/${String(y).slice(-2)}`,
+        }
+      }
+      if (granularity === 'WEEK') {
+        // Monday of the week
+        const day = d.getDay()
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+        const weekStart = new Date(d)
+        weekStart.setDate(diff)
+        const key = weekStart.toISOString().slice(0, 10)
+        const dd = String(weekStart.getDate()).padStart(2, '0')
+        const mm = String(weekStart.getMonth() + 1).padStart(2, '0')
+        return {
+          key,
+          label: `Sem ${dd}/${mm}`,
+        }
+      }
+      // Default DAY
+      const key = isoDate.slice(0, 10)
+      const [, mm, dd] = key.split('-')
+      return {
+        key,
+        label: `${dd}/${mm}`,
+      }
+    }
+
+    // Pre-populate daily buckets if span <= 45 days and granularity === 'DAY'
+    const daysSpan = Math.ceil((endMs - startMs) / 86400000)
+    if (granularity === 'DAY' && daysSpan >= 1 && daysSpan <= 45) {
+      for (let i = 0; i <= daysSpan; i++) {
+        const cur = new Date(startMs + i * 86400000)
+        if (cur.getTime() > endMs) break
+        const iso = cur.toISOString()
+        const b = getTimelineBucket(iso)
+        if (!timelineMap.has(b.key)) {
+          timelineMap.set(b.key, {
+            bucketKey: b.key,
+            label: b.label,
+            revenue: 0,
+            profit: 0,
+            ordersCount: 0,
+            unitsSold: 0,
+          })
+        }
+      }
+    }
+
+    // Aggregation maps for the selected period
+    const productSalesMap = new Map<
+      string,
+      {
+        productId: string
+        productName: string
+        productSku: string
+        categoryName: string
+        unit: string
+        imageUrl: string | null
+        storeId: string
+        storeName: string
+        quantitySold: number
+        revenue: number
+        costTotal: number
+        profit: number
+        orderIds: Set<string>
+        minStock: number
+      }
+    >()
+
+    const categorySalesMap = new Map<
+      string,
+      { categoryName: string; revenue: number; profit: number; quantitySold: number; orderIds: Set<string> }
+    >()
+
+    const channelSalesMap = new Map<
+      string,
+      { channel: string; revenue: number; ordersCount: number }
+    >()
+
+    const paymentSalesMap = new Map<
+      string,
+      { method: string; amount: number; transactionsCount: number }
+    >()
+
+    const WEEKDAY_LABELS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const weekdaySalesMap = new Map<
+      number,
+      { dayIndex: number; dayLabel: string; revenue: number; ordersCount: number }
+    >()
+    for (let d = 0; d < 7; d++) {
+      weekdaySalesMap.set(d, {
+        dayIndex: d,
+        dayLabel: WEEKDAY_LABELS[d],
+        revenue: 0,
+        ordersCount: 0,
+      })
+    }
+
+    const periodOrders: DashboardPeriodOrderItem[] = []
+
+    const CHANNEL_LABELS: Record<string, string> = {
+      IN_STORE: 'PDV / Balcão',
+      WHATSAPP: 'WhatsApp',
+      ECOMMERCE: 'Catálogo Online',
+    }
+
+    const PAYMENT_LABELS: Record<string, string> = {
+      PIX: 'PIX Instantâneo',
+      CREDIT_CARD: 'Cartão de Crédito',
+      DEBIT_CARD: 'Cartão de Débito',
+      CASH: 'Dinheiro / Espécie',
+      BANK_TRANSFER: 'Transferência / Boleto',
+    }
+
+    for (const order of scopedOrders) {
+      const createdIso = String(order.created_at || '')
+      const createdMs = new Date(createdIso).getTime()
+      const isCancelled = order.status === 'CANCELLED'
+      const { rev, profit, units } = computeOrderMetrics(order)
+
+      // Today & Current Month KPIs
+      if (!isCancelled) {
+        if (createdIso.startsWith(todayPrefix)) {
+          salesTodayTotal += rev
+        }
+        if (createdIso.startsWith(currentMonthPrefix)) {
+          salesMonthTotal += rev
+        }
+      }
+      if (order.status === 'PENDING') {
+        pendingOrdersCount += 1
+      }
+
+      // Monthly 12M series
+      const mKey = createdIso.slice(0, 7)
+      if (!isCancelled && monthlyMap.has(mKey)) {
+        const mPoint = monthlyMap.get(mKey)!
+        mPoint.revenue += rev
+        mPoint.profit += profit
+        mPoint.ordersCount += 1
+        mPoint.unitsSold += units
+      }
+
+      // Previous period comparison
+      if (!isCancelled && createdMs >= prevStartMs && createdMs <= prevEndMs) {
+        previousPeriodRevenue += rev
+        previousPeriodOrdersCount += 1
+      }
+
+      // Selected Period Analytics
+      if (createdMs >= startMs && createdMs <= endMs) {
+        const cust = Array.isArray(order.customers) ? order.customers[0] : order.customers
+        const paymentsList = (order.payments || []) as any[]
+        const primaryPayment = paymentsList[0]?.method || 'PIX'
+
+        periodOrders.push({
+          id: order.id,
+          orderNumber: order.order_number,
+          storeId: order.store_id,
+          storeName: storeNameMap.get(order.store_id) || 'Loja',
+          customerName: cust?.name || 'Cliente Genérico',
+          channel: order.channel || 'IN_STORE',
+          paymentMethod: primaryPayment,
+          status: order.status,
+          itemsCount: Number(units.toFixed(2)),
+          subtotal: Number(order.subtotal) || 0,
+          discountAmount: Number(order.discount_amount) || 0,
+          totalAmount: rev,
+          estimatedProfit: Number(profit.toFixed(2)),
+          createdAt: createdIso,
+        })
+
+        if (isCancelled) {
+          cancelledOrdersCount += 1
+          cancelledAmount += rev
+          continue
+        }
+
+        periodRevenue += rev
+        periodProfit += profit
+        periodOrdersCount += 1
+        periodUnitsSold += units
+
+        // Timeline bucket
+        const bucket = getTimelineBucket(createdIso)
+        const tPoint = timelineMap.get(bucket.key) || {
+          bucketKey: bucket.key,
+          label: bucket.label,
+          revenue: 0,
+          profit: 0,
+          ordersCount: 0,
+          unitsSold: 0,
+        }
+        tPoint.revenue += rev
+        tPoint.profit += profit
+        tPoint.ordersCount += 1
+        tPoint.unitsSold += units
+        timelineMap.set(bucket.key, tPoint)
+
+        // Channel breakdown
+        const chCode = order.channel || 'IN_STORE'
+        const chEntry = channelSalesMap.get(chCode) || {
+          channel: chCode,
+          revenue: 0,
+          ordersCount: 0,
+        }
+        chEntry.revenue += rev
+        chEntry.ordersCount += 1
+        channelSalesMap.set(chCode, chEntry)
+
+        // Payment breakdown
+        if (paymentsList.length > 0) {
+          for (const p of paymentsList) {
+            const pMethod = p.method || 'PIX'
+            const pAmt = Number(p.amount) || rev
+            const pEntry = paymentSalesMap.get(pMethod) || {
+              method: pMethod,
+              amount: 0,
+              transactionsCount: 0,
+            }
+            pEntry.amount += pAmt
+            pEntry.transactionsCount += 1
+            paymentSalesMap.set(pMethod, pEntry)
+          }
+        } else {
+          const pEntry = paymentSalesMap.get('PIX') || {
+            method: 'PIX',
+            amount: 0,
+            transactionsCount: 0,
+          }
+          pEntry.amount += rev
+          pEntry.transactionsCount += 1
+          paymentSalesMap.set('PIX', pEntry)
+        }
+
+        // Weekday breakdown
+        const dayIdx = new Date(createdIso).getDay()
+        const wdEntry = weekdaySalesMap.get(dayIdx)
+        if (wdEntry) {
+          wdEntry.revenue += rev
+          wdEntry.ordersCount += 1
+        }
+
+        // Order items -> Top Products & Category Breakdown
+        const items = (order.order_items || []) as any[]
+        for (const it of items) {
+          const prod = Array.isArray(it.products) ? it.products[0] : it.products
+          const catObj = Array.isArray(prod?.categories) ? prod?.categories[0] : prod?.categories
+          const images = (prod?.product_images || []) as any[]
+          const primaryImg =
+            images.find((img) => img.is_primary)?.public_url || images[0]?.public_url || null
+
+          const pId = prod?.id || it.product_id
+          const pName = prod?.name || 'Produto'
+          const pSku = prod?.sku || ''
+          const catName = catObj?.name || 'Sem Categoria'
+          const unit = prod?.unit || 'UN'
+          const minStock = Number(prod?.min_stock) || 0
+
+          const qty = Number(it.quantity) || 0
+          const itemRev = Number(it.total_price) || qty * (Number(it.unit_price) || 0)
+          const uCost =
+            it.unit_cost !== null && it.unit_cost !== undefined && Number(it.unit_cost) > 0
+              ? Number(it.unit_cost)
+              : Number(prod?.cost_price) || 0
+          const itemCost = qty * uCost
+          const itemProfit = itemRev - itemCost
+
+          // Aggregate Product (group by SKU or Name when 'ALL' stores is selected so identical products across branches merge cleanly, or by productId)
+          const groupKey = selectedStoreId === 'ALL' ? (pSku || pName || pId) : pId
+          const existingProd = productSalesMap.get(groupKey)
+          if (existingProd) {
+            existingProd.quantitySold += qty
+            existingProd.revenue += itemRev
+            existingProd.costTotal += itemCost
+            existingProd.profit += itemProfit
+            existingProd.orderIds.add(order.id)
+            if (!existingProd.imageUrl && primaryImg) {
+              existingProd.imageUrl = primaryImg
+            }
+          } else {
+            productSalesMap.set(groupKey, {
+              productId: pId,
+              productName: pName,
+              productSku: pSku,
+              categoryName: catName,
+              unit,
+              imageUrl: primaryImg,
+              storeId: order.store_id,
+              storeName: storeNameMap.get(order.store_id) || 'Loja',
+              quantitySold: qty,
+              revenue: itemRev,
+              costTotal: itemCost,
+              profit: itemProfit,
+              orderIds: new Set([order.id]),
+              minStock,
+            })
+          }
+
+          // Aggregate Category
+          const existingCat = categorySalesMap.get(catName) || {
+            categoryName: catName,
+            revenue: 0,
+            profit: 0,
+            quantitySold: 0,
+            orderIds: new Set<string>(),
+          }
+          existingCat.revenue += itemRev
+          existingCat.profit += itemProfit
+          existingCat.quantitySold += qty
+          existingCat.orderIds.add(order.id)
+          categorySalesMap.set(catName, existingCat)
+        }
+      }
+    }
+
+    const averageTicket = periodOrdersCount > 0 ? periodRevenue / periodOrdersCount : 0
+    const previousAverageTicket =
+      previousPeriodOrdersCount > 0 ? previousPeriodRevenue / previousPeriodOrdersCount : 0
+    const periodMarginPercent = periodRevenue > 0 ? (periodProfit / periodRevenue) * 100 : 0
+
+    const calcGrowth = (curr: number, prev: number) => {
+      if (prev <= 0) return curr > 0 ? 100 : 0
+      return Number((((curr - prev) / prev) * 100).toFixed(1))
+    }
+
+    const monthlySalesSeries: DashboardMonthlyPoint[] = Array.from(monthlyMap.values()).map(
+      (m) => ({
+        monthKey: m.monthKey,
+        monthLabel: m.monthLabel,
+        revenue: Number(m.revenue.toFixed(2)),
+        profit: Number(m.profit.toFixed(2)),
+        ordersCount: m.ordersCount,
+        unitsSold: Number(m.unitsSold.toFixed(2)),
+        averageTicket: m.ordersCount > 0 ? Number((m.revenue / m.ordersCount).toFixed(2)) : 0,
+      })
+    )
+
+    const timelineSeries: DashboardTimelinePoint[] = Array.from(timelineMap.values())
+      .sort((a, b) => a.bucketKey.localeCompare(b.bucketKey))
+      .map((t) => ({
+        bucketKey: t.bucketKey,
+        label: t.label,
+        revenue: Number(t.revenue.toFixed(2)),
+        profit: Number(t.profit.toFixed(2)),
+        ordersCount: t.ordersCount,
+        unitsSold: Number(t.unitsSold.toFixed(2)),
+        averageTicket: t.ordersCount > 0 ? Number((t.revenue / t.ordersCount).toFixed(2)) : 0,
+      }))
+
+    const topProducts: DashboardTopProductItem[] = Array.from(productSalesMap.values())
+      .map((p) => {
+        const stockInfo = stockByProductAgg.get(p.productId)
+        const currentStock = stockInfo
+          ? stockInfo.qty
+          : stockByStoreProduct.get(`${p.storeId}:${p.productId}`) || 0
+        const marginPct = p.revenue > 0 ? (p.profit / p.revenue) * 100 : 0
+        const sharePct = periodRevenue > 0 ? (p.revenue / periodRevenue) * 100 : 0
+
+        return {
+          productId: p.productId,
+          productName: p.productName,
+          productSku: p.productSku,
+          categoryName: p.categoryName,
+          unit: p.unit,
+          imageUrl: p.imageUrl,
+          storeId: p.storeId,
+          storeName: p.storeName,
+          quantitySold: Number(p.quantitySold.toFixed(2)),
+          revenue: Number(p.revenue.toFixed(2)),
+          costTotal: Number(p.costTotal.toFixed(2)),
+          profit: Number(p.profit.toFixed(2)),
+          marginPercent: Number(marginPct.toFixed(1)),
+          ordersCount: p.orderIds.size,
+          shareOfRevenuePercent: Number(sharePct.toFixed(1)),
+          currentStock: Number(currentStock.toFixed(2)),
+          minStock: p.minStock,
+        }
+      })
+      .sort((a, b) => b.revenue - a.revenue || b.quantitySold - a.quantitySold)
+
+    const categoryBreakdown: DashboardCategoryBreakdownItem[] = Array.from(
+      categorySalesMap.values()
+    )
+      .map((c) => ({
+        categoryName: c.categoryName,
+        revenue: Number(c.revenue.toFixed(2)),
+        profit: Number(c.profit.toFixed(2)),
+        quantitySold: Number(c.quantitySold.toFixed(2)),
+        ordersCount: c.orderIds.size,
+        sharePercent:
+          periodRevenue > 0 ? Number(((c.revenue / periodRevenue) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+
+    const channelBreakdown: DashboardChannelBreakdownItem[] = Array.from(
+      channelSalesMap.values()
+    )
+      .map((ch) => ({
+        channel: ch.channel,
+        channelLabel: CHANNEL_LABELS[ch.channel] || ch.channel,
+        revenue: Number(ch.revenue.toFixed(2)),
+        ordersCount: ch.ordersCount,
+        averageTicket:
+          ch.ordersCount > 0 ? Number((ch.revenue / ch.ordersCount).toFixed(2)) : 0,
+        sharePercent:
+          periodRevenue > 0 ? Number(((ch.revenue / periodRevenue) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+
+    const totalPaymentsAmt = Array.from(paymentSalesMap.values()).reduce(
+      (acc, p) => acc + p.amount,
+      0
+    )
+    const paymentBreakdown: DashboardPaymentBreakdownItem[] = Array.from(
+      paymentSalesMap.values()
+    )
+      .map((p) => ({
+        method: p.method,
+        methodLabel: PAYMENT_LABELS[p.method] || p.method,
+        amount: Number(p.amount.toFixed(2)),
+        transactionsCount: p.transactionsCount,
+        sharePercent:
+          totalPaymentsAmt > 0
+            ? Number(((p.amount / totalPaymentsAmt) * 100).toFixed(1))
+            : 0,
+      }))
+      .sort((a, b) => b.amount - a.amount)
+
+    const weekdayBreakdown: DashboardWeekdayItem[] = Array.from(weekdaySalesMap.values()).map(
+      (w) => ({
+        dayIndex: w.dayIndex,
+        dayLabel: w.dayLabel,
+        revenue: Number(w.revenue.toFixed(2)),
+        ordersCount: w.ordersCount,
+        averageTicket:
+          w.ordersCount > 0 ? Number((w.revenue / w.ordersCount).toFixed(2)) : 0,
+      })
+    )
+
+    return {
+      kpis: {
+        periodRevenue: Number(periodRevenue.toFixed(2)),
+        previousPeriodRevenue: Number(previousPeriodRevenue.toFixed(2)),
+        revenueGrowthPercent: calcGrowth(periodRevenue, previousPeriodRevenue),
+        periodProfit: Number(periodProfit.toFixed(2)),
+        periodMarginPercent: Number(periodMarginPercent.toFixed(1)),
+        periodOrdersCount,
+        previousPeriodOrdersCount,
+        ordersGrowthPercent: calcGrowth(periodOrdersCount, previousPeriodOrdersCount),
+        averageTicket: Number(averageTicket.toFixed(2)),
+        previousAverageTicket: Number(previousAverageTicket.toFixed(2)),
+        ticketGrowthPercent: calcGrowth(averageTicket, previousAverageTicket),
+        periodUnitsSold: Number(periodUnitsSold.toFixed(2)),
+        salesTodayTotal: Number(salesTodayTotal.toFixed(2)),
+        salesMonthTotal: Number(salesMonthTotal.toFixed(2)),
+        pendingOrdersCount,
+        cancelledOrdersCount,
+        cancelledAmount: Number(cancelledAmount.toFixed(2)),
+        stockCostValuation: Number(stockCostValuation.toFixed(2)),
+        stockSellingValuation: Number(stockSellingValuation.toFixed(2)),
+        lowStockCount,
+        outOfStockCount,
+        expiring30dCount,
+        expiredCount,
+        activeCustomersCount,
+        totalProductsCount,
+      },
+      monthlySalesSeries,
+      timelineSeries,
+      storeComparison,
+      topProducts,
+      categoryBreakdown,
+      channelBreakdown,
+      paymentBreakdown,
+      weekdayBreakdown,
+      periodOrders,
     }
   },
 }
