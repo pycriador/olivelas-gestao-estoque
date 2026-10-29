@@ -81,17 +81,18 @@ source:
 
 ## Navegação do `AppLayout`
 
-Itens de topo: Dashboard; se `isGlobalAdmin`, também Admin Global (`/global-admin`).
+Item de topo: Dashboard (`/dashboard`).
 
 Grupos (ids no código):
 
 | Grupo `id` | Paths |
 | --- | --- |
+| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin`, `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
 | `registry` | `/products`, `/categories`, `/customers`, `/suppliers` |
 | `control` | `/inventory`, `/expiration`, `/purchases` |
-| `management` | `/orders`, `/reports`, `/team` |
+| `management` | `/orders`, `/reports`, `/stores`, `/team`, `/team/new` |
 
-Links soltos (grid 2 colunas no mobile): `/sales`, `/integrations`, `/notifications`, `/audit`, `/settings`.
+Links soltos (inferiores): `/sales`, `/integrations`, `/notifications`, `/audit`, `/settings`.
 
 Link “Catálogo Público” se `storeSlug` existe e não é `'global'`. Link “+ Gerenciar Todas as Lojas” no switcher só se `isGlobalAdmin`.
 

@@ -49,6 +49,39 @@ Command palette (`GlobalCommandK`) está sempre montada no layout.
 
 Tema da loja: `applyStoreTheme` quando há `storeId` ≠ `'all'`.
 
+### Estrutura do Menu Lateral (`AppLayout`)
+
+O menu lateral autenticado organiza todas as páginas e telas dedicadas em seções claras, filtradas dinamicamente via `hasRouteAccess`:
+
+1. **Topo**:
+   - `/dashboard` — Painel Geral (Dashboard Executivo Multi-Loja)
+2. **Seção `Admin Global` (`id: 'global-admin'`, exclusiva para `GLOBAL_ADMIN`)**:
+   - `/global-admin` — Painel Admin Global
+   - `/global-admin?tab=stores` — Lojas & Filiais (Matriz) (também destaca `/global-admin/stores/:storeId/edit`)
+   - `/global-admin/stores/new` — Nova Loja / Filial
+   - `/global-admin?tab=users` — Usuários Store Admin (também destaca `/global-admin/users/:userId/*`)
+   - `/global-admin/users/new` — Novo Admin de Loja
+   - `/global-admin?tab=finance` — Financeiro (Visão Geral)
+   - `/global-admin/finance/rules` — Regras & Licenças (10 Grátis)
+   - `/global-admin/finance/plans` — Planos & Telas SaaS
+   - `/global-admin/finance/payments` — Pagamentos & Faturas
+   - `/global-admin?tab=backups` — Backups Multi-Loja
+   - `/global-admin?tab=db-explorer` — DB Explorer (Banco)
+   - `/global-admin?tab=api-hbac` — Chaves API & HBAC
+   - `/global-admin?tab=delete` — Exclusão Definitiva
+3. **Seção `Cadastros` (`id: 'registry'`)**:
+   - `/products`, `/categories`, `/customers`, `/suppliers`
+4. **Seção `Controle` (`id: 'control'`)**:
+   - `/inventory`, `/expiration`, `/purchases`
+5. **Seção `Gestão` (`id: 'management'`)**:
+   - `/orders` — Pedidos
+   - `/reports` — Relatórios
+   - `/stores` — Lojas & Filiais
+   - `/team` — Equipe & Papéis (também destaca `/team/:employeeId`)
+   - `/team/new` — Novo Funcionário
+6. **Links Inferiores**:
+   - `/sales`, `/integrations`, `/notifications`, `/audit`, `/settings`
+
 ## Shell marketing (`PublicLayout`)
 
 | Região | Mobile | `md+` |

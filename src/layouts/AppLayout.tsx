@@ -10,6 +10,7 @@ import {
   ShoppingCart,
   Users,
   UserCheck,
+  UserPlus,
   Truck,
   FileText,
   Bell,
@@ -28,6 +29,16 @@ import {
   BarChart3,
   Palette,
   Webhook,
+  Building2,
+  GitBranch,
+  DollarSign,
+  Sliders,
+  Sparkles,
+  Receipt,
+  HardDrive,
+  Database,
+  KeyRound,
+  Trash2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -85,15 +96,70 @@ export function AppLayout() {
   type NavItem = { label: string; path: string; icon: LucideIcon }
   type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] }
 
+  const isNavItemActive = (itemPath: string): boolean => {
+    const [targetPath, targetSearch] = itemPath.split('?')
+    if (targetSearch) {
+      if (location.pathname === targetPath && location.search === `?${targetSearch}`) {
+        return true
+      }
+      if (
+        itemPath === '/global-admin?tab=stores' &&
+        location.pathname.startsWith('/global-admin/stores/') &&
+        location.pathname !== '/global-admin/stores/new'
+      ) {
+        return true
+      }
+      if (
+        itemPath === '/global-admin?tab=users' &&
+        location.pathname.startsWith('/global-admin/users/') &&
+        location.pathname !== '/global-admin/users/new'
+      ) {
+        return true
+      }
+      return false
+    }
+    if (itemPath === '/global-admin') {
+      return location.pathname === '/global-admin' && !location.search
+    }
+    if (itemPath === '/team') {
+      return (
+        location.pathname === '/team' ||
+        (location.pathname.startsWith('/team/') && location.pathname !== '/team/new')
+      )
+    }
+    return location.pathname === itemPath
+  }
+
   const topNavItems: NavItem[] = [
     { label: t.nav.dashboard, path: '/dashboard', icon: LayoutDashboard },
-    ...(isGlobalAdmin
-      ? [{ label: t.nav.globalAdmin, path: '/global-admin', icon: Shield }]
-      : []),
   ]
 
   // "Compras" fica so em Controle para nao duplicar o mesmo link.
   const rawNavGroups: NavGroup[] = [
+    ...(isGlobalAdmin
+      ? [
+          {
+            id: 'global-admin',
+            label: t.nav.groupGlobalAdmin,
+            icon: Shield,
+            items: [
+              { label: t.nav.globalAdmin, path: '/global-admin', icon: Shield },
+              { label: t.nav.globalStores, path: '/global-admin?tab=stores', icon: Building2 },
+              { label: t.nav.globalNewStore, path: '/global-admin/stores/new', icon: GitBranch },
+              { label: t.nav.globalUsers, path: '/global-admin?tab=users', icon: Users },
+              { label: t.nav.globalNewUser, path: '/global-admin/users/new', icon: UserPlus },
+              { label: t.nav.globalFinanceHub, path: '/global-admin?tab=finance', icon: DollarSign },
+              { label: t.nav.globalFinanceRules, path: '/global-admin/finance/rules', icon: Sliders },
+              { label: t.nav.globalFinancePlans, path: '/global-admin/finance/plans', icon: Sparkles },
+              { label: t.nav.globalFinancePayments, path: '/global-admin/finance/payments', icon: Receipt },
+              { label: t.nav.globalBackups, path: '/global-admin?tab=backups', icon: HardDrive },
+              { label: t.nav.globalDbExplorer, path: '/global-admin?tab=db-explorer', icon: Database },
+              { label: t.nav.globalApiHbac, path: '/global-admin?tab=api-hbac', icon: KeyRound },
+              { label: t.nav.globalDelete, path: '/global-admin?tab=delete', icon: Trash2 },
+            ],
+          },
+        ]
+      : []),
     {
       id: 'registry',
       label: t.nav.groupRegistry,
@@ -122,7 +188,9 @@ export function AppLayout() {
       items: [
         { label: t.nav.orders, path: '/orders', icon: ShoppingCart },
         { label: t.nav.reports, path: '/reports', icon: BarChart3 },
+        { label: t.nav.stores, path: '/stores', icon: GitBranch },
         { label: t.nav.team, path: '/team', icon: UserCheck },
+        { label: t.nav.newEmployee, path: '/team/new', icon: UserPlus },
       ],
     },
   ]
@@ -145,7 +213,7 @@ export function AppLayout() {
   const bottomNavItems: NavItem[] = rawBottomNavItems.filter((item) => hasRouteAccess(item.path))
 
   const activeNavGroup = navGroups.find((group) =>
-    group.items.some((item) => item.path === location.pathname),
+    group.items.some((item) => isNavItemActive(item.path)),
   )
   const openMobileGroup = mobileExpandedGroup ?? activeNavGroup?.id ?? null
 
@@ -315,7 +383,7 @@ export function AppLayout() {
                   >
                     {group.items.map((item) => {
                       const Icon = item.icon
-                      const isActive = location.pathname === item.path
+                      const isActive = isNavItemActive(item.path)
                       return (
                         <Link
                           key={item.path}

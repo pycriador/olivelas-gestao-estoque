@@ -247,10 +247,13 @@ export function usePermissions() {
   const hasRouteAccess = React.useCallback(
     (path: string): boolean => {
       if (isGlobalAdmin) return true
-      if (path === '/dashboard' || path === '/notifications') return true
-      if (path === '/global-admin') return Boolean(isGlobalAdmin)
+      const cleanPath = path.split('?')[0]
+      if (cleanPath === '/dashboard' || cleanPath === '/notifications') return true
+      if (cleanPath === '/global-admin' || cleanPath.startsWith('/global-admin/')) {
+        return Boolean(isGlobalAdmin)
+      }
 
-      const requiredModule = ROUTE_TO_MODULE_MAP[path]
+      const requiredModule = ROUTE_TO_MODULE_MAP[cleanPath]
       if (!requiredModule) return true
 
       return hasModule(requiredModule)

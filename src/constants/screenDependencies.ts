@@ -348,6 +348,7 @@ export const ROUTE_TO_MODULE_MAP: Record<string, ModuleCode> = {
   '/customers': 'MOD_CUSTOMERS',
   '/reports': 'MOD_REPORTS',
   '/team': 'MOD_TEAM_AUDIT',
+  '/team/new': 'MOD_TEAM_AUDIT',
   '/audit': 'MOD_TEAM_AUDIT',
   '/settings': 'MOD_TEAM_AUDIT',
   '/stores': 'MOD_TEAM_AUDIT',
