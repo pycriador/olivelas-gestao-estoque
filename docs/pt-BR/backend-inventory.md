@@ -41,6 +41,7 @@ Ordem incremental observada (arquivos datados):
 22. `20261030000022_permission_groups_and_billing.sql`
 23. `20261030000023_staff_roles_approvers_and_branches.sql`
 24. `20261030000024_global_finance_licensing_rules.sql`
+25. `20261030000025_store_saved_views.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -67,6 +68,7 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | `subscription_payments` | livro-razão de faturas e histórico de pagamentos SaaS por usuário (`reference_month`, `amount`, `paid_amount`, `payment_method`, `status`, `due_date`, `paid_at`) |
 | `global_billing_rules` | regras globais de licenciamento comercial SaaS (franquia padrão `default_free_employees_per_store = 10`, preço por funcionário excedente `extra_employee_price = 19.90`, carência e cobrança de filiais) |
 | `permission_billing_audit_logs` | trilha de auditoria imutável de alterações de grupo, módulos, preços e baixas de pagamento |
+| `store_saved_views` | visões de filtros salvas no banco de dados individualmente por loja ou filial (`store_id` + `page_key`, ex.: `customers`), armazenando `filters` (`jsonb`) como múltipla seleção de status de pedidos, status de cliente, período/datas e flag `is_default` |
 
 ### Cadastro
 

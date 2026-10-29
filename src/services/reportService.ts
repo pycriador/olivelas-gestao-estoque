@@ -4,12 +4,16 @@ import type {
   ValuationReportItem,
   AbcCurveItem,
   PurchasingReportItem,
+  PurchasingReportLineItem,
   LossesReportItem,
   StockoutReportItem,
   SalesReportItem,
+  SalesReportLineItem,
   ConsumptionDemandReportItem,
   CustomerTicketReportItem,
+  CustomerReportOrderEntry,
   CapitalInvestmentReportItem,
+  ReportDateRangeParams,
   DashboardAnalyticsParams,
   DashboardAnalyticsData,
   DashboardMonthlyPoint,
@@ -472,9 +476,9 @@ export const reportService = {
   },
 
   /**
-   * 3. Relatório de Compras & Entrada de Mercadorias
+   * 3. Relatório de Compras & Entrada de Mercadorias (com Data/Hora e Itens Detalhados)
    */
-  async getPurchasingReport(storeId: string): Promise<PurchasingReportItem[]> {
+  async getPurchasingReport(storeId: string, dateRange?: ReportDateRangeParams): Promise<PurchasingReportItem[]> {
     const isSpecificStore = Boolean(storeId && storeId !== 'all')
 
     let query = supabase
@@ -486,15 +490,18 @@ export const reportService = {
         subtotal,
         shipping_cost,
         total_amount,
+        created_at,
         issued_at,
         received_at,
         suppliers ( trade_name, corporate_name ),
         purchase_order_items (
           id,
+          product_id,
           unit_cost,
           total_cost,
           quantity_ordered,
-          products ( cost_price, selling_price )
+          quantity_received,
+          products ( name, sku, unit, cost_price, selling_price )
         )
       `)
       .order('created_at', { ascending: false })
@@ -507,18 +514,54 @@ export const reportService = {
 
     if (error) throw error
 
-    return (data || []).map((po: any) => {
+    const fromTime = dateRange?.dateFrom ? new Date(`${dateRange.dateFrom}T00:00:00`).getTime() : null
+    const toTime = dateRange?.dateTo ? new Date(`${dateRange.dateTo}T23:59:59.999`).getTime() : null
+
+    const filteredData = (data || []).filter((po: any) => {
+      if (!fromTime && !toTime) return true
+      const refDate = po.issued_at || po.created_at
+      if (!refDate) return true
+      const t = new Date(refDate).getTime()
+      if (fromTime && t < fromTime) return false
+      if (toTime && t > toTime) return false
+      return true
+    })
+
+    return filteredData.map((po: any) => {
       const supp = Array.isArray(po.suppliers) ? po.suppliers[0] : po.suppliers
       const items = (po.purchase_order_items || []) as any[]
       const totalCost = Number(po.total_amount) || 0
 
       let totalSellingValue = 0
-      for (const it of items) {
+      let totalUnitsOrdered = 0
+      const itemsList = items.map((it: any) => {
         const prod = Array.isArray(it.products) ? it.products[0] : it.products
         const qty = Number(it.quantity_ordered) || 0
+        const qtyRec = Number(it.quantity_received) || 0
+        const unitCost = Number(it.unit_cost) || Number(prod?.cost_price) || 0
+        const totalItemCost = Number(it.total_cost) || qty * unitCost
         const sell = Number(prod?.selling_price) || 0
         totalSellingValue += qty * sell
-      }
+        totalUnitsOrdered += qty
+
+        return {
+          productId: it.product_id || null,
+          productName: prod?.name || 'Produto',
+          productSku: prod?.sku || '',
+          unit: prod?.unit || 'UN',
+          quantityOrdered: qty,
+          quantityReceived: qtyRec,
+          unitCost,
+          totalCost: totalItemCost,
+        }
+      })
+
+      const itemsSummary =
+        itemsList.length > 0
+          ? itemsList
+              .map((i) => `${i.quantityOrdered} ${i.unit} x ${i.productName}`)
+              .join(', ')
+          : 'Sem itens registrados'
 
       const potentialProfit = Math.max(0, totalSellingValue - totalCost)
       const marginPercent = totalSellingValue > 0 ? (potentialProfit / totalSellingValue) * 100 : 0
@@ -528,13 +571,17 @@ export const reportService = {
         orderNumber: po.order_number,
         supplierName: supp?.trade_name || supp?.corporate_name || 'Fornecedor Diversos',
         itemsCount: items.length,
+        totalUnitsOrdered,
         totalCost,
         totalSellingValue,
         potentialProfit,
         marginPercent,
         status: po.status,
-        issuedAt: po.issued_at,
+        createdAt: po.created_at || po.issued_at || new Date().toISOString(),
+        issuedAt: po.issued_at || po.created_at,
         receivedAt: po.received_at,
+        itemsSummary,
+        itemsList,
       }
     })
   },
@@ -542,7 +589,7 @@ export const reportService = {
   /**
    * 4. Relatório de Perdas, Avarias & Baixas Operacionais
    */
-  async getLossesReport(storeId: string): Promise<LossesReportItem[]> {
+  async getLossesReport(storeId: string, dateRange?: ReportDateRangeParams): Promise<LossesReportItem[]> {
     const isSpecificStore = Boolean(storeId && storeId !== 'all')
 
     let query = supabase
@@ -565,6 +612,12 @@ export const reportService = {
 
     if (isSpecificStore) {
       query = query.eq('store_id', storeId)
+    }
+    if (dateRange?.dateFrom) {
+      query = query.gte('created_at', `${dateRange.dateFrom}T00:00:00`)
+    }
+    if (dateRange?.dateTo) {
+      query = query.lte('created_at', `${dateRange.dateTo}T23:59:59.999`)
     }
 
     const { data, error } = await query
@@ -640,9 +693,9 @@ export const reportService = {
   },
 
   /**
-   * 6. Relatório de Desempenho de Vendas & Faturamento
+   * 6. Relatório de Desempenho de Vendas & Faturamento (com Data/Hora e Itens Detalhados)
    */
-  async getSalesPerformanceReport(storeId: string): Promise<SalesReportItem[]> {
+  async getSalesPerformanceReport(storeId: string, dateRange?: ReportDateRangeParams): Promise<SalesReportItem[]> {
     const isSpecificStore = Boolean(storeId && storeId !== 'all')
 
     let query = supabase
@@ -650,36 +703,95 @@ export const reportService = {
       .select(`
         id,
         order_number,
+        customer_id,
         channel,
         subtotal,
         discount_amount,
         total_amount,
         status,
         created_at,
-        customers ( name ),
-        order_items ( quantity )
+        customers ( id, name, document, phone ),
+        order_items (
+          id,
+          product_id,
+          quantity,
+          unit_price,
+          discount,
+          total_price,
+          products ( name, sku, unit )
+        ),
+        payments ( method, amount )
       `)
       .order('created_at', { ascending: false })
 
     if (isSpecificStore) {
       query = query.eq('store_id', storeId)
     }
+    if (dateRange?.dateFrom) {
+      query = query.gte('created_at', `${dateRange.dateFrom}T00:00:00`)
+    }
+    if (dateRange?.dateTo) {
+      query = query.lte('created_at', `${dateRange.dateTo}T23:59:59.999`)
+    }
 
     const { data, error } = await query
 
     if (error) throw error
 
+    const PAYMENT_LABELS: Record<string, string> = {
+      CASH: 'Dinheiro',
+      CREDIT_CARD: 'Cartão Crédito',
+      DEBIT_CARD: 'Cartão Débito',
+      PIX: 'PIX',
+      VOUCHER: 'Voucher',
+    }
+
     return (data || []).map((o: any) => {
       const cust = Array.isArray(o.customers) ? o.customers[0] : o.customers
       const items = (o.order_items || []) as any[]
+      const payments = (o.payments || []) as any[]
       const itemsCount = items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0)
+
+      const itemsList = items.map((it: any) => {
+        const prod = Array.isArray(it.products) ? it.products[0] : it.products
+        const qty = Number(it.quantity) || 0
+        const unitPrice = Number(it.unit_price) || 0
+        const discount = Number(it.discount) || 0
+        const totalPrice = Number(it.total_price) || Math.max(0, qty * unitPrice - discount)
+        return {
+          productId: it.product_id || null,
+          productName: prod?.name || 'Produto',
+          productSku: prod?.sku || '',
+          unit: prod?.unit || 'UN',
+          quantity: qty,
+          unitPrice,
+          discount,
+          totalPrice,
+        }
+      })
+
+      const itemsSummary =
+        itemsList.length > 0
+          ? itemsList.map((i) => `${i.quantity} ${i.unit} x ${i.productName}`).join(', ')
+          : 'Sem itens detalhados'
+
+      const paymentMethods =
+        payments.length > 0
+          ? Array.from(new Set(payments.map((p) => PAYMENT_LABELS[p.method] || p.method))).join(' + ')
+          : 'Padrão'
 
       return {
         id: o.id,
         orderNumber: o.order_number,
+        customerId: o.customer_id || cust?.id || null,
         customerName: cust?.name || 'Consumidor Final',
+        customerDocument: cust?.document || null,
+        customerPhone: cust?.phone || null,
         channel: o.channel,
+        paymentMethods,
         itemsCount,
+        itemsSummary,
+        itemsList,
         subtotal: Number(o.subtotal) || 0,
         discountAmount: Number(o.discount_amount) || 0,
         totalAmount: Number(o.total_amount) || 0,
@@ -791,9 +903,9 @@ export const reportService = {
   },
 
   /**
-   * 8. Relatório de Ticket Médio por Cliente & Comportamento (LTV)
+   * 8. Relatório de Ticket Médio por Cliente, Pedidos por Cliente & Comportamento (LTV)
    */
-  async getCustomerTicketReport(storeId: string): Promise<CustomerTicketReportItem[]> {
+  async getCustomerTicketReport(storeId: string, dateRange?: ReportDateRangeParams): Promise<CustomerTicketReportItem[]> {
     const isSpecificStore = Boolean(storeId && storeId !== 'all')
 
     // 1. Clientes
@@ -809,46 +921,114 @@ export const reportService = {
 
     if (custErr) throw custErr
 
-    // 2. Pedidos válidos
+    // 2. Todos os pedidos com itens e pagamentos para listar pedidos por cliente com data e hora
     let ordQuery = supabase
       .from('orders')
-      .select('id, customer_id, total_amount, channel, created_at, status')
-      .neq('status', 'CANCELLED')
+      .select(`
+        id,
+        order_number,
+        customer_id,
+        subtotal,
+        discount_amount,
+        total_amount,
+        channel,
+        created_at,
+        status,
+        order_items (
+          id,
+          quantity,
+          unit_price,
+          total_price,
+          products ( name, sku, unit )
+        ),
+        payments ( method, amount )
+      `)
       .order('created_at', { ascending: false })
 
     if (isSpecificStore) {
       ordQuery = ordQuery.eq('store_id', storeId)
+    }
+    if (dateRange?.dateFrom) {
+      ordQuery = ordQuery.gte('created_at', `${dateRange.dateFrom}T00:00:00`)
+    }
+    if (dateRange?.dateTo) {
+      ordQuery = ordQuery.lte('created_at', `${dateRange.dateTo}T23:59:59.999`)
     }
 
     const { data: orders, error: ordErr } = await ordQuery
 
     if (ordErr) throw ordErr
 
-    const ordersByCustomer = new Map<string, any[]>()
+    const PAYMENT_LABELS: Record<string, string> = {
+      CASH: 'Dinheiro',
+      CREDIT_CARD: 'Cartão Crédito',
+      DEBIT_CARD: 'Cartão Débito',
+      PIX: 'PIX',
+      VOUCHER: 'Voucher',
+    }
+
+    const ordersByCustomer = new Map<string, CustomerReportOrderEntry[]>()
     for (const o of (orders || []) as any[]) {
       if (!o.customer_id) continue
+      const items = (o.order_items || []) as any[]
+      const payments = (o.payments || []) as any[]
+      const itemsCount = items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0)
+      const itemsSummary =
+        items.length > 0
+          ? items
+              .map((it) => {
+                const prod = Array.isArray(it.products) ? it.products[0] : it.products
+                return `${Number(it.quantity) || 0} ${prod?.unit || 'UN'} x ${prod?.name || 'Produto'}`
+              })
+              .join(', ')
+          : 'Sem itens detalhados'
+      const paymentMethods =
+        payments.length > 0
+          ? Array.from(new Set(payments.map((p) => PAYMENT_LABELS[p.method] || p.method))).join(' + ')
+          : 'Padrão'
+
+      const entry: CustomerReportOrderEntry = {
+        orderId: o.id,
+        orderNumber: o.order_number,
+        createdAt: o.created_at,
+        status: o.status,
+        channel: o.channel || 'IN_STORE',
+        paymentMethods,
+        itemsCount,
+        itemsSummary,
+        totalAmount: Number(o.total_amount) || 0,
+      }
+
       const list = ordersByCustomer.get(o.customer_id) || []
-      list.push(o)
+      list.push(entry)
       ordersByCustomer.set(o.customer_id, list)
     }
 
     const now = Date.now()
+    const hasDateFilter = Boolean(dateRange?.dateFrom || dateRange?.dateTo)
 
-    return (customers || []).map((c: any) => {
-      const custOrders = ordersByCustomer.get(c.id) || []
-      const totalOrders = custOrders.length
-      const totalSpent = custOrders.reduce((acc, o) => acc + (Number(o.total_amount) || 0), 0)
+    const result = (customers || []).map((c: any) => {
+      const allCustOrders = ordersByCustomer.get(c.id) || []
+      const validOrders = allCustOrders.filter((o) => o.status !== 'CANCELLED')
+      const openOrdersCount = allCustOrders.filter((o) =>
+        ['PENDING', 'CONFIRMED', 'PROCESSING', 'READY', 'SHIPPED'].includes(o.status)
+      ).length
+      const closedOrdersCount = allCustOrders.filter((o) => o.status === 'DELIVERED').length
+      const cancelledOrdersCount = allCustOrders.filter((o) => o.status === 'CANCELLED').length
+
+      const totalOrders = validOrders.length
+      const totalSpent = validOrders.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0)
       const averageTicket = totalOrders > 0 ? Number((totalSpent / totalOrders).toFixed(2)) : 0
 
-      const lastOrder = custOrders[0]
-      const lastOrderDate = lastOrder ? lastOrder.created_at : null
+      const lastOrder = allCustOrders[0]
+      const lastOrderDate = lastOrder ? lastOrder.createdAt : null
       const daysSinceLastOrder = lastOrderDate
         ? Math.floor((now - new Date(lastOrderDate).getTime()) / 86400000)
         : 999
 
       // Canal favorito
       const channelCounts: Record<string, number> = {}
-      custOrders.forEach((o) => {
+      validOrders.forEach((o) => {
         const ch = o.channel || 'IN_STORE'
         channelCounts[ch] = (channelCounts[ch] || 0) + 1
       })
@@ -879,14 +1059,25 @@ export const reportService = {
         email: c.email,
         status: c.status,
         totalOrders,
+        openOrdersCount,
+        closedOrdersCount,
+        cancelledOrdersCount,
         totalSpent: Number(totalSpent.toFixed(2)),
         averageTicket,
         lastOrderDate,
         daysSinceLastOrder,
         topChannel,
         customerSegment,
+        orders: allCustOrders,
       }
-    }).sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders)
+    })
+
+    // Se houver filtro de período ativo, priorizar clientes que tiveram pedidos no período selecionado
+    const filteredResult = hasDateFilter
+      ? result.filter((r) => (r.orders?.length || 0) > 0)
+      : result
+
+    return filteredResult.sort((a, b) => b.totalSpent - a.totalSpent || b.totalOrders - a.totalOrders)
   },
 
   /**

@@ -49,18 +49,40 @@ export interface AbcCurveItem {
   strategy: string
 }
 
+export interface ReportDateRangeParams {
+  dateFrom?: string | null // YYYY-MM-DD
+  dateTo?: string | null // YYYY-MM-DD
+}
+
+export interface PurchasingReportLineItem {
+  id?: string
+  productId?: string | null
+  productName: string
+  productSku: string
+  unit: string
+  quantityOrdered: number
+  quantityReceived?: number
+  unitCost: number
+  totalCost: number
+  sellingPrice?: number
+}
+
 export interface PurchasingReportItem {
   id: string
   orderNumber: string
   supplierName: string
   itemsCount: number
+  totalUnitsOrdered?: number
   totalCost: number
   totalSellingValue: number
   potentialProfit: number
   marginPercent: number
   status: string
+  createdAt?: string
   issuedAt: string | null
   receivedAt: string | null
+  itemsSummary?: string
+  itemsList?: PurchasingReportLineItem[]
 }
 
 export interface LossesReportItem {
@@ -94,12 +116,30 @@ export interface StockoutReportItem {
   urgency: 'CRITICAL' | 'WARNING'
 }
 
+export interface SalesReportLineItem {
+  id?: string
+  productId: string | null
+  productName: string
+  productSku: string
+  unit: string
+  quantity: number
+  unitPrice: number
+  discount: number
+  totalPrice: number
+}
+
 export interface SalesReportItem {
   id: string
   orderNumber: string
+  customerId?: string | null
   customerName: string
+  customerDocument?: string | null
+  customerPhone?: string | null
   channel: string
+  paymentMethods?: string
   itemsCount: number
+  itemsSummary?: string
+  itemsList?: SalesReportLineItem[]
   subtotal: number
   discountAmount: number
   totalAmount: number
@@ -124,6 +164,20 @@ export interface ConsumptionDemandReportItem {
   urgency: 'URGENT' | 'ATTENTION' | 'NORMAL' | 'OVERSTOCK'
 }
 
+export interface CustomerReportOrderEntry {
+  orderId: string
+  orderNumber: string
+  createdAt: string
+  status: string
+  channel: string
+  paymentMethods: string
+  itemsCount: number
+  itemsSummary: string
+  subtotal?: number
+  discountAmount?: number
+  totalAmount: number
+}
+
 export interface CustomerTicketReportItem {
   customerId: string
   customerName: string
@@ -132,12 +186,16 @@ export interface CustomerTicketReportItem {
   email: string | null
   status: string
   totalOrders: number
+  openOrdersCount?: number
+  closedOrdersCount?: number
+  cancelledOrdersCount?: number
   totalSpent: number
   averageTicket: number
   lastOrderDate: string | null
   daysSinceLastOrder: number
   topChannel: string
   customerSegment: 'VIP' | 'FREQUENT' | 'OCCASIONAL' | 'INACTIVE'
+  orders?: CustomerReportOrderEntry[]
 }
 
 export interface CapitalInvestmentReportItem {

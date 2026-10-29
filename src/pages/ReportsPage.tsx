@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { reportService } from '@/services/reportService'
 import { useTenant } from '@/hooks/useTenant'
@@ -34,6 +35,12 @@ import {
   Wallet,
   Building2,
   RefreshCw,
+  Calendar,
+  ExternalLink,
+  ChevronDown,
+  ChevronRight,
+  Clock,
+  Receipt,
 } from 'lucide-react'
 import type {
   ValuationReportItem,
@@ -45,6 +52,7 @@ import type {
   ConsumptionDemandReportItem,
   CustomerTicketReportItem,
   CapitalInvestmentReportItem,
+  ReportDateRangeParams,
 } from '@/types/report.types'
 
 type ReportTab =
@@ -57,6 +65,16 @@ type ReportTab =
   | 'losses'
   | 'stockouts'
   | 'sales'
+
+type ReportPeriodPreset =
+  | 'all'
+  | 'today'
+  | 'week'
+  | 'month'
+  | 'last_month'
+  | 'quarter'
+  | 'year'
+  | 'custom'
 
 const VALID_REPORT_TABS: ReportTab[] = [
   'valuation',
@@ -74,6 +92,69 @@ const DEFAULT_REPORT_FILTERS = {
   tab: 'valuation',
   category: 'ALL',
   status: 'ALL',
+  period: 'all',
+  from: '',
+  to: '',
+}
+
+function computeReportDateRange(
+  preset: ReportPeriodPreset,
+  customFrom: string,
+  customTo: string
+): ReportDateRangeParams {
+  const now = new Date()
+  const toYMD = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${y}-${m}-${day}`
+  }
+
+  if (preset === 'today') {
+    const today = toYMD(now)
+    return { dateFrom: today, dateTo: today }
+  }
+  if (preset === 'week') {
+    const d = new Date(now)
+    const day = d.getDay()
+    d.setDate(d.getDate() - day)
+    return { dateFrom: toYMD(d), dateTo: toYMD(now) }
+  }
+  if (preset === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    return { dateFrom: toYMD(start), dateTo: toYMD(now) }
+  }
+  if (preset === 'last_month') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const end = new Date(now.getFullYear(), now.getMonth(), 0)
+    return { dateFrom: toYMD(start), dateTo: toYMD(end) }
+  }
+  if (preset === 'quarter') {
+    const d = new Date(now)
+    d.setDate(d.getDate() - 90)
+    return { dateFrom: toYMD(d), dateTo: toYMD(now) }
+  }
+  if (preset === 'year') {
+    const start = new Date(now.getFullYear(), 0, 1)
+    return { dateFrom: toYMD(start), dateTo: toYMD(now) }
+  }
+  if (preset === 'custom') {
+    return {
+      dateFrom: customFrom || null,
+      dateTo: customTo || null,
+    }
+  }
+  return { dateFrom: null, dateTo: null }
+}
+
+const ORDER_STATUS_BADGE_LABELS: Record<string, string> = {
+  PENDING: 'Pendente',
+  CONFIRMED: 'Confirmado',
+  PROCESSING: 'Em Preparo',
+  READY: 'Pronto',
+  SHIPPED: 'Enviado',
+  DELIVERED: 'Entregue',
+  CANCELLED: 'Cancelado',
 }
 
 export function ReportsPage() {
@@ -103,6 +184,25 @@ export function ReportsPage() {
 
   const [activeTab, setActiveTab] = React.useState<ReportTab>(urlTab)
   const [selectedStoreId, setSelectedStoreId] = React.useState<string>(storeId || 'all')
+  const [expandedCustomerIds, setExpandedCustomerIds] = React.useState<Set<string>>(new Set())
+
+  const periodPreset = ((filters.period as ReportPeriodPreset) || 'all') as ReportPeriodPreset
+  const customDateFrom = filters.from || ''
+  const customDateTo = filters.to || ''
+
+  const effectiveDateRange = React.useMemo(
+    () => computeReportDateRange(periodPreset, customDateFrom, customDateTo),
+    [periodPreset, customDateFrom, customDateTo]
+  )
+
+  const toggleExpandCustomerOrders = (customerId: string) => {
+    setExpandedCustomerIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(customerId)) next.delete(customerId)
+      else next.add(customerId)
+      return next
+    })
+  }
 
   React.useEffect(() => {
     setActiveTab(urlTab)
@@ -130,10 +230,34 @@ export function ReportsPage() {
       tab,
       status: 'ALL',
       category: 'ALL',
+      period: periodPreset,
+      from: customDateFrom,
+      to: customDateTo,
     })
     requestAnimationFrame(() => {
       reportTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
     })
+  }
+
+  const handlePeriodPresetChange = (preset: ReportPeriodPreset) => {
+    setFilters({
+      ...filters,
+      tab: activeTab,
+      period: preset,
+      from: preset === 'custom' ? customDateFrom : '',
+      to: preset === 'custom' ? customDateTo : '',
+    })
+    setPage(1)
+  }
+
+  const handleCustomDateChange = (field: 'from' | 'to', val: string) => {
+    setFilters({
+      ...filters,
+      tab: activeTab,
+      period: 'custom',
+      [field]: val,
+    })
+    setPage(1)
   }
 
   const handleSearchChange = (val: string) => {
@@ -175,17 +299,17 @@ export function ReportsPage() {
     enabled: activeTab === 'abc',
   })
 
-  // 4. Purchasing Report Query
+  // 4. Purchasing Report Query (supports Date/Time period filtering)
   const { data: purchasingData = [], isLoading: isPurchasingLoading, isError: isPurchasingError, refetch: refetchPurchasing } = useQuery({
-    queryKey: ['report-purchasing', effectiveStoreId],
-    queryFn: () => reportService.getPurchasingReport(effectiveStoreId),
+    queryKey: ['report-purchasing', effectiveStoreId, effectiveDateRange.dateFrom, effectiveDateRange.dateTo],
+    queryFn: () => reportService.getPurchasingReport(effectiveStoreId, effectiveDateRange),
     enabled: activeTab === 'purchasing',
   })
 
-  // 5. Losses Report Query
+  // 5. Losses Report Query (supports Date/Time period filtering)
   const { data: lossesData = [], isLoading: isLossesLoading, isError: isLossesError, refetch: refetchLosses } = useQuery({
-    queryKey: ['report-losses', effectiveStoreId],
-    queryFn: () => reportService.getLossesReport(effectiveStoreId),
+    queryKey: ['report-losses', effectiveStoreId, effectiveDateRange.dateFrom, effectiveDateRange.dateTo],
+    queryFn: () => reportService.getLossesReport(effectiveStoreId, effectiveDateRange),
     enabled: activeTab === 'losses',
   })
 
@@ -196,10 +320,10 @@ export function ReportsPage() {
     enabled: activeTab === 'stockouts',
   })
 
-  // 7. Sales Report Query
+  // 7. Sales Report Query (supports Date/Time period filtering)
   const { data: salesData = [], isLoading: isSalesLoading, isError: isSalesError, refetch: refetchSales } = useQuery({
-    queryKey: ['report-sales', effectiveStoreId],
-    queryFn: () => reportService.getSalesPerformanceReport(effectiveStoreId),
+    queryKey: ['report-sales', effectiveStoreId, effectiveDateRange.dateFrom, effectiveDateRange.dateTo],
+    queryFn: () => reportService.getSalesPerformanceReport(effectiveStoreId, effectiveDateRange),
     enabled: activeTab === 'sales',
   })
 
@@ -210,10 +334,10 @@ export function ReportsPage() {
     enabled: activeTab === 'demand',
   })
 
-  // 9. Customers & LTV Query
+  // 9. Customers & LTV Query (supports Date/Time period filtering & lists orders per customer)
   const { data: customersData = [], isLoading: isCustomersLoading, isError: isCustomersError, refetch: refetchCustomers } = useQuery({
-    queryKey: ['report-customers', effectiveStoreId],
-    queryFn: () => reportService.getCustomerTicketReport(effectiveStoreId),
+    queryKey: ['report-customers', effectiveStoreId, effectiveDateRange.dateFrom, effectiveDateRange.dateTo],
+    queryFn: () => reportService.getCustomerTicketReport(effectiveStoreId, effectiveDateRange),
     enabled: activeTab === 'customers',
   })
 
@@ -306,7 +430,12 @@ export function ReportsPage() {
             (i.document && i.document.toLowerCase().includes(q)) ||
             (i.phone && i.phone.toLowerCase().includes(q)) ||
             (i.email && i.email.toLowerCase().includes(q)) ||
-            i.topChannel.toLowerCase().includes(q)
+            i.topChannel.toLowerCase().includes(q) ||
+            (i.orders || []).some(
+              (o) =>
+                o.orderNumber.toLowerCase().includes(q) ||
+                o.itemsSummary.toLowerCase().includes(q)
+            )
         )
       }
       const total = filtered.length
@@ -333,7 +462,8 @@ export function ReportsPage() {
         filtered = filtered.filter(
           (i) =>
             i.orderNumber.toLowerCase().includes(q) ||
-            i.supplierName.toLowerCase().includes(q)
+            i.supplierName.toLowerCase().includes(q) ||
+            (i.itemsSummary && i.itemsSummary.toLowerCase().includes(q))
         )
       }
       const total = filtered.length
@@ -386,7 +516,8 @@ export function ReportsPage() {
           (i) =>
             i.orderNumber.toLowerCase().includes(q) ||
             i.customerName.toLowerCase().includes(q) ||
-            i.channel.toLowerCase().includes(q)
+            i.channel.toLowerCase().includes(q) ||
+            (i.itemsSummary && i.itemsSummary.toLowerCase().includes(q))
         )
       }
       const total = filtered.length
@@ -465,14 +596,14 @@ export function ReportsPage() {
     else if (activeTab === 'sales') refetchSales()
   }
 
-  // Export CSV handler per active tab
+  // Export CSV handler per active tab — exports ONLY what is currently visible on screen (currentItems) with full details
   const handleExportCSV = () => {
-    const filenamePrefix = `relatorio_${activeTab}_${effectiveStoreName.toLowerCase().replace(/\s+/g, '_')}`
+    const filenamePrefix = `relatorio_${activeTab}_visiveis_${effectiveStoreName.toLowerCase().replace(/\s+/g, '_')}`
 
     if (activeTab === 'valuation') {
       exportToCSV(
         filenamePrefix,
-        valuationData,
+        currentItems as ValuationReportItem[],
         [
           { header: 'Produto', key: 'productName' },
           { header: 'SKU', key: 'productSku' },
@@ -492,7 +623,7 @@ export function ReportsPage() {
     } else if (activeTab === 'abc') {
       exportToCSV(
         filenamePrefix,
-        abcData,
+        currentItems as AbcCurveItem[],
         [
           { header: 'Curva ABC', key: 'classification' },
           { header: 'Produto', key: 'productName' },
@@ -509,7 +640,7 @@ export function ReportsPage() {
     } else if (activeTab === 'demand') {
       exportToCSV(
         filenamePrefix,
-        demandData,
+        currentItems as ConsumptionDemandReportItem[],
         [
           { header: 'Urgência', key: 'urgency' },
           { header: 'Produto', key: 'productName' },
@@ -528,25 +659,44 @@ export function ReportsPage() {
     } else if (activeTab === 'customers') {
       exportToCSV(
         filenamePrefix,
-        customersData,
+        currentItems as CustomerTicketReportItem[],
         [
           { header: 'Segmento', key: 'customerSegment' },
           { header: 'Cliente', key: 'customerName' },
           { header: 'Documento', key: (r) => r.document || '-' },
           { header: 'Telefone', key: (r) => r.phone || '-' },
           { header: 'E-mail', key: (r) => r.email || '-' },
-          { header: 'Total de Pedidos', key: 'totalOrders' },
+          { header: 'Pedidos Válidos', key: 'totalOrders' },
+          { header: 'Pedidos em Aberto', key: (r) => r.openOrdersCount ?? 0 },
+          { header: 'Pedidos Fechados', key: (r) => r.closedOrdersCount ?? 0 },
+          { header: 'Pedidos Cancelados', key: (r) => r.cancelledOrdersCount ?? 0 },
           { header: 'Gasto Acumulado (R$)', key: 'totalSpent' },
           { header: 'Ticket Médio (R$)', key: 'averageTicket' },
-          { header: 'Última Compra', key: (r) => (r.lastOrderDate ? formatDate(r.lastOrderDate) : 'Nunca comprou') },
+          { header: 'Última Compra (Data/Hora)', key: (r) => (r.lastOrderDate ? formatDateTime(r.lastOrderDate) : 'Nunca comprou') },
           { header: 'Dias sem Comprar', key: (r) => (r.daysSinceLastOrder >= 999 ? '-' : r.daysSinceLastOrder) },
           { header: 'Canal Mais Utilizado', key: 'topChannel' },
+          {
+            header: 'Detalhamento Completo dos Pedidos Visíveis (Nº | Data/Hora | Status | Pagamento | Itens | Valor)',
+            key: (r) =>
+              (r.orders || []).length === 0
+                ? 'Sem pedidos no período'
+                : (r.orders || [])
+                    .map(
+                      (o) =>
+                        `[${o.orderNumber} em ${formatDateTime(o.createdAt)} | Status: ${
+                          ORDER_STATUS_BADGE_LABELS[o.status] || o.status
+                        } | Pagto: ${o.paymentMethods} | Itens: ${o.itemsSummary} | Total: ${formatCurrency(
+                          o.totalAmount
+                        )}]`
+                    )
+                    .join(' ; '),
+          },
         ]
       )
     } else if (activeTab === 'investment') {
       exportToCSV(
         filenamePrefix,
-        investmentData,
+        currentItems as CapitalInvestmentReportItem[],
         [
           { header: 'Categoria', key: 'categoryName' },
           { header: 'Qtd de SKUs', key: 'productsCount' },
@@ -562,24 +712,26 @@ export function ReportsPage() {
     } else if (activeTab === 'purchasing') {
       exportToCSV(
         filenamePrefix,
-        purchasingData,
+        currentItems as PurchasingReportItem[],
         [
-          { header: 'Nº Pedido', key: 'orderNumber' },
+          { header: 'Nº Pedido Compra', key: 'orderNumber' },
           { header: 'Fornecedor', key: 'supplierName' },
-          { header: 'Qtd Itens', key: 'itemsCount' },
+          { header: 'Data/Hora Emissão', key: (r) => formatDateTime(r.issuedAt || r.createdAt) },
+          { header: 'Data/Hora Recebimento', key: (r) => (r.receivedAt ? formatDateTime(r.receivedAt) : 'Aguardando') },
+          { header: 'Qtd SKUs', key: 'itemsCount' },
+          { header: 'Unidades Totais', key: (r) => r.totalUnitsOrdered ?? r.itemsCount },
+          { header: 'Itens Detalhados da Compra', key: (r) => r.itemsSummary || '-' },
           { header: 'Custo Total Compra (R$)', key: 'totalCost' },
           { header: 'Venda Projetada (R$)', key: 'totalSellingValue' },
           { header: 'Lucro Previsto (R$)', key: 'potentialProfit' },
           { header: 'Margem %', key: (r) => r.marginPercent.toFixed(2) },
           { header: 'Status', key: 'status' },
-          { header: 'Data Pedido', key: (r) => (r.issuedAt ? formatDate(r.issuedAt) : '-') },
-          { header: 'Data Recebimento', key: (r) => (r.receivedAt ? formatDate(r.receivedAt) : '-') },
         ]
       )
     } else if (activeTab === 'losses') {
       exportToCSV(
         filenamePrefix,
-        lossesData,
+        currentItems as LossesReportItem[],
         [
           { header: 'Data/Hora', key: (r) => formatDateTime(r.createdAt) },
           { header: 'Produto', key: 'productName' },
@@ -596,7 +748,7 @@ export function ReportsPage() {
     } else if (activeTab === 'stockouts') {
       exportToCSV(
         filenamePrefix,
-        stockoutsData,
+        currentItems as StockoutReportItem[],
         [
           { header: 'Urgência', key: (r) => (r.urgency === 'CRITICAL' ? 'Ruptura Total' : 'Estoque Crítico') },
           { header: 'Produto', key: 'productName' },
@@ -611,17 +763,21 @@ export function ReportsPage() {
     } else if (activeTab === 'sales') {
       exportToCSV(
         filenamePrefix,
-        salesData,
+        currentItems as SalesReportItem[],
         [
           { header: 'Nº Pedido', key: 'orderNumber' },
-          { header: 'Data/Hora', key: (r) => formatDateTime(r.createdAt) },
+          { header: 'Data/Hora Exata', key: (r) => formatDateTime(r.createdAt) },
           { header: 'Cliente', key: 'customerName' },
+          { header: 'Documento Cliente', key: (r) => r.customerDocument || '-' },
+          { header: 'Telefone Cliente', key: (r) => r.customerPhone || '-' },
           { header: 'Canal', key: 'channel' },
+          { header: 'Forma de Pagamento', key: (r) => r.paymentMethods || 'Padrão' },
           { header: 'Qtd Itens', key: 'itemsCount' },
+          { header: 'Itens Detalhados do Pedido', key: (r) => r.itemsSummary || '-' },
           { header: 'Subtotal (R$)', key: 'subtotal' },
           { header: 'Desconto (R$)', key: 'discountAmount' },
-          { header: 'Total (R$)', key: 'totalAmount' },
-          { header: 'Status', key: 'status' },
+          { header: 'Total Pago (R$)', key: 'totalAmount' },
+          { header: 'Status', key: (r) => ORDER_STATUS_BADGE_LABELS[r.status] || r.status },
         ]
       )
     }
@@ -997,7 +1153,46 @@ export function ReportsPage() {
           </div>
 
           {/* Filters & Export Actions Group */}
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap justify-end flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap justify-end flex-shrink-0">
+            {/* Period & Custom Date Filter */}
+            <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8 shadow-2xs">
+              <Calendar className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <select
+                value={periodPreset}
+                onChange={(e) => handlePeriodPresetChange(e.target.value as ReportPeriodPreset)}
+                aria-label="Filtrar período do relatório"
+                className="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="all">Período: Todo o Histórico</option>
+                <option value="today">Hoje</option>
+                <option value="week">Esta Semana</option>
+                <option value="month">Este Mês</option>
+                <option value="last_month">Mês Passado</option>
+                <option value="quarter">Últimos 90 Dias</option>
+                <option value="year">Este Ano</option>
+                <option value="custom">Data Personalizada (De / Até)</option>
+              </select>
+            </div>
+
+            {periodPreset === 'custom' && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
+                <span className="text-[10px] font-semibold text-muted-foreground">De:</span>
+                <input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => handleCustomDateChange('from', e.target.value)}
+                  className="bg-transparent text-xs font-mono text-foreground focus:outline-none"
+                />
+                <span className="text-[10px] font-semibold text-muted-foreground">Até:</span>
+                <input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => handleCustomDateChange('to', e.target.value)}
+                  className="bg-transparent text-xs font-mono text-foreground focus:outline-none"
+                />
+              </div>
+            )}
+
             {/* Dynamic Filter: Categories (Valuation) */}
             {activeTab === 'valuation' && categories.length > 0 && (
               <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8">
@@ -1107,11 +1302,12 @@ export function ReportsPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleExportCSV}
+                disabled={currentItems.length === 0}
                 className="h-8 text-xs px-2.5 bg-background hover:bg-muted/80 shadow-2xs cursor-pointer"
-                title="Exportar dados do relatório atual para planilha CSV"
+                title="Exporta apenas os registros visíveis na tela atual com todos os detalhes dos pedidos"
               >
-                <Download className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-                <span>Exportar CSV</span>
+                <Download className="h-3.5 w-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
+                <span>Exportar Visíveis ({currentItems.length})</span>
               </Button>
 
               <Button
@@ -1526,7 +1722,7 @@ export function ReportsPage() {
                 </>
               )}
 
-              {/* TAB: CUSTOMER TICKET & LTV REPORT */}
+              {/* TAB: CUSTOMER TICKET, ORDERS PER CUSTOMER & LTV REPORT */}
               {activeTab === 'customers' && (
                 <>
                   <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
@@ -1536,69 +1732,234 @@ export function ReportsPage() {
                           <th className="py-3 px-4 font-semibold text-center">Segmento</th>
                           <th className="py-3 px-4 font-semibold">Cliente</th>
                           <th className="py-3 px-4 font-semibold">Documento / Contato</th>
-                          <th className="py-3 px-4 font-semibold text-center">Pedidos</th>
-                          <th className="py-3 px-4 font-semibold text-right">LTV (Gasto Total)</th>
-                          <th className="py-3 px-4 font-semibold text-right">Ticket Médio</th>
-                          <th className="py-3 px-4 font-semibold text-center">Última Compra</th>
-                          <th className="py-3 px-4 font-semibold text-center">Canal Preferido</th>
+                          <th className="py-3 px-4 font-semibold">Pedidos do Cliente (Link para Clientes)</th>
+                          <th className="py-3 px-4 font-semibold text-right">LTV / Ticket</th>
+                          <th className="py-3 px-4 font-semibold text-center">Última Compra (Data/Hora)</th>
+                          <th className="py-3 px-4 font-semibold text-center">Canal</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {(currentItems as CustomerTicketReportItem[]).map((row) => (
-                          <tr key={row.customerId} className="hover:bg-muted/30 transition-colors">
-                            <td className="py-2.5 px-4 text-center">
-                              <Badge
-                                variant={
-                                  row.customerSegment === 'VIP'
-                                    ? 'success'
-                                    : row.customerSegment === 'FREQUENT'
-                                    ? 'warning'
-                                    : 'secondary'
-                                }
-                                className="text-[10px]"
-                              >
-                                {row.customerSegment === 'VIP'
-                                  ? '👑 VIP'
-                                  : row.customerSegment === 'FREQUENT'
-                                  ? '🔥 Frequente'
-                                  : row.customerSegment === 'OCCASIONAL'
-                                  ? 'Ocasional'
-                                  : 'Inativo'}
-                              </Badge>
-                            </td>
-                            <td className="py-2.5 px-4 font-semibold text-foreground">
-                              {row.customerName}
-                            </td>
-                            <td className="py-2.5 px-4 text-muted-foreground">
-                              <div className="font-mono text-foreground text-[11px]">{row.document || '-'}</div>
-                              <div className="text-[10px]">{row.phone || row.email || 'Sem contato'}</div>
-                            </td>
-                            <td className="py-2.5 px-4 text-center font-mono font-bold text-foreground">
-                              {row.totalOrders}
-                            </td>
-                            <td className="py-2.5 px-4 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              {formatCurrency(row.totalSpent)}
-                            </td>
-                            <td className="py-2.5 px-4 text-right font-mono font-semibold text-foreground">
-                              {formatCurrency(row.averageTicket)}
-                            </td>
-                            <td className="py-2.5 px-4 text-center font-mono text-muted-foreground text-[11px]">
-                              {row.lastOrderDate ? (
-                                <div>
-                                  <div>{formatDate(row.lastOrderDate)}</div>
-                                  <div className="text-[10px] text-muted-foreground">({row.daysSinceLastOrder} dias atrás)</div>
-                                </div>
-                              ) : (
-                                'Nunca comprou'
+                        {(currentItems as CustomerTicketReportItem[]).map((row) => {
+                          const custOrders = row.orders || []
+                          const isExpanded = expandedCustomerIds.has(row.customerId)
+                          return (
+                            <React.Fragment key={row.customerId}>
+                              <tr className="hover:bg-muted/30 transition-colors">
+                                <td className="py-2.5 px-4 text-center">
+                                  <Badge
+                                    variant={
+                                      row.customerSegment === 'VIP'
+                                        ? 'success'
+                                        : row.customerSegment === 'FREQUENT'
+                                        ? 'warning'
+                                        : 'secondary'
+                                    }
+                                    className="text-[10px]"
+                                  >
+                                    {row.customerSegment === 'VIP'
+                                      ? '👑 VIP'
+                                      : row.customerSegment === 'FREQUENT'
+                                      ? '🔥 Frequente'
+                                      : row.customerSegment === 'OCCASIONAL'
+                                      ? 'Ocasional'
+                                      : 'Inativo'}
+                                  </Badge>
+                                </td>
+                                <td className="py-2.5 px-4 font-semibold text-foreground">
+                                  <Link
+                                    to={`/customers?customerId=${row.customerId}`}
+                                    className="hover:text-primary hover:underline inline-flex items-center gap-1"
+                                    title="Filtrar este cliente na tela de Clientes"
+                                  >
+                                    {row.customerName}
+                                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                                  </Link>
+                                </td>
+                                <td className="py-2.5 px-4 text-muted-foreground">
+                                  <div className="font-mono text-foreground text-[11px]">{row.document || '-'}</div>
+                                  <div className="text-[10px]">{row.phone || row.email || 'Sem contato'}</div>
+                                </td>
+                                <td className="py-2.5 px-4">
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <Badge variant="outline" className="text-[10px] font-mono">
+                                        {custOrders.length} {custOrders.length === 1 ? 'pedido' : 'pedidos'}
+                                      </Badge>
+                                      {(row.openOrdersCount || 0) > 0 && (
+                                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                                          {row.openOrdersCount} aberto(s)
+                                        </span>
+                                      )}
+                                      {(row.closedOrdersCount || 0) > 0 && (
+                                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                                          {row.closedOrdersCount} fechado(s)
+                                        </span>
+                                      )}
+                                      {(row.cancelledOrdersCount || 0) > 0 && (
+                                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400">
+                                          {row.cancelledOrdersCount} cancelado(s)
+                                        </span>
+                                      )}
+                                      {custOrders.length > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleExpandCustomerOrders(row.customerId)}
+                                          className="text-[10px] font-semibold text-primary hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+                                        >
+                                          {isExpanded ? (
+                                            <>
+                                              <ChevronDown className="h-3 w-3" /> Ocultar lista
+                                            </>
+                                          ) : (
+                                            <>
+                                              <ChevronRight className="h-3 w-3" /> Detalhar pedidos
+                                            </>
+                                          )}
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    {custOrders.length > 0 && (
+                                      <div className="flex items-center gap-1 flex-wrap">
+                                        {custOrders.slice(0, 3).map((ord) => (
+                                          <Link
+                                            key={ord.orderId}
+                                            to={`/customers?customerId=${row.customerId}&orderId=${ord.orderId}`}
+                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-border bg-muted/40 hover:border-primary/50 hover:bg-primary/5 text-[10px] font-mono transition-colors"
+                                            title={`Abrir pedido ${ord.orderNumber} de ${row.customerName} em Clientes`}
+                                          >
+                                            <Receipt className="h-2.5 w-2.5 text-primary" />
+                                            <span className="font-bold text-foreground">{ord.orderNumber}</span>
+                                            <span className="text-muted-foreground">
+                                              ({formatDateTime(ord.createdAt)})
+                                            </span>
+                                            <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                              {formatCurrency(ord.totalAmount)}
+                                            </span>
+                                            <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
+                                          </Link>
+                                        ))}
+                                        {custOrders.length > 3 && !isExpanded && (
+                                          <button
+                                            type="button"
+                                            onClick={() => toggleExpandCustomerOrders(row.customerId)}
+                                            className="text-[10px] font-mono text-primary hover:underline px-1 cursor-pointer"
+                                          >
+                                            +{custOrders.length - 3} mais
+                                          </button>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-4 text-right font-mono">
+                                  <div className="font-bold text-emerald-600 dark:text-emerald-400">
+                                    {formatCurrency(row.totalSpent)}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground">
+                                    Ticket: {formatCurrency(row.averageTicket)}
+                                  </div>
+                                </td>
+                                <td className="py-2.5 px-4 text-center font-mono text-muted-foreground text-[11px]">
+                                  {row.lastOrderDate ? (
+                                    <div>
+                                      <div className="text-foreground font-medium">{formatDateTime(row.lastOrderDate)}</div>
+                                      <div className="text-[10px] text-muted-foreground">({row.daysSinceLastOrder} dias atrás)</div>
+                                    </div>
+                                  ) : (
+                                    'Nunca comprou'
+                                  )}
+                                </td>
+                                <td className="py-2.5 px-4 text-center">
+                                  <Badge variant="outline" className="text-[10px]">
+                                    {row.topChannel}
+                                  </Badge>
+                                </td>
+                              </tr>
+
+                              {isExpanded && custOrders.length > 0 && (
+                                <tr className="bg-muted/20">
+                                  <td colSpan={7} className="px-6 py-3">
+                                    <div className="rounded-xl border border-border bg-card p-3 space-y-2 shadow-2xs">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                                          <ShoppingCart className="h-3.5 w-3.5 text-primary" />
+                                          Todos os Pedidos de {row.customerName} ({custOrders.length})
+                                        </span>
+                                        <Link
+                                          to={`/customers?customerId=${row.customerId}`}
+                                          className="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                                        >
+                                          Ver cliente na tela de Clientes
+                                          <ExternalLink className="h-3 w-3" />
+                                        </Link>
+                                      </div>
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-[11px] border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-border text-muted-foreground uppercase text-[9px]">
+                                              <th className="py-1.5 px-2">Nº Pedido</th>
+                                              <th className="py-1.5 px-2">Data e Hora Exata</th>
+                                              <th className="py-1.5 px-2">Itens Comprados</th>
+                                              <th className="py-1.5 px-2">Pagamento / Canal</th>
+                                              <th className="py-1.5 px-2 text-center">Status</th>
+                                              <th className="py-1.5 px-2 text-right">Valor Total</th>
+                                              <th className="py-1.5 px-2 text-right">Ação</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-border/60">
+                                            {custOrders.map((ord) => (
+                                              <tr key={ord.orderId} className="hover:bg-muted/30">
+                                                <td className="py-1.5 px-2 font-mono font-bold text-foreground">
+                                                  {ord.orderNumber}
+                                                </td>
+                                                <td className="py-1.5 px-2 font-mono text-muted-foreground">
+                                                  {formatDateTime(ord.createdAt)}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-foreground max-w-md truncate" title={ord.itemsSummary}>
+                                                  {ord.itemsSummary}
+                                                </td>
+                                                <td className="py-1.5 px-2 font-mono text-muted-foreground">
+                                                  {ord.paymentMethods} · {ord.channel}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-center">
+                                                  <Badge
+                                                    variant={
+                                                      ord.status === 'DELIVERED'
+                                                        ? 'success'
+                                                        : ord.status === 'CANCELLED'
+                                                        ? 'danger'
+                                                        : 'warning'
+                                                    }
+                                                    className="text-[9px]"
+                                                  >
+                                                    {ORDER_STATUS_BADGE_LABELS[ord.status] || ord.status}
+                                                  </Badge>
+                                                </td>
+                                                <td className="py-1.5 px-2 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                                  {formatCurrency(ord.totalAmount)}
+                                                </td>
+                                                <td className="py-1.5 px-2 text-right">
+                                                  <Link
+                                                    to={`/customers?customerId=${row.customerId}&orderId=${ord.orderId}`}
+                                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 font-semibold text-[10px]"
+                                                  >
+                                                    Abrir Pedido
+                                                    <ExternalLink className="h-2.5 w-2.5" />
+                                                  </Link>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+                                  </td>
+                                </tr>
                               )}
-                            </td>
-                            <td className="py-2.5 px-4 text-center">
-                              <Badge variant="outline" className="text-[10px]">
-                                {row.topChannel}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
+                            </React.Fragment>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
@@ -1609,7 +1970,13 @@ export function ReportsPage() {
                       <article key={row.customerId} className="p-3 space-y-2">
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-semibold text-xs text-foreground">{row.customerName}</div>
+                            <Link
+                              to={`/customers?customerId=${row.customerId}`}
+                              className="font-semibold text-xs text-foreground hover:text-primary inline-flex items-center gap-1"
+                            >
+                              {row.customerName}
+                              <ExternalLink className="h-3 w-3" />
+                            </Link>
                             <div className="text-[10px] text-muted-foreground font-mono">{row.document || 'Sem documento'}</div>
                           </div>
                           <Badge
@@ -1627,12 +1994,27 @@ export function ReportsPage() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-[9px] uppercase text-muted-foreground">Ticket Médio</div>
+                            <div className="text-[9px] uppercase text-muted-foreground">Última Compra</div>
                             <div className="font-bold text-foreground">
-                              {formatCurrency(row.averageTicket)}
+                              {row.lastOrderDate ? formatDateTime(row.lastOrderDate) : 'Sem compras'}
                             </div>
                           </div>
                         </div>
+                        {(row.orders || []).length > 0 && (
+                          <div className="flex flex-wrap gap-1 pt-1">
+                            {(row.orders || []).slice(0, 3).map((ord) => (
+                              <Link
+                                key={ord.orderId}
+                                to={`/customers?customerId=${row.customerId}&orderId=${ord.orderId}`}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded border border-border bg-muted/30 text-[10px] font-mono"
+                              >
+                                <span className="font-bold">{ord.orderNumber}</span>
+                                <span className="text-muted-foreground">{formatDateTime(ord.createdAt)}</span>
+                                <ExternalLink className="h-2.5 w-2.5 text-primary" />
+                              </Link>
+                            ))}
+                          </div>
+                        )}
                       </article>
                     ))}
                   </div>
@@ -1737,20 +2119,20 @@ export function ReportsPage() {
                 </>
               )}
 
-              {/* TAB: PURCHASING REPORT */}
+              {/* TAB: PURCHASING REPORT (WITH EXACT DATE/TIME & DETAILED ITEMS) */}
               {activeTab === 'purchasing' && (
                 <>
                   <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                         <tr>
-                          <th className="py-3 px-4 font-semibold">Nº Pedido</th>
+                          <th className="py-3 px-4 font-semibold">Nº Pedido Compra</th>
+                          <th className="py-3 px-4 font-semibold">Data e Hora (Emissão / Receb.)</th>
                           <th className="py-3 px-4 font-semibold">Fornecedor</th>
-                          <th className="py-3 px-4 font-semibold text-center">Itens</th>
+                          <th className="py-3 px-4 font-semibold">Itens Comprados (Detalhamento)</th>
                           <th className="py-3 px-4 font-semibold text-right">Custo Compra</th>
                           <th className="py-3 px-4 font-semibold text-right">Venda Projetada</th>
                           <th className="py-3 px-4 font-semibold text-right">Lucro Previsto</th>
-                          <th className="py-3 px-4 font-semibold text-center">Margem %</th>
                           <th className="py-3 px-4 font-semibold text-center">Status</th>
                         </tr>
                       </thead>
@@ -1760,11 +2142,27 @@ export function ReportsPage() {
                             <td className="py-2.5 px-4 font-mono font-semibold text-foreground">
                               {row.orderNumber}
                             </td>
-                            <td className="py-2.5 px-4 text-foreground">
+                            <td className="py-2.5 px-4 font-mono text-[11px]">
+                              <div className="flex items-center gap-1 text-foreground font-medium">
+                                <Clock className="h-3 w-3 text-teal-500 shrink-0" />
+                                {formatDateTime(row.issuedAt || row.createdAt)}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground">
+                                {row.receivedAt
+                                  ? `Recebido: ${formatDateTime(row.receivedAt)}`
+                                  : 'Aguardando recebimento'}
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 font-medium text-foreground">
                               {row.supplierName}
                             </td>
-                            <td className="py-2.5 px-4 text-center font-mono">
-                              {row.itemsCount}
+                            <td className="py-2.5 px-4">
+                              <div className="text-[11px] text-foreground max-w-xs truncate" title={row.itemsSummary}>
+                                {row.itemsSummary || `${row.itemsCount} itens`}
+                              </div>
+                              <div className="text-[10px] font-mono text-muted-foreground">
+                                {row.itemsCount} SKU(s) · {row.totalUnitsOrdered ?? row.itemsCount} un. totais
+                              </div>
                             </td>
                             <td className="py-2.5 px-4 text-right font-mono text-muted-foreground">
                               {formatCurrency(row.totalCost)}
@@ -1773,12 +2171,8 @@ export function ReportsPage() {
                               {formatCurrency(row.totalSellingValue)}
                             </td>
                             <td className="py-2.5 px-4 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
-                              {formatCurrency(row.potentialProfit)}
-                            </td>
-                            <td className="py-2.5 px-4 text-center">
-                              <Badge variant="outline" className="font-mono text-[10px]">
-                                {row.marginPercent.toFixed(1)}%
-                              </Badge>
+                              <div>{formatCurrency(row.potentialProfit)}</div>
+                              <div className="text-[10px] text-muted-foreground">{row.marginPercent.toFixed(1)}% margem</div>
                             </td>
                             <td className="py-2.5 px-4 text-center">
                               <Badge
@@ -1808,11 +2202,19 @@ export function ReportsPage() {
                           <div>
                             <div className="font-semibold text-xs text-foreground font-mono">{row.orderNumber}</div>
                             <div className="text-[10px] text-muted-foreground">{row.supplierName}</div>
+                            <div className="text-[10px] font-mono text-muted-foreground mt-0.5">
+                              {formatDateTime(row.issuedAt || row.createdAt)}
+                            </div>
                           </div>
                           <Badge variant={row.status === 'RECEIVED' ? 'success' : 'secondary'} className="text-[10px]">
                             {row.status}
                           </Badge>
                         </div>
+                        {row.itemsSummary && (
+                          <div className="text-[11px] text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                            {row.itemsSummary}
+                          </div>
+                        )}
                         <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-muted/40 p-2 rounded-lg">
                           <div>
                             <div className="text-[9px] uppercase text-muted-foreground">Custo Compra</div>
@@ -2006,7 +2408,7 @@ export function ReportsPage() {
                 </>
               )}
 
-              {/* TAB 6: SALES PERFORMANCE REPORT */}
+              {/* TAB 6: SALES PERFORMANCE REPORT (WITH EXACT DATE/TIME, ITEMS & CUSTOMER LINK) */}
               {activeTab === 'sales' && (
                 <>
                   <div className="hidden md:block flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
@@ -2014,84 +2416,134 @@ export function ReportsPage() {
                       <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                         <tr>
                           <th className="py-3 px-4 font-semibold">Nº Pedido</th>
-                          <th className="py-3 px-4 font-semibold">Data / Hora</th>
+                          <th className="py-3 px-4 font-semibold">Data e Hora Exata</th>
                           <th className="py-3 px-4 font-semibold">Cliente</th>
-                          <th className="py-3 px-4 font-semibold">Canal</th>
-                          <th className="py-3 px-4 font-semibold text-center">Itens</th>
-                          <th className="py-3 px-4 font-semibold text-right">Subtotal</th>
-                          <th className="py-3 px-4 font-semibold text-right">Desconto</th>
+                          <th className="py-3 px-4 font-semibold">Itens da Compra / Pagamento</th>
+                          <th className="py-3 px-4 font-semibold text-right">Subtotal / Desc.</th>
                           <th className="py-3 px-4 font-semibold text-right">Total Pago</th>
                           <th className="py-3 px-4 font-semibold text-center">Status</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border">
-                        {(currentItems as SalesReportItem[]).map((row) => (
-                          <tr key={row.id} className="hover:bg-muted/30 transition-colors">
-                            <td className="py-2.5 px-4 font-mono font-semibold text-foreground">
-                              {row.orderNumber}
-                            </td>
-                            <td className="py-2.5 px-4 text-muted-foreground font-mono text-[11px]">
-                              {formatDateTime(row.createdAt)}
-                            </td>
-                            <td className="py-2.5 px-4 text-foreground">
-                              {row.customerName}
-                            </td>
-                            <td className="py-2.5 px-4">
-                              <Badge variant="outline" className="text-[10px]">
-                                {row.channel}
-                              </Badge>
-                            </td>
-                            <td className="py-2.5 px-4 text-center font-mono">
-                              {row.itemsCount}
-                            </td>
-                            <td className="py-2.5 px-4 text-right font-mono text-muted-foreground">
-                              {formatCurrency(row.subtotal)}
-                            </td>
-                            <td className="py-2.5 px-4 text-right font-mono text-rose-500">
-                              {row.discountAmount > 0 ? `-${formatCurrency(row.discountAmount)}` : '-'}
-                            </td>
-                            <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
-                              {formatCurrency(row.totalAmount)}
-                            </td>
-                            <td className="py-2.5 px-4 text-center">
-                              <Badge
-                                variant={
-                                  row.status === 'DELIVERED' || row.status === 'COMPLETED'
-                                    ? 'success'
-                                    : row.status === 'CANCELLED'
-                                    ? 'danger'
-                                    : 'warning'
-                                }
-                                className="text-[10px]"
-                              >
-                                {row.status}
-                              </Badge>
-                            </td>
-                          </tr>
-                        ))}
+                        {(currentItems as SalesReportItem[]).map((row) => {
+                          const customerOrderUrl = row.customerId
+                            ? `/customers?customerId=${row.customerId}&orderId=${row.id}`
+                            : `/customers?orderId=${row.id}`
+                          return (
+                            <tr key={row.id} className="hover:bg-muted/30 transition-colors">
+                              <td className="py-2.5 px-4 font-mono font-semibold text-foreground">
+                                <Link
+                                  to={customerOrderUrl}
+                                  className="inline-flex items-center gap-1 text-primary hover:underline"
+                                  title="Abrir detalhes deste pedido na tela de Clientes"
+                                >
+                                  {row.orderNumber}
+                                  <ExternalLink className="h-3 w-3" />
+                                </Link>
+                              </td>
+                              <td className="py-2.5 px-4 text-foreground font-mono text-[11px]">
+                                <div className="flex items-center gap-1 font-medium">
+                                  <Clock className="h-3 w-3 text-emerald-500 shrink-0" />
+                                  {formatDateTime(row.createdAt)}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-4 text-foreground">
+                                {row.customerId ? (
+                                  <Link
+                                    to={`/customers?customerId=${row.customerId}&orderId=${row.id}`}
+                                    className="font-medium hover:text-primary hover:underline inline-flex items-center gap-1"
+                                  >
+                                    {row.customerName}
+                                    <ExternalLink className="h-2.5 w-2.5 text-muted-foreground" />
+                                  </Link>
+                                ) : (
+                                  <span>{row.customerName}</span>
+                                )}
+                                {row.customerDocument && (
+                                  <div className="text-[10px] font-mono text-muted-foreground">{row.customerDocument}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-4">
+                                <div className="text-[11px] text-foreground max-w-xs truncate" title={row.itemsSummary}>
+                                  {row.itemsSummary || `${row.itemsCount} itens`}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <Badge variant="outline" className="text-[9px] h-4 px-1">
+                                    {row.channel}
+                                  </Badge>
+                                  <span className="text-[10px] font-mono text-muted-foreground">
+                                    {row.paymentMethods || 'Padrão'} · {row.itemsCount} un.
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-4 text-right font-mono text-muted-foreground">
+                                <div>{formatCurrency(row.subtotal)}</div>
+                                {row.discountAmount > 0 && (
+                                  <div className="text-[10px] text-rose-500">-{formatCurrency(row.discountAmount)}</div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-4 text-right font-mono font-bold text-foreground">
+                                {formatCurrency(row.totalAmount)}
+                              </td>
+                              <td className="py-2.5 px-4 text-center">
+                                <Badge
+                                  variant={
+                                    row.status === 'DELIVERED' || row.status === 'COMPLETED'
+                                      ? 'success'
+                                      : row.status === 'CANCELLED'
+                                      ? 'danger'
+                                      : 'warning'
+                                  }
+                                  className="text-[10px]"
+                                >
+                                  {ORDER_STATUS_BADGE_LABELS[row.status] || row.status}
+                                </Badge>
+                              </td>
+                            </tr>
+                          )
+                        })}
                       </tbody>
                     </table>
                   </div>
 
                   {/* Mobile Cards */}
                   <div className="md:hidden flex-1 min-h-0 overflow-y-auto divide-y divide-border custom-scrollbar">
-                    {(currentItems as SalesReportItem[]).map((row) => (
-                      <article key={row.id} className="p-3 space-y-2">
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="font-semibold text-xs text-foreground font-mono">{row.orderNumber}</div>
-                            <div className="text-[10px] text-muted-foreground">{row.customerName}</div>
+                    {(currentItems as SalesReportItem[]).map((row) => {
+                      const customerOrderUrl = row.customerId
+                        ? `/customers?customerId=${row.customerId}&orderId=${row.id}`
+                        : `/customers?orderId=${row.id}`
+                      return (
+                        <article key={row.id} className="p-3 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <Link
+                                to={customerOrderUrl}
+                                className="font-semibold text-xs text-primary font-mono inline-flex items-center gap-1"
+                              >
+                                {row.orderNumber}
+                                <ExternalLink className="h-3 w-3" />
+                              </Link>
+                              <div className="text-[10px] text-muted-foreground">{row.customerName}</div>
+                              <div className="text-[10px] font-mono text-muted-foreground">
+                                {formatDateTime(row.createdAt)}
+                              </div>
+                            </div>
+                            <Badge variant={row.status === 'DELIVERED' ? 'success' : 'secondary'} className="text-[10px]">
+                              {ORDER_STATUS_BADGE_LABELS[row.status] || row.status}
+                            </Badge>
                           </div>
-                          <Badge variant={row.status === 'DELIVERED' ? 'success' : 'secondary'} className="text-[10px]">
-                            {row.status}
-                          </Badge>
-                        </div>
-                        <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2 rounded-lg">
-                          <div className="text-muted-foreground text-[10px]">{formatDate(row.createdAt)} · {row.channel}</div>
-                          <div className="font-bold text-foreground">{formatCurrency(row.totalAmount)}</div>
-                        </div>
-                      </article>
-                    ))}
+                          {row.itemsSummary && (
+                            <div className="text-[11px] text-muted-foreground bg-muted/30 p-2 rounded-lg">
+                              {row.itemsSummary}
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between text-xs font-mono bg-muted/40 p-2 rounded-lg">
+                            <div className="text-muted-foreground text-[10px]">{row.paymentMethods} · {row.channel}</div>
+                            <div className="font-bold text-foreground">{formatCurrency(row.totalAmount)}</div>
+                          </div>
+                        </article>
+                      )
+                    })}
                   </div>
                 </>
               )}
