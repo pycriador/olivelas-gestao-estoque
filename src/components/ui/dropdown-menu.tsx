@@ -131,10 +131,17 @@ export function DropdownMenu({
         aria-expanded={isOpen}
         aria-label={triggerLabel || 'Mais ações'}
         title={triggerLabel}
-        className={`inline-flex items-center justify-center gap-1.5 h-7 px-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer select-none ${buttonClassName}`}
+        className={`inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer select-none ${
+          triggerLabel
+            ? 'border border-border bg-background/80 text-foreground hover:bg-muted shadow-xs'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+        } ${buttonClassName}`}
       >
         {triggerLabel ? (
-          <span className="text-xs font-semibold">{triggerLabel}</span>
+          <>
+            <span className="text-xs font-semibold">{triggerLabel}</span>
+            <MoreHorizontal className="h-3.5 w-3.5 opacity-70" />
+          </>
         ) : (
           <MoreHorizontal className="h-4 w-4" />
         )}

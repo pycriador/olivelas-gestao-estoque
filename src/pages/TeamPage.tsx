@@ -1,7 +1,9 @@
 import * as React from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { userService } from '@/services/userService'
+import { permissionGroupService } from '@/services/permissionGroupService'
 import { useTenant } from '@/hooks/useTenant'
 import { useTablePagination } from '@/hooks/useTablePagination'
 import {
@@ -9,13 +11,13 @@ import {
   ROLE_METADATA,
   resolveEmployeePermissions,
 } from '@/constants/granularPermissions'
-import { EmployeeRolePermissionsModal } from '@/components/team/EmployeeRolePermissionsModal'
 import { StoreCustomRolesModal } from '@/components/team/StoreCustomRolesModal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { Badge } from '@/components/ui/badge'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { EmptyState } from '@/components/common/EmptyState'
@@ -41,6 +43,7 @@ import type { StoreMember } from '@/types/user.types'
 export function TeamPage() {
   const { storeId, storeName, hasActiveStore } = useTenant()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const {
     search,
@@ -55,9 +58,7 @@ export function TeamPage() {
   const statusFilter = filters.status || 'ALL'
 
   // Modal states
-  const [isEmployeeModalOpen, setIsEmployeeModalOpen] = React.useState(false)
   const [isCustomRolesModalOpen, setIsCustomRolesModalOpen] = React.useState(false)
-  const [editingMember, setEditingMember] = React.useState<StoreMember | null>(null)
   const [removingMember, setRemovingMember] = React.useState<StoreMember | null>(null)
   const [togglingMember, setTogglingMember] = React.useState<StoreMember | null>(null)
 
@@ -65,6 +66,12 @@ export function TeamPage() {
   const { data: members = [], isLoading } = useQuery({
     queryKey: ['store-members', storeId],
     queryFn: () => userService.listStoreMembers(storeId),
+    enabled: Boolean(hasActiveStore),
+  })
+
+  const { data: licenseSummary } = useQuery({
+    queryKey: ['store-license-summary', storeId, members.length],
+    queryFn: () => permissionGroupService.getStoreEmployeeLicenseSummary(storeId),
     enabled: Boolean(hasActiveStore),
   })
 
@@ -111,13 +118,11 @@ export function TeamPage() {
   })
 
   const handleOpenAdd = () => {
-    setEditingMember(null)
-    setIsEmployeeModalOpen(true)
+    navigate('/team/new')
   }
 
   const handleOpenEdit = (m: StoreMember) => {
-    setEditingMember(m)
-    setIsEmployeeModalOpen(true)
+    navigate(`/team/${m.id}`)
   }
 
   // Filtered members list
@@ -220,11 +225,18 @@ export function TeamPage() {
         <div className="p-2.5 rounded-xl border border-border bg-card flex items-center justify-between">
           <div>
             <div className="text-[10px] font-bold uppercase text-muted-foreground">
-              Acessos Ativos
+              Cota de Licenças Grátis
             </div>
             <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">
-              {totalActive} ativos
+              {licenseSummary
+                ? `${licenseSummary.activeEmployeesCount} / ${licenseSummary.freeEmployeesQuota} grátis`
+                : `${totalActive} ativos`}
             </div>
+            {licenseSummary && licenseSummary.extraBillableEmployees > 0 && (
+              <div className="text-[10px] font-semibold text-amber-600 dark:text-amber-400">
+                +{licenseSummary.extraBillableEmployees} extra ({formatCurrency(licenseSummary.extraEmployeesMonthlyCost)}/mês)
+              </div>
+            )}
           </div>
           <SlidersHorizontal className="h-5 w-5 text-emerald-500 opacity-80" />
         </div>
@@ -316,7 +328,7 @@ export function TeamPage() {
                     <th className="py-2.5 px-4">Autorização de Baixa de Estoque</th>
                     <th className="py-2.5 px-4">Permissões Granulares</th>
                     <th className="py-2.5 px-4 text-center">Status</th>
-                    <th className="py-2.5 px-4 text-right">Ações</th>
+                    <th className="py-2.5 px-4 text-right">Ações Rápidas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -441,51 +453,36 @@ export function TeamPage() {
                         </td>
 
                         <td className="py-2.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2.5 border-primary/30 text-primary hover:bg-primary/10"
-                              onClick={() => handleOpenEdit(m)}
-                              title="Configurar Papel, Aprovação de Baixa e Permissões Granulares"
-                            >
-                              <SlidersHorizontal className="h-3.5 w-3.5 mr-1" /> Papel & Permissões
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2"
-                              onClick={() => resetPasswordMutation.mutate(m.email)}
-                              title="Enviar link de redefinição de senha"
-                            >
-                              <KeyRound className="h-3.5 w-3.5" />
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className={`h-8 text-xs font-semibold px-2 ${
-                                m.isActive
-                                  ? 'text-warning hover:bg-warning/10 border-warning/30'
-                                  : 'text-success hover:bg-success/10 border-success/30'
-                              }`}
-                              onClick={() => setTogglingMember(m)}
-                              title={m.isActive ? 'Desativar Acesso' : 'Ativar Acesso'}
-                            >
-                              <Power className="h-3.5 w-3.5" />
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs font-semibold px-2 text-danger hover:bg-danger/10 border-danger/30"
-                              onClick={() => setRemovingMember(m)}
-                              title="Remover da Loja"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
+                          <DropdownMenu
+                            triggerLabel="Ações Rápidas"
+                            items={[
+                              {
+                                key: 'edit-role-perms',
+                                label: 'Abrir Tela Completa (Papel & Permissões)',
+                                icon: <SlidersHorizontal className="h-3.5 w-3.5 text-primary" />,
+                                onSelect: () => handleOpenEdit(m),
+                              },
+                              {
+                                key: 'reset-password',
+                                label: 'Enviar Redefinição de Senha',
+                                icon: <KeyRound className="h-3.5 w-3.5 text-amber-500" />,
+                                onSelect: () => resetPasswordMutation.mutate(m.email),
+                              },
+                              {
+                                key: 'toggle-status',
+                                label: m.isActive ? 'Desativar Acesso' : 'Ativar Acesso',
+                                icon: <Power className="h-3.5 w-3.5" />,
+                                onSelect: () => setTogglingMember(m),
+                              },
+                              {
+                                key: 'remove-member',
+                                label: 'Remover Funcionário da Loja',
+                                icon: <Trash2 className="h-3.5 w-3.5" />,
+                                variant: 'danger',
+                                onSelect: () => setRemovingMember(m),
+                              },
+                            ]}
+                          />
                         </td>
                       </tr>
                     )
@@ -496,18 +493,6 @@ export function TeamPage() {
           )}
         </CardContent>
       </Card>
-
-      {/* Modal: Cadastrar / Editar Funcionário & Permissões Granulares */}
-      <EmployeeRolePermissionsModal
-        isOpen={isEmployeeModalOpen}
-        onClose={() => {
-          setIsEmployeeModalOpen(false)
-          setEditingMember(null)
-        }}
-        storeId={storeId}
-        storeName={storeName}
-        member={editingMember}
-      />
 
       {/* Modal: Papéis Customizados da Loja */}
       <StoreCustomRolesModal

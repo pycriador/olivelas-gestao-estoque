@@ -20,6 +20,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { StockBranchTransferModal } from '@/components/inventory/StockBranchTransferModal'
 import { usePermissions } from '@/hooks/usePermissions'
 import {
@@ -38,6 +39,7 @@ import {
   GitBranch,
   Truck,
   Building2,
+  CornerDownRight,
 } from 'lucide-react'
 import type { Store } from '@/types/store.types'
 
@@ -197,8 +199,8 @@ export function StoresPage() {
       result = result.filter((s) => !s.isBranch)
     }
 
-    // Sort
-    result = [...result].sort((a, b) => {
+    // Sort base items
+    const sorted = [...result].sort((a, b) => {
       let valA = (a[sortBy as keyof StoreDisplayRow] ?? '') as string
       let valB = (b[sortBy as keyof StoreDisplayRow] ?? '') as string
 
@@ -210,7 +212,28 @@ export function StoresPage() {
       return 0
     })
 
-    return result
+    // Group hierarchically: Matriz followed immediately by its Filiais
+    const rowIdsInResult = new Set(sorted.map((s) => s.id))
+    const roots = sorted.filter((s) => !s.isBranch || !s.parentStoreId || !rowIdsInResult.has(s.parentStoreId))
+    const childrenByParent = new Map<string, StoreDisplayRow[]>()
+    for (const s of sorted) {
+      if (s.isBranch && s.parentStoreId && rowIdsInResult.has(s.parentStoreId)) {
+        const list = childrenByParent.get(s.parentStoreId) || []
+        list.push(s)
+        childrenByParent.set(s.parentStoreId, list)
+      }
+    }
+
+    const hierarchical: StoreDisplayRow[] = []
+    for (const root of roots) {
+      hierarchical.push(root)
+      const children = childrenByParent.get(root.id) || []
+      for (const child of children) {
+        hierarchical.push(child)
+      }
+    }
+
+    return hierarchical
   }, [allDisplayRows, search, statusFilter, unitTypeFilter, sortBy, sortOrder])
 
   // Pagination Slice
@@ -552,7 +575,7 @@ export function StoresPage() {
                       onSort={toggleSort}
                       className="text-center"
                     />
-                    <th className="py-3 px-4 text-right">Ações</th>
+                    <th className="py-3 px-4 text-right">Ações Rápidas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -561,13 +584,16 @@ export function StoresPage() {
                       <tr
                         key={s.id}
                         className={`hover:bg-muted/30 transition-colors ${
-                          s.isCurrentActive ? 'bg-primary/5' : ''
+                          s.isCurrentActive ? 'bg-primary/5' : s.isBranch ? 'bg-muted/15' : ''
                         }`}
                       >
                         {/* Loja / Nome */}
                         <td className="py-2.5 px-4">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`p-1.5 rounded-lg ${s.isCurrentActive ? 'bg-primary text-primary-foreground' : 'bg-primary/10 text-primary'}`}>
+                          <div className={`flex items-center gap-2.5 ${s.isBranch ? 'pl-6 border-l-2 border-primary/30 ml-2' : ''}`}>
+                            {s.isBranch && (
+                              <CornerDownRight className="h-3.5 w-3.5 text-primary shrink-0 -ml-1" />
+                            )}
+                            <div className={`p-1.5 rounded-lg ${s.isCurrentActive ? 'bg-primary text-primary-foreground' : s.isBranch ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-primary/10 text-primary'}`}>
                               {s.isBranch ? <GitBranch className="h-4 w-4" /> : <StoreIcon className="h-4 w-4" />}
                             </div>
                             <div>
@@ -661,50 +687,51 @@ export function StoresPage() {
                           </Badge>
                         </td>
 
-                        {/* Ações */}
+                        {/* Ações Rápidas */}
                         <td className="py-2.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            {s.isCurrentActive ? (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 text-xs px-2.5 text-primary border-primary/30 bg-primary/5 pointer-events-none"
-                              >
-                                <Check className="h-3.5 w-3.5 mr-1" /> Selecionada
-                              </Button>
-                            ) : (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleSelectStore(s)}
-                                className="h-8 text-xs px-2.5 hover:bg-primary hover:text-primary-foreground font-medium"
-                              >
-                                Acessar <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                              </Button>
-                            )}
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenEdit(s)}
-                              className="h-8 text-xs font-semibold px-2.5"
-                            >
-                              <Edit2 className="h-3.5 w-3.5 mr-1" /> Editar
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setTogglingStore(s)}
-                              className={`h-8 text-xs font-semibold px-2.5 ${
-                                s.isActive
-                                  ? 'text-danger hover:bg-danger/10 border-danger/30'
-                                  : 'text-success hover:bg-success/10 border-success/30'
-                              }`}
-                            >
-                              <Power className="h-3.5 w-3.5 mr-1" /> {s.isActive ? 'Desativar' : 'Ativar'}
-                            </Button>
-                          </div>
+                          <DropdownMenu
+                            triggerLabel="Ações Rápidas"
+                            items={[
+                              {
+                                key: 'select-store',
+                                label: s.isCurrentActive ? 'Loja Atualmente Selecionada' : 'Acessar Painel desta Unidade',
+                                icon: s.isCurrentActive ? (
+                                  <Check className="h-3.5 w-3.5 text-emerald-500" />
+                                ) : (
+                                  <ArrowRight className="h-3.5 w-3.5 text-primary" />
+                                ),
+                                disabled: s.isCurrentActive,
+                                onSelect: () => handleSelectStore(s),
+                              },
+                              {
+                                key: 'edit-store',
+                                label: isGlobalAdmin
+                                  ? 'Editar Loja, Filiação & Admins (Tela Completa)'
+                                  : 'Editar Dados da Unidade',
+                                icon: <Edit2 className="h-3.5 w-3.5 text-primary" />,
+                                onSelect: () => {
+                                  if (isGlobalAdmin) {
+                                    navigate(`/global-admin/stores/${s.id}/edit`)
+                                  } else {
+                                    handleOpenEdit(s)
+                                  }
+                                },
+                              },
+                              {
+                                key: 'open-catalog',
+                                label: 'Abrir Catálogo Público',
+                                icon: <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />,
+                                onSelect: () => window.open(`/store/${s.slug}`, '_blank'),
+                              },
+                              {
+                                key: 'toggle-status',
+                                label: s.isActive ? 'Desativar Unidade' : 'Ativar Unidade',
+                                icon: <Power className="h-3.5 w-3.5" />,
+                                variant: s.isActive ? 'danger' : 'default',
+                                onSelect: () => setTogglingStore(s),
+                              },
+                            ]}
+                          />
                         </td>
                       </tr>
                     )

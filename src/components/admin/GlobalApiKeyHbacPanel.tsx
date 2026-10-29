@@ -685,8 +685,7 @@ console.log('Status:', response.status, data)`
                     {/* Action Dropdown Menu */}
                     <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
                       <DropdownMenu
-                        triggerLabel="Ações"
-                        buttonClassName="h-8 px-2.5 rounded-lg border border-border bg-card hover:bg-muted text-xs font-semibold text-foreground shadow-xs"
+                        triggerLabel="Ações Rápidas"
                         items={[
                           {
                             key: 'edit',

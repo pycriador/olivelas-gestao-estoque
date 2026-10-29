@@ -48,6 +48,16 @@ source:
 | --- | --- | --- |
 | `/dashboard` | `DashboardPage` | |
 | `/global-admin` | `GlobalAdminDashboardPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
+| `/global-admin/stores/new` | `GlobalAdminStoreEditPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
+| `/global-admin/stores/:storeId/edit` | `GlobalAdminStoreEditPage` | Edição completa da loja, filiação (`Matriz` / `Filial`), `STORE_ADMIN`s e equipe |
+| `/global-admin/stores/:storeId/employees/new` | `StoreEmployeeEditPage` | Criação de funcionário com Store ID na URL (`requireGlobalAdmin`) |
+| `/global-admin/stores/:storeId/employees/:employeeId` | `StoreEmployeeEditPage` | Edição completa de funcionário, alçada de baixa e permissões granulares (`requireGlobalAdmin`) |
+| `/global-admin/users/:userId/edit` | `GlobalAdminUserEditPage` | Edição de conta, senha e lojas administradas do `STORE_ADMIN` / `GLOBAL_ADMIN` |
+| `/global-admin/users/:userId/permissions` | `GlobalAdminUserPermissionsPage` | Gestão em tela inteira de grupo de permissões, módulos liberados e grafo de dependências |
+| `/global-admin/users/:userId/billing` | `GlobalAdminUserBillingPage` | Controle de pagamentos, faturas, cálculo de licenças de funcionários e histórico financeiro |
+| `/global-admin/finance/rules` | `GlobalAdminFinanceRulesPage` | Regras financeiras globais (10 funcionários grátis por loja, valor por licença adicional) e exceções por loja |
+| `/global-admin/finance/plans` | `GlobalAdminFinancePlansPage` | Catálogo comercial de grupos de permissões e tabela de valores por módulo |
+| `/global-admin/finance/payments` | `GlobalAdminFinancePaymentsPage` | Livro-razão consolidado de faturas e histórico de pagamentos de todas as contas |
 | `/stores` | `StoresPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/products` | `ProductsPage` | Catálogo mestre com entrada em lote e galeria; `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
 | `/categories` | `CategoriesPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
@@ -62,6 +72,9 @@ source:
 | `/notifications` | `NotificationsPage` | |
 | `/audit` | `AuditLogsPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/team` | `TeamPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/team/new` | `StoreEmployeeEditPage` | Cadastro de funcionário da loja ativa (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/team/:employeeId` | `StoreEmployeeEditPage` | Edição de funcionário da loja ativa (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/team/stores/:storeId/employees/:employeeId` | `StoreEmployeeEditPage` | Edição de funcionário com identificação explícita de loja e funcionário na URL (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/integrations` | `ApiIntegrationsPage` | API Studio & Conector de Serviços estilo Postman (De → Para, Dry-Run, Upsert e cURL); `PermissionGate` (`moduleCode="MOD_API_INTEGRATIONS"`) |
 | `/settings` | `SettingsPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `*` | `NotFoundPage` | fora dos layouts acima |
@@ -92,11 +105,11 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | `SalesPage` | PDV: `grid-cols-1 lg:grid-cols-12` (catálogo 8 com miniaturas de `product_images` / carrinho 4 em `lg`) |
 | `ProductsPage` | catálogo mestre: tabela `hidden md:block` + lista `md:hidden` com miniaturas, seleção múltipla e `BulkStockEntryModal` |
 | `InventoryPage` | KPI de valorização a custo/venda + abas de Saldos (com miniaturas de produtos), Movimentações, **Aprovação de Baixas** (`stock_writeoff_requests`) e **Remessas p/ Filiais** (`stock_transfers` sem venda), além de `StockWriteoffModal`, `BulkStockWriteoffModal` e `StockBranchTransferModal` |
-| `StoresPage` | Gestão de Lojas & Filiais: filtros Todas / Matrizes / Filiais, KPIs de unidades e remessas, cadastro de Filial vinculada à Matriz (`is_branch`, `branch_code`, `parent_store_id`, `manager_name`) e botão de envio de estoque para filial sem venda |
-| `TeamPage` | Gestão de Funcionários, Aprovadores de Baixa & Papéis: KPIs de equipe e aprovadores (`STOCK_APPROVER` / `can_approve_writeoff`), filtros por papel e alçada de baixa, `EmployeeRolePermissionsModal` (47 permissões granulares em 8 grupos) e `StoreCustomRolesModal` (`store_custom_roles`) |
+| `StoresPage` | Gestão Hierárquica de Lojas & Filiais (`Matriz -> └─ Filial`): filtros Todas / Matrizes / Filiais, KPIs de unidades e remessas, `DropdownMenu` consolidado em Ações Rápidas, cadastro de Filial vinculada à Matriz e envio de estoque para filial sem venda |
+| `TeamPage` | Gestão de Funcionários, Aprovadores de Baixa & Licenças: KPIs de equipe, aprovadores e cota de licenças grátis (`10 funcionários grátis`), `DropdownMenu` em Ações Rápidas e navegação para página dedicada `/team/stores/:storeId/employees/:employeeId` |
 | `ExpirationPage` | KPIs de validade (Vencidos, `<= 7d`, `<= 30d`, No Prazo) + listagem de lotes com miniaturas de produtos e justificativas (`batch_dispositions`) |
 | `ReportsPage` | menu segmentado com 9 abas analíticas, KPI summary, barra contextual de filtros por categoria/status/classe/urgência/segmento, busca instantânea, sincronização de URL e exportação CSV |
-| `GlobalAdminDashboardPage` | métricas globais + abas de Lojas, Usuários (com colunas de Grupo/Telas Liberadas, Valor & Assinatura e modais de Permissões & Telas, Pagamentos e Catálogo de Grupos & Valores), `GlobalDbExplorerPanel` (CRUD dinâmico), `GlobalBackupPanel` (Dumps SQL/ZIP/JSON) e `GlobalApiKeyHbacPanel` (Gestor de Chaves HBAC) |
+| `GlobalAdminDashboardPage` | métricas globais + abas de **Lojas & Filiais** (árvore hierárquica `Matriz -> └─ Filial`), **Usuários Admin** (restrito a `STORE_ADMIN` e `GLOBAL_ADMIN` pagantes de plano), **Financeiro** (hub com cards para Regras & Licenças, Planos & Módulos e Pagamentos), `GlobalDbExplorerPanel`, `GlobalBackupPanel`, `GlobalApiKeyHbacPanel` e `GlobalDeletePanel`, todos com `DropdownMenu` unificado na coluna **Ações Rápidas** |
 | `ApiIntegrationsPage` | API Studio estilo Postman (`grid-cols-1 lg:grid-cols-12`): Request Builder HTTP, Importar/Exportar cURL, Templates Prontos, Mapeador Visual De → Para com Auto-Map, Simulação Dry-Run e Sincronização em lote com Clientes, Categorias, Produtos, Fornecedores e Estoque |
 | `PurchasingPage` | ordens de compra com cálculo de custo unitário, markup, preço de venda sugerido e lucro previsto |
 | Maioria cadastros | `ResponsiveTable` e/ou tabela + `Modal` CRUD; rodapé de modal `flex-col-reverse sm:flex-row` |

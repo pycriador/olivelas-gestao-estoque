@@ -13,6 +13,8 @@ import type {
   PermissionBillingAuditLog,
   PermissionGroup,
   PermissionModule,
+  PlatformBillingRules,
+  StoreEmployeeLicenseSummary,
   SubscriptionPayment,
   SubscriptionPaymentStatus,
   UserPermissionProfile,
@@ -23,6 +25,22 @@ const LOCAL_GROUPS_CACHE_KEY = 'olivelas_perm_groups_v1'
 const LOCAL_MODULES_CACHE_KEY = 'olivelas_perm_modules_v1'
 const LOCAL_PAYMENTS_CACHE_KEY = 'olivelas_sub_payments_v1'
 const LOCAL_AUDIT_CACHE_KEY = 'olivelas_perm_billing_audit_v1'
+const LOCAL_BILLING_RULES_CACHE_KEY = 'olivelas_platform_billing_rules_v1'
+
+const DEFAULT_BILLING_RULES: PlatformBillingRules = {
+  id: 'default',
+  defaultFreeEmployeesPerStore: 10,
+  defaultExtraEmployeePrice: 19.9,
+  countStoreAdminsInQuota: false,
+  gracePeriodDays: 5,
+  autoBlockOverdue: true,
+  pixKey: 'financeiro@olivelas.com.br',
+  billingSupportWhatsapp: '11999999999',
+  notes:
+    'Cada loja possui direito a 10 funcionários gratuitos. Licenças adicionais de funcionários ativos são cobradas mensalmente na fatura do Store Admin.',
+  storeOverrides: {},
+  updatedAt: new Date().toISOString(),
+}
 
 function readLocalCache<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback
@@ -905,5 +923,292 @@ export const permissionGroupService = {
       {}
     )
     return allAudit[userId] || []
+  },
+
+  /**
+   * Lista todas as faturas e pagamentos da plataforma (visão consolidada Financeiro)
+   */
+  async listAllPlatformPayments(): Promise<SubscriptionPayment[]> {
+    try {
+      const { data, error } = await supabase
+        .from('subscription_payments')
+        .select('*')
+        .order('due_date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .limit(300)
+
+      if (!error && data && data.length > 0) {
+        return data.map(mapPaymentRow)
+      }
+    } catch {
+      // Fallback
+    }
+
+    const allLocal = readLocalCache<Record<string, SubscriptionPayment[]>>(
+      LOCAL_PAYMENTS_CACHE_KEY,
+      {}
+    )
+    const flattened = Object.values(allLocal).flat()
+    return flattened.sort((a, b) => (b.dueDate || '').localeCompare(a.dueDate || ''))
+  },
+
+  /**
+   * Obtém as regras globais de cobrança e licenciamento de funcionários (ex: 10 funcionários grátis por loja)
+   */
+  async getPlatformBillingRules(): Promise<PlatformBillingRules> {
+    const localCached = readLocalCache<PlatformBillingRules>(
+      LOCAL_BILLING_RULES_CACHE_KEY,
+      DEFAULT_BILLING_RULES
+    )
+
+    try {
+      const { data, error } = await supabase
+        .from('platform_billing_rules')
+        .select('*')
+        .eq('id', 'default')
+        .maybeSingle()
+
+      if (!error && data) {
+        const merged: PlatformBillingRules = {
+          id: data.id || 'default',
+          defaultFreeEmployeesPerStore: Number(
+            data.default_free_employees_per_store ?? localCached.defaultFreeEmployeesPerStore ?? 10
+          ),
+          defaultExtraEmployeePrice: Number(
+            data.default_extra_employee_price ?? localCached.defaultExtraEmployeePrice ?? 19.9
+          ),
+          countStoreAdminsInQuota: Boolean(
+            data.count_store_admins_in_quota ?? localCached.countStoreAdminsInQuota ?? false
+          ),
+          gracePeriodDays: Number(data.grace_period_days ?? localCached.gracePeriodDays ?? 5),
+          autoBlockOverdue: Boolean(data.auto_block_overdue ?? localCached.autoBlockOverdue ?? true),
+          pixKey: data.pix_key ?? localCached.pixKey ?? null,
+          billingSupportWhatsapp:
+            data.billing_support_whatsapp ?? localCached.billingSupportWhatsapp ?? null,
+          notes: data.notes ?? localCached.notes ?? null,
+          storeOverrides: localCached.storeOverrides || {},
+          updatedBy: data.updated_by ?? null,
+          updatedAt: data.updated_at ?? localCached.updatedAt ?? new Date().toISOString(),
+        }
+        writeLocalCache(LOCAL_BILLING_RULES_CACHE_KEY, merged)
+        return merged
+      }
+    } catch {
+      // Fallback to localStorage
+    }
+
+    return localCached
+  },
+
+  /**
+   * Salva as regras globais de cobrança e licenciamento de funcionários
+   */
+  async savePlatformBillingRules(
+    updates: Partial<PlatformBillingRules>
+  ): Promise<PlatformBillingRules> {
+    const current = await this.getPlatformBillingRules()
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser()
+
+    const next: PlatformBillingRules = {
+      ...current,
+      ...updates,
+      defaultFreeEmployeesPerStore: Math.max(
+        0,
+        Number(updates.defaultFreeEmployeesPerStore ?? current.defaultFreeEmployeesPerStore ?? 10)
+      ),
+      defaultExtraEmployeePrice: Math.max(
+        0,
+        Number(updates.defaultExtraEmployeePrice ?? current.defaultExtraEmployeePrice ?? 19.9)
+      ),
+      gracePeriodDays: Math.max(
+        0,
+        Number(updates.gracePeriodDays ?? current.gracePeriodDays ?? 5)
+      ),
+      storeOverrides: updates.storeOverrides ?? current.storeOverrides ?? {},
+      updatedBy: currentUser?.id || null,
+      updatedAt: new Date().toISOString(),
+    }
+
+    writeLocalCache(LOCAL_BILLING_RULES_CACHE_KEY, next)
+
+    try {
+      await supabase.from('platform_billing_rules').upsert(
+        {
+          id: 'default',
+          default_free_employees_per_store: next.defaultFreeEmployeesPerStore,
+          default_extra_employee_price: next.defaultExtraEmployeePrice,
+          count_store_admins_in_quota: next.countStoreAdminsInQuota,
+          grace_period_days: next.gracePeriodDays,
+          auto_block_overdue: next.autoBlockOverdue,
+          pix_key: next.pixKey,
+          billing_support_whatsapp: next.billingSupportWhatsapp,
+          notes: next.notes,
+          updated_by: currentUser?.id || null,
+          updated_at: next.updatedAt,
+        },
+        { onConflict: 'id' }
+      )
+    } catch {
+      // Fallback saved in localStorage
+    }
+
+    auditService.logAction({
+      action: 'BILLING_RULES_UPDATED',
+      entity: 'platform_billing_rules',
+      entityId: 'default',
+      afterData: {
+        defaultFreeEmployeesPerStore: next.defaultFreeEmployeesPerStore,
+        defaultExtraEmployeePrice: next.defaultExtraEmployeePrice,
+        gracePeriodDays: next.gracePeriodDays,
+        autoBlockOverdue: next.autoBlockOverdue,
+      },
+    })
+
+    return next
+  },
+
+  /**
+   * Salva exceção de cota de funcionários grátis e preço de licença adicional para uma loja específica
+   */
+  async saveStoreLicensingOverride(
+    storeId: string,
+    override: {
+      freeEmployeesLimit: number | null
+      extraEmployeePrice: number | null
+    }
+  ): Promise<void> {
+    const rules = await this.getPlatformBillingRules()
+    const nextOverrides = { ...(rules.storeOverrides || {}) }
+
+    if (override.freeEmployeesLimit === null && override.extraEmployeePrice === null) {
+      delete nextOverrides[storeId]
+    } else {
+      nextOverrides[storeId] = {
+        freeEmployeesLimit: override.freeEmployeesLimit,
+        extraEmployeePrice: override.extraEmployeePrice,
+      }
+    }
+
+    await this.savePlatformBillingRules({ storeOverrides: nextOverrides })
+
+    try {
+      await supabase
+        .from('stores')
+        .update({
+          free_employees_limit: override.freeEmployeesLimit,
+          extra_employee_price: override.extraEmployeePrice,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', storeId)
+    } catch {
+      // Fallback handled by localStorage storeOverrides
+    }
+  },
+
+  /**
+   * Calcula o resumo de licenças de funcionários (cota gratuita vs excedente cobrado) de todas as lojas
+   */
+  async getStoresEmployeeLicenseSummaries(): Promise<StoreEmployeeLicenseSummary[]> {
+    const rules = await this.getPlatformBillingRules()
+
+    const { data: storesData } = await supabase
+      .from('stores')
+      .select('*')
+      .is('deleted_at', null)
+      .order('name', { ascending: true })
+
+    const stores = storesData || []
+    if (stores.length === 0) return []
+
+    const { data: storeUsersData } = await supabase
+      .from('store_users')
+      .select(`
+        id,
+        store_id,
+        user_id,
+        role,
+        is_active,
+        profiles (
+          id,
+          full_name,
+          email
+        )
+      `)
+
+    const membersByStore = new Map<string, any[]>()
+    for (const su of (storeUsersData || []) as any[]) {
+      const list = membersByStore.get(su.store_id) || []
+      list.push(su)
+      membersByStore.set(su.store_id, list)
+    }
+
+    return stores.map((store: any) => {
+      const members = membersByStore.get(store.id) || []
+      const storeAdminUsers = members
+        .filter((m) => m.role === 'STORE_ADMIN')
+        .map((m) => ({
+          userId: m.user_id,
+          fullName: m.profiles?.full_name || null,
+          email: m.profiles?.email || '',
+        }))
+
+      const nonAdminMembers = members.filter((m) => m.role !== 'STORE_ADMIN')
+      const activeEmployeesCount = rules.countStoreAdminsInQuota
+        ? members.filter((m) => m.is_active !== false).length
+        : nonAdminMembers.filter((m) => m.is_active !== false).length
+
+      const inactiveEmployeesCount = nonAdminMembers.filter((m) => m.is_active === false).length
+
+      const localOverride = rules.storeOverrides?.[store.id]
+      const customLimit =
+        store.free_employees_limit !== undefined && store.free_employees_limit !== null
+          ? Number(store.free_employees_limit)
+          : localOverride?.freeEmployeesLimit !== undefined && localOverride?.freeEmployeesLimit !== null
+            ? Number(localOverride.freeEmployeesLimit)
+            : null
+
+      const customPrice =
+        store.extra_employee_price !== undefined && store.extra_employee_price !== null
+          ? Number(store.extra_employee_price)
+          : localOverride?.extraEmployeePrice !== undefined && localOverride?.extraEmployeePrice !== null
+            ? Number(localOverride.extraEmployeePrice)
+            : null
+
+      const freeEmployeesQuota = customLimit ?? rules.defaultFreeEmployeesPerStore
+      const extraEmployeeUnitPrice = customPrice ?? rules.defaultExtraEmployeePrice
+      const extraBillableEmployees = Math.max(0, activeEmployeesCount - freeEmployeesQuota)
+      const extraEmployeesMonthlyCost = extraBillableEmployees * extraEmployeeUnitPrice
+
+      return {
+        storeId: store.id,
+        storeName: store.name,
+        storeSlug: store.slug,
+        isBranch: Boolean(store.is_branch || store.parent_store_id),
+        parentStoreId: store.parent_store_id || null,
+        branchCode: store.branch_code || null,
+        storeAdminUsers,
+        totalMembersCount: members.length,
+        storeAdminsCount: storeAdminUsers.length,
+        activeEmployeesCount,
+        inactiveEmployeesCount,
+        freeEmployeesQuota,
+        extraBillableEmployees,
+        extraEmployeeUnitPrice,
+        extraEmployeesMonthlyCost,
+        hasCustomStoreOverride: customLimit !== null || customPrice !== null,
+      }
+    })
+  },
+
+  /**
+   * Calcula o resumo de licenças de funcionários para uma loja específica
+   */
+  async getStoreEmployeeLicenseSummary(
+    storeId: string
+  ): Promise<StoreEmployeeLicenseSummary | null> {
+    const all = await this.getStoresEmployeeLicenseSummaries()
+    return all.find((s) => s.storeId === storeId) || null
   },
 }

@@ -20,6 +20,7 @@ import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { Trash2, Search, Store as StoreIcon, AlertTriangle } from 'lucide-react'
 
 /**
@@ -228,7 +229,7 @@ export function GlobalDeletePanel() {
                     <th className="py-3 px-4 text-left">Loja</th>
                     <th className="py-3 px-4 text-left">Detalhe</th>
                     <th className="py-3 px-4 text-left">Criado em</th>
-                    <th className="py-3 px-4 text-right">Ação</th>
+                    <th className="py-3 px-4 text-right">Ações Rápidas</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -250,20 +251,22 @@ export function GlobalDeletePanel() {
                         {row.created_at ? formatDateTime(row.created_at) : '—'}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-[11px] text-danger hover:bg-danger/10"
-                          onClick={() => {
-                            setError('')
-                            setSuccess('')
-                            setTarget(row)
-                          }}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Excluir
-                        </Button>
+                        <DropdownMenu
+                          triggerLabel="Ações Rápidas"
+                          items={[
+                            {
+                              key: 'hard-delete',
+                              label: 'Excluir Definitivamente',
+                              icon: <Trash2 className="h-3.5 w-3.5" />,
+                              variant: 'danger',
+                              onSelect: () => {
+                                setError('')
+                                setSuccess('')
+                                setTarget(row)
+                              },
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}

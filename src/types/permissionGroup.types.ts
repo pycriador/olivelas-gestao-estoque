@@ -127,10 +127,55 @@ export interface PermissionBillingAuditLog {
     | 'PAYMENT_MARKED_PAID'
     | 'PAYMENT_STATUS_CHANGED'
     | 'GROUP_CATALOG_UPDATED'
+    | 'BILLING_RULES_UPDATED'
   summary: string
   previousState: Record<string, any>
   newState: Record<string, any>
   createdAt: string
+}
+
+export interface PlatformBillingRules {
+  id: string
+  defaultFreeEmployeesPerStore: number
+  defaultExtraEmployeePrice: number
+  countStoreAdminsInQuota: boolean
+  gracePeriodDays: number
+  autoBlockOverdue: boolean
+  pixKey: string | null
+  billingSupportWhatsapp: string | null
+  notes: string | null
+  storeOverrides?: Record<
+    string,
+    {
+      freeEmployeesLimit?: number | null
+      extraEmployeePrice?: number | null
+    }
+  >
+  updatedBy?: string | null
+  updatedAt: string
+}
+
+export interface StoreEmployeeLicenseSummary {
+  storeId: string
+  storeName: string
+  storeSlug: string
+  isBranch: boolean
+  parentStoreId: string | null
+  branchCode: string | null
+  storeAdminUsers: Array<{
+    userId: string
+    fullName: string | null
+    email: string
+  }>
+  totalMembersCount: number
+  storeAdminsCount: number
+  activeEmployeesCount: number
+  inactiveEmployeesCount: number
+  freeEmployeesQuota: number
+  extraBillableEmployees: number
+  extraEmployeeUnitPrice: number
+  extraEmployeesMonthlyCost: number
+  hasCustomStoreOverride: boolean
 }
 
 export type DependencySeverity = 'CRITICAL' | 'WARNING' | 'INFO'

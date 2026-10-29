@@ -22,6 +22,14 @@ import { ResetPasswordPage } from '@/pages/ResetPasswordPage'
 // Operational Protected Pages
 import { DashboardPage } from '@/pages/DashboardPage'
 import { GlobalAdminDashboardPage } from '@/pages/GlobalAdminDashboardPage'
+import { GlobalAdminStoreEditPage } from '@/pages/admin/GlobalAdminStoreEditPage'
+import { StoreEmployeeEditPage } from '@/pages/admin/StoreEmployeeEditPage'
+import { GlobalAdminUserEditPage } from '@/pages/admin/GlobalAdminUserEditPage'
+import { GlobalAdminUserPermissionsPage } from '@/pages/admin/GlobalAdminUserPermissionsPage'
+import { GlobalAdminUserBillingPage } from '@/pages/admin/GlobalAdminUserBillingPage'
+import { GlobalAdminFinanceRulesPage } from '@/pages/admin/GlobalAdminFinanceRulesPage'
+import { GlobalAdminFinancePlansPage } from '@/pages/admin/GlobalAdminFinancePlansPage'
+import { GlobalAdminFinancePaymentsPage } from '@/pages/admin/GlobalAdminFinancePaymentsPage'
 import { StoresPage } from '@/pages/StoresPage'
 import { ProductsPage } from '@/pages/ProductsPage'
 import { CategoriesPage } from '@/pages/CategoriesPage'
@@ -78,6 +86,94 @@ export function AppRoutes() {
           element={
             <ProtectedRoute requireGlobalAdmin>
               <GlobalAdminDashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/stores/new"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminStoreEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/stores/:storeId/edit"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminStoreEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/stores/:storeId/employees/new"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <StoreEmployeeEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/stores/:storeId/employees/:employeeId"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <StoreEmployeeEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/users/new"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminUserEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/users/:userId/edit"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminUserEditPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/users/:userId/permissions"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminUserPermissionsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/users/:userId/billing"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminUserBillingPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/finance/rules"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminFinanceRulesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/finance/plans"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminFinancePlansPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/finance/payments"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminFinancePaymentsPage />
             </ProtectedRoute>
           }
         />
@@ -183,6 +279,22 @@ export function AppRoutes() {
           element={
             <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
               <TeamPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/team/new"
+          element={
+            <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
+              <StoreEmployeeEditPage />
+            </PermissionGate>
+          }
+        />
+        <Route
+          path="/team/:employeeId"
+          element={
+            <PermissionGate moduleCode="MOD_TEAM_AUDIT" showUpgradeScreen>
+              <StoreEmployeeEditPage />
             </PermissionGate>
           }
         />

@@ -12,6 +12,11 @@ import type { UserRole } from '@/types/database.types'
 export interface UserListParams {
   search?: string
   isGlobalAdmin?: boolean
+  /**
+   * Quando true (padrão no Global Admin > Usuários), exclui funcionários de lojas
+   * que não sejam STORE_ADMIN nem GLOBAL_ADMIN, pois funcionários não possuem plano de pagamento.
+   */
+  excludeStoreEmployees?: boolean
   sortBy?: string
   sortOrder?: 'asc' | 'desc'
   page?: number
@@ -20,12 +25,16 @@ export interface UserListParams {
 
 export const userService = {
   /**
-   * List all platform users (Global Admin)
+   * List platform users (Global Admin).
+   * Por padrão (`excludeStoreEmployees = true`), exibe apenas contas titulares/assinantes
+   * (`STORE_ADMIN`, `GLOBAL_ADMIN` ou contas sem vínculo de funcionário operacional),
+   * já que funcionários da loja entram na cota de licenças da loja e não pagam plano individual.
    */
   async listPlatformUsers(params: UserListParams = {}): Promise<{ data: PlatformUser[]; total: number }> {
     const {
       search,
       isGlobalAdmin,
+      excludeStoreEmployees = true,
       sortBy = 'created_at',
       sortOrder = 'desc',
       page = 1,
@@ -49,12 +58,9 @@ export const userService = {
       ? sortBy
       : 'created_at'
 
-    const from = (page - 1) * pageSize
-    const to = from + pageSize - 1
-
-    const { data: profiles, count, error } = await query
-      .order(orderCol, { ascending: sortOrder === 'asc' })
-      .range(from, to)
+    const { data: profiles, error } = await query.order(orderCol, {
+      ascending: sortOrder === 'asc',
+    })
 
     if (error) {
       console.error('Error fetching platform profiles:', error)
@@ -62,10 +68,10 @@ export const userService = {
     }
 
     if (!profiles || profiles.length === 0) {
-      return { data: [], total: count || 0 }
+      return { data: [], total: 0 }
     }
 
-    const userIds = profiles.map((p) => p.id)
+    const allUserIds = profiles.map((p) => p.id)
 
     // Fetch store relations for these users safely
     const userStoresMap = new Map<string, any[]>()
@@ -85,7 +91,7 @@ export const userService = {
             slug
           )
         `)
-        .in('user_id', userIds)
+        .in('user_id', allUserIds)
 
       if (!storeErr && storeUsers) {
         for (const su of storeUsers as any[]) {
@@ -109,9 +115,24 @@ export const userService = {
       console.warn('Could not load user store relations:', e)
     }
 
-    const permissionProfilesMap = await permissionGroupService.getProfilesByUserIds(userIds)
+    // Filter out operational store employees when excludeStoreEmployees is enabled
+    const filteredProfiles = excludeStoreEmployees
+      ? profiles.filter((p) => {
+          if (p.is_global_admin) return true
+          const links = userStoresMap.get(p.id) || []
+          if (links.length === 0) return true
+          return links.some((l) => l.role === 'STORE_ADMIN')
+        })
+      : profiles
 
-    const result: PlatformUser[] = profiles.map((p) => ({
+    const total = filteredProfiles.length
+    const from = (page - 1) * pageSize
+    const pagedProfiles = filteredProfiles.slice(from, from + pageSize)
+    const pagedUserIds = pagedProfiles.map((p) => p.id)
+
+    const permissionProfilesMap = await permissionGroupService.getProfilesByUserIds(pagedUserIds)
+
+    const result: PlatformUser[] = pagedProfiles.map((p) => ({
       id: p.id,
       email: p.email,
       fullName: p.full_name || null,
@@ -126,7 +147,76 @@ export const userService = {
 
     return {
       data: result,
-      total: count || 0,
+      total,
+    }
+  },
+
+  /**
+   * Get a single platform user by ID with stores and permission profile
+   */
+  async getPlatformUserById(userId: string): Promise<PlatformUser | null> {
+    if (!userId) return null
+    const { data: p, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error) throw error
+    if (!p) return null
+
+    const storesList: any[] = []
+    try {
+      const { data: storeUsers } = await supabase
+        .from('store_users')
+        .select(`
+          user_id,
+          role,
+          is_active,
+          job_title,
+          can_approve_writeoff,
+          custom_role_id,
+          stores (
+            id,
+            name,
+            slug
+          )
+        `)
+        .eq('user_id', userId)
+
+      for (const su of (storeUsers || []) as any[]) {
+        if (su.stores) {
+          storesList.push({
+            storeId: su.stores.id,
+            storeName: su.stores.name,
+            storeSlug: su.stores.slug,
+            role: su.role,
+            isActive: su.is_active,
+            jobTitle: su.job_title ?? null,
+            canApproveWriteoff: Boolean(
+              su.can_approve_writeoff || su.role === 'STOCK_APPROVER' || su.role === 'STORE_ADMIN'
+            ),
+            customRoleId: su.custom_role_id ?? null,
+          })
+        }
+      }
+    } catch {
+      // Ignore
+    }
+
+    const permissionProfile = await permissionGroupService.getUserPermissionProfile(userId)
+
+    return {
+      id: p.id,
+      email: p.email,
+      fullName: p.full_name || null,
+      phone: p.phone || null,
+      avatarUrl: p.avatar_url || null,
+      isGlobalAdmin: Boolean(p.is_global_admin),
+      createdAt: p.created_at,
+      updatedAt: p.updated_at,
+      stores: storesList,
+      permissionProfile,
     }
   },
 

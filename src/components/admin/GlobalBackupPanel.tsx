@@ -4,6 +4,7 @@ import { backupService, type BackupProgress } from '@/services/backupService'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import {
   Database,
   Download,
@@ -99,7 +100,7 @@ export function GlobalBackupPanel({ stores }: GlobalBackupPanelProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
           <span className="text-xs text-muted-foreground font-medium whitespace-nowrap">Escopo:</span>
           <select
             value={selectedStoreId}
@@ -115,6 +116,33 @@ export function GlobalBackupPanel({ stores }: GlobalBackupPanelProps) {
               </option>
             ))}
           </select>
+
+          <DropdownMenu
+            triggerLabel="Ações Rápidas"
+            items={[
+              {
+                key: 'sql-dump',
+                label: 'Baixar Script SQL (.SQL)',
+                icon: <Database className="h-3.5 w-3.5 text-blue-500" />,
+                disabled: isProcessing,
+                onSelect: handleDownloadSQL,
+              },
+              {
+                key: 'images-zip',
+                label: 'Baixar Imagens (.ZIP)',
+                icon: <FolderArchive className="h-3.5 w-3.5 text-emerald-500" />,
+                disabled: isProcessing,
+                onSelect: handleDownloadImagesZip,
+              },
+              {
+                key: 'json-package',
+                label: 'Baixar Pacote de Dados (.JSON)',
+                icon: <FileCode className="h-3.5 w-3.5 text-amber-500" />,
+                disabled: isProcessing,
+                onSelect: handleDownloadJSON,
+              },
+            ]}
+          />
         </div>
       </div>
 

@@ -14,6 +14,20 @@ classification: Confirmed
 
 ## 2026-10-29
 
+- **Hierarquia Matriz → Filiais, Dropdown Único de Ações Rápidas, Licenciamento de 10 Funcionários Grátis por Loja, Área Financeiro no Global Admin e Separação de Modais em Páginas Dedicadas com URLs Próprias** (`supabase/migrations/20261030000024_global_finance_licensing_rules.sql`, `AppRoutes.tsx`, `GlobalAdminDashboardPage.tsx`, `StoresPage.tsx`, `TeamPage.tsx`, `dropdown-menu.tsx`, `GlobalAdminStoreEditPage.tsx`, `StoreEmployeeEditPage.tsx`, `GlobalAdminUserEditPage.tsx`, `GlobalAdminUserPermissionsPage.tsx`, `GlobalAdminUserBillingPage.tsx`, `GlobalAdminFinanceRulesPage.tsx`, `GlobalAdminFinancePlansPage.tsx`, `GlobalAdminFinancePaymentsPage.tsx`):
+  - **Exibição Hierárquica Matriz → Filiais (`/global-admin?tab=stores` e `/stores`)**:
+    - As lojas filiais (`is_branch = true` ou `parent_store_id != null`) são agrupadas e renderizadas imediatamente abaixo de sua respectiva Matriz como linhas filhas indentadas (`└─ Filial`), exibindo o código da filial, vínculo com a matriz, administradores (`STORE_ADMIN`) e consumo de licenças de equipe.
+    - O Global Admin pode editar a filiação de qualquer loja (converter entre Matriz Independente e Filial vinculada a outra Matriz) e gerenciar os usuários `STORE_ADMIN` na página dedicada `/global-admin/stores/:storeId/edit`.
+  - **Consolidação de Todas as Ações Rápidas em Botão Dropdown Único (`dropdown-menu.tsx`)**:
+    - Todas as abas de `/global-admin` (`Lojas & Filiais`, `Usuários Admin`, `Financeiro`, `Backups`, `DB Explorer`, `API & HBAC`, `Exclusão Definitiva`), além de `/stores` e `/team`, utilizam um único botão `Ações Rápidas` com menu dropdown flutuante renderizado via Portal.
+  - **Exclusão de Funcionários Operacionais de `/global-admin?tab=users`**:
+    - Funcionários operacionais da loja (`SELLER`, `INVENTORY`, `STOCK_APPROVER`, `FINANCE`, `VIEWER`) não pagam plano individual e são gerenciados dentro da loja (`/team` ou `/global-admin/stores/:storeId/edit`); a aba `/global-admin?tab=users` lista exclusivamente titulares `STORE_ADMIN` e `GLOBAL_ADMIN`.
+  - **Regras de Licenciamento de Equipe (10 Funcionários Grátis + Cobrança por Licença Adicional) na Aba "Financeiro" (`/global-admin?tab=finance` e `/global-admin/finance/rules`)**:
+    - Criada a tabela `public.global_billing_rules` e colunas de override por loja (`free_employees_limit`, `extra_employee_price` em `public.stores`).
+    - Cada loja possui por padrão **10 funcionários ativos grátis**; acima da franquia, cada licença adicional soma automaticamente o valor unitário configurável à mensalidade do `STORE_ADMIN`, com simulador e exceções por loja editáveis em `/global-admin/finance/rules`.
+  - **Separação de Modais em Páginas Completas com URLs Próprias**:
+    - Substituídos os modais sobrecarregados por 8 páginas completas com rotas próprias identificando loja, funcionário e usuário na URL: `/global-admin/stores/:storeId/edit`, `/global-admin/stores/:storeId/employees/:employeeId`, `/team/stores/:storeId/employees/:employeeId`, `/global-admin/users/:userId/edit`, `/global-admin/users/:userId/permissions`, `/global-admin/users/:userId/billing`, `/global-admin/finance/rules`, `/global-admin/finance/plans` e `/global-admin/finance/payments`.
+
 - **Correção da Troca de Abas e Contadores em Tempo Real em `/inventory` (`Saldos`, `Movimentos`, `Aprovações de Baixa`, `Remessas p/ Filiais`)** (`useTablePagination.ts`, `InventoryPage.tsx`, `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`):
   - **Causa Raiz (`useTablePagination.ts` + React Router v7)**:
     - Em `react-router-dom` v7, múltiplas chamadas a `setSearchParams` no mesmo ciclo de evento leem `location.search` da closure da renderização atual (não enfileirando mutações de forma síncrona). Em `InventoryPage.tsx`, os botões das abas (`Saldos`, `Movimentos`, `Aprovações de Baixa`, `Remessas p/ Filiais`) invocavam `setFilter('tab', '...')` seguido de `setPage(1)` no mesmo `onClick`; a segunda chamada (`setPage(1)`) lia `searchParams` obsoleto (sem `tab`) e sobrescrevia a URL de volta para `?`, cancelando a navegação de aba.

@@ -12,6 +12,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { Badge } from '@/components/ui/badge'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
+import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import {
   Database,
   Search,
@@ -228,7 +229,7 @@ export function GlobalDbExplorerPanel({ stores }: GlobalDbExplorerPanelProps) {
               <table className="w-full text-left text-xs border-collapse font-mono">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground uppercase text-[10px] tracking-wider">
                   <tr>
-                    <th className="py-2.5 px-3 font-semibold text-center w-24">Ações</th>
+                    <th className="py-2.5 px-3 font-semibold text-center w-36">Ações Rápidas</th>
                     {columns.slice(0, 8).map((col) => (
                       <th key={col} className="py-2.5 px-3 font-semibold whitespace-nowrap">
                         {col}
@@ -241,31 +242,31 @@ export function GlobalDbExplorerPanel({ stores }: GlobalDbExplorerPanelProps) {
                     const rowId = String(row[currentTableMeta.primaryKey] || idx)
                     return (
                       <tr key={rowId} className="hover:bg-muted/30 transition-colors">
-                        <td className="py-2 px-3 text-center whitespace-nowrap space-x-1">
-                          <button
-                            type="button"
-                            title="Ver JSON completo"
-                            onClick={() => setRawJsonModalRow(row)}
-                            className="p-1 text-muted-foreground hover:text-foreground rounded"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Editar Registro"
-                            onClick={() => handleOpenEdit(row)}
-                            className="p-1 text-primary hover:bg-primary/10 rounded"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            type="button"
-                            title="Excluir Registro"
-                            onClick={() => setDeletingRow(row)}
-                            className="p-1 text-danger hover:bg-danger/10 rounded"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                        <td className="py-2 px-3 text-center whitespace-nowrap font-sans">
+                          <DropdownMenu
+                            triggerLabel="Ações Rápidas"
+                            items={[
+                              {
+                                key: 'view-json',
+                                label: 'Ver JSON Completo',
+                                icon: <Eye className="h-3.5 w-3.5 text-blue-500" />,
+                                onSelect: () => setRawJsonModalRow(row),
+                              },
+                              {
+                                key: 'edit-row',
+                                label: 'Editar Registro',
+                                icon: <Edit2 className="h-3.5 w-3.5 text-primary" />,
+                                onSelect: () => handleOpenEdit(row),
+                              },
+                              {
+                                key: 'delete-row',
+                                label: 'Excluir Registro',
+                                icon: <Trash2 className="h-3.5 w-3.5" />,
+                                variant: 'danger',
+                                onSelect: () => setDeletingRow(row),
+                              },
+                            ]}
+                          />
                         </td>
 
                         {columns.slice(0, 8).map((col) => {

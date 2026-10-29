@@ -40,6 +40,7 @@ Ordem incremental observada (arquivos datados):
 21. `20261029000021_external_api_integrator.sql`
 22. `20261030000022_permission_groups_and_billing.sql`
 23. `20261030000023_staff_roles_approvers_and_branches.sql`
+24. `20261030000024_global_finance_licensing_rules.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -56,7 +57,7 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | Tabela | Papel |
 | --- | --- |
 | `profiles` | 1:1 `auth.users`; `is_global_admin` |
-| `stores` | tenant; `slug` único; `theme_config`; `deleted_at`; hierarquia de filiais (`parent_store_id`, `branch_code`, `is_branch`, `manager_name`) |
+| `stores` | tenant; `slug` único; `theme_config`; `deleted_at`; hierarquia de filiais (`parent_store_id`, `branch_code`, `is_branch`, `manager_name`); exceções de licenciamento de equipe (`free_employees_limit`, `extra_employee_price`) |
 | `store_users` | membership `store_id` + `user_id` + `role` + credenciais granulares de funcionário (`job_title`, `employee_registration`, `custom_role_id`, `can_approve_writeoff`, `approval_pin`, `max_writeoff_value`, `granted_permissions`, `revoked_permissions`) |
 | `store_custom_roles` | papéis operacionais customizados por loja (`code`, `name`, `base_role`, `permissions`, `can_approve_writeoff`, `max_writeoff_value`) |
 | `roles`, `permissions`, `role_permissions` | catálogo de permissões (seed + 24 permissões granulares adicionais na migration 23) |
@@ -64,6 +65,7 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | `permission_groups` | pacotes comerciais de permissões (ex.: Catálogo WhatsApp, Controle de Estoque, ERP Completo) com preços base |
 | `user_permission_profiles` | perfil efetivo de permissões e assinatura por usuário (`enabled_modules`, `enforce_over_store_admin`, `agreed_monthly_value`, `payment_status`, `next_due_date`) |
 | `subscription_payments` | livro-razão de faturas e histórico de pagamentos SaaS por usuário (`reference_month`, `amount`, `paid_amount`, `payment_method`, `status`, `due_date`, `paid_at`) |
+| `global_billing_rules` | regras globais de licenciamento comercial SaaS (franquia padrão `default_free_employees_per_store = 10`, preço por funcionário excedente `extra_employee_price = 19.90`, carência e cobrança de filiais) |
 | `permission_billing_audit_logs` | trilha de auditoria imutável de alterações de grupo, módulos, preços e baixas de pagamento |
 
 ### Cadastro

@@ -21,6 +21,8 @@ export interface Store {
   branch_code?: string | null
   is_branch?: boolean
   manager_name?: string | null
+  free_employees_limit?: number | null
+  extra_employee_price?: number | null
   is_active: boolean
   theme_config: {
     appTheme?: string
