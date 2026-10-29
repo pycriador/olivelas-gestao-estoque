@@ -224,6 +224,7 @@ export function StockWriteoffModal({ isOpen, onClose, productId }: StockWriteoff
       queryClient.invalidateQueries({ queryKey: ['stock-balances', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-movements', storeId] })
       queryClient.invalidateQueries({ queryKey: ['stock-batches', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['stock-writeoff-requests', storeId] })
       queryClient.invalidateQueries({ queryKey: ['writeoff-requests', storeId] })
       queryClient.invalidateQueries({ queryKey: ['products', storeId] })
       queryClient.invalidateQueries({ queryKey: ['dashboard-metrics', storeId] })

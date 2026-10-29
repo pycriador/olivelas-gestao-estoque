@@ -141,7 +141,7 @@ export function InventoryPage() {
         sortBy,
         sortOrder,
       }),
-    enabled: Boolean(hasActiveStore && activeTab === 'balances'),
+    enabled: Boolean(hasActiveStore),
   })
 
   // Query Store Valuation
@@ -174,13 +174,13 @@ export function InventoryPage() {
         sortBy: sortBy === 'quantity' ? 'quantity' : 'created_at',
         sortOrder,
       }),
-    enabled: Boolean(hasActiveStore && activeTab === 'movements'),
+    enabled: Boolean(hasActiveStore),
   })
 
   const { data: lossReasons = [] } = useQuery({
     queryKey: ['loss-reasons'],
     queryFn: () => inventoryService.getLossReasons(),
-    enabled: Boolean(hasActiveStore && (activeTab === 'movements' || activeTab === 'approvals')),
+    enabled: Boolean(hasActiveStore),
   })
 
   const { data: writeoffRequests = [], isLoading: loadingWriteoffRequests } = useQuery({
@@ -418,11 +418,9 @@ export function InventoryPage() {
         {/* Tab Selector Pills */}
         <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border flex-wrap">
           <button
-            onClick={() => {
-              setFilter('tab', 'balances')
-              setPage(1)
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+            type="button"
+            onClick={() => setFilter('tab', 'balances')}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'balances'
                 ? 'bg-card text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
@@ -431,11 +429,9 @@ export function InventoryPage() {
             <Layers className="h-3.5 w-3.5 inline mr-1" /> Saldos ({totalBalances})
           </button>
           <button
-            onClick={() => {
-              setFilter('tab', 'movements')
-              setPage(1)
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+            type="button"
+            onClick={() => setFilter('tab', 'movements')}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'movements'
                 ? 'bg-card text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
@@ -444,11 +440,9 @@ export function InventoryPage() {
             <History className="h-3.5 w-3.5 inline mr-1" /> Movimentos ({totalMovements})
           </button>
           <button
-            onClick={() => {
-              setFilter('tab', 'approvals')
-              setPage(1)
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 ${
+            type="button"
+            onClick={() => setFilter('tab', 'approvals')}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
               activeTab === 'approvals'
                 ? 'bg-card text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
@@ -462,11 +456,9 @@ export function InventoryPage() {
             )}
           </button>
           <button
-            onClick={() => {
-              setFilter('tab', 'transfers')
-              setPage(1)
-            }}
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
+            type="button"
+            onClick={() => setFilter('tab', 'transfers')}
+            className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
               activeTab === 'transfers'
                 ? 'bg-card text-foreground shadow-xs'
                 : 'text-muted-foreground hover:text-foreground'
@@ -524,10 +516,7 @@ export function InventoryPage() {
           {activeTab === 'balances' && (
             <select
               value={stockStatusFilter}
-              onChange={(e) => {
-                setFilter('stockStatus', e.target.value)
-                setPage(1)
-              }}
+              onChange={(e) => setFilter('stockStatus', e.target.value)}
               aria-label="Filtrar por saldo de estoque"
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer font-medium"
             >
@@ -549,10 +538,7 @@ export function InventoryPage() {
               )}
               <select
                 value={movementTypeFilter}
-                onChange={(e) => {
-                  setFilter('movementType', e.target.value)
-                  setPage(1)
-                }}
+                onChange={(e) => setFilter('movementType', e.target.value)}
                 aria-label="Filtrar por tipo"
                 className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
               >
@@ -568,10 +554,7 @@ export function InventoryPage() {
 
               <select
                 value={reasonCodeFilter}
-                onChange={(e) => {
-                  setFilter('reasonCode', e.target.value)
-                  setPage(1)
-                }}
+                onChange={(e) => setFilter('reasonCode', e.target.value)}
                 aria-label="Filtrar por motivo"
                 className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
               >

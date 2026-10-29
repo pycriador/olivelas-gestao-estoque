@@ -20,6 +20,17 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
 
   const [searchParams, setSearchParams] = useSearchParams()
 
+  // Keep a synchronous reference to the latest URLSearchParams so multiple updates
+  // in the same event handler (e.g. setFilter + setPage) compose instead of overwriting each other
+  const latestParamsRef = React.useRef<URLSearchParams>(new URLSearchParams(searchParams))
+  const prevRenderedSearchRef = React.useRef<string>(searchParams.toString())
+
+  const currentSearchStr = searchParams.toString()
+  if (prevRenderedSearchRef.current !== currentSearchStr) {
+    prevRenderedSearchRef.current = currentSearchStr
+    latestParamsRef.current = new URLSearchParams(searchParams)
+  }
+
   // Read current params from URL
   const page = parseInt(searchParams.get('page') || String(defaultPage), 10) || defaultPage
   const pageSize = parseInt(searchParams.get('pageSize') || String(defaultPageSize), 10) || defaultPageSize
@@ -41,11 +52,10 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
   // Helper to update URL params cleanly
   const updateParams = React.useCallback(
     (updater: (prev: URLSearchParams) => void) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev)
-        updater(next)
-        return next
-      }, { replace: true })
+      const next = new URLSearchParams(latestParamsRef.current)
+      updater(next)
+      latestParamsRef.current = next
+      setSearchParams(next, { replace: true })
     },
     [setSearchParams]
   )
@@ -135,7 +145,9 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
   )
 
   const resetAll = React.useCallback(() => {
-    setSearchParams(new URLSearchParams(), { replace: true })
+    const empty = new URLSearchParams()
+    latestParamsRef.current = empty
+    setSearchParams(empty, { replace: true })
   }, [setSearchParams])
 
   return {

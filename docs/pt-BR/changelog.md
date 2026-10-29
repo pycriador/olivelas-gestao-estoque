@@ -14,6 +14,13 @@ classification: Confirmed
 
 ## 2026-10-29
 
+- **Correção da Troca de Abas e Contadores em Tempo Real em `/inventory` (`Saldos`, `Movimentos`, `Aprovações de Baixa`, `Remessas p/ Filiais`)** (`useTablePagination.ts`, `InventoryPage.tsx`, `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`):
+  - **Causa Raiz (`useTablePagination.ts` + React Router v7)**:
+    - Em `react-router-dom` v7, múltiplas chamadas a `setSearchParams` no mesmo ciclo de evento leem `location.search` da closure da renderização atual (não enfileirando mutações de forma síncrona). Em `InventoryPage.tsx`, os botões das abas (`Saldos`, `Movimentos`, `Aprovações de Baixa`, `Remessas p/ Filiais`) invocavam `setFilter('tab', '...')` seguido de `setPage(1)` no mesmo `onClick`; a segunda chamada (`setPage(1)`) lia `searchParams` obsoleto (sem `tab`) e sobrescrevia a URL de volta para `?`, cancelando a navegação de aba.
+    - Adicionado `latestParamsRef` síncrono em `useTablePagination.ts` para compor múltiplas atualizações de query string no mesmo evento sem perda de parâmetros, além de remover chamadas redundantes a `setPage(1)` (pois `setFilter` já reseta `page`).
+  - **Contadores e Invalidação de Queries (`InventoryPage.tsx`, `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`)**:
+    - As queries de `balancesData`, `movementsData` e `lossReasons` passaram a carregar sempre que há loja ativa (`enabled: Boolean(hasActiveStore)`), exibindo os contadores reais nas abas desde o primeiro carregamento e invalidando `stock-writeoff-requests` imediatamente após solicitações ou baixas de estoque.
+
 - **Cadastro de Funcionários, Papéis Granulares, Aprovador de Baixa de Estoque (`STOCK_APPROVER`) e Remessa de Estoque para Filiais Sem Venda** (`supabase/migrations/20261030000023_staff_roles_approvers_and_branches.sql`, `TeamPage.tsx`, `GlobalAdminDashboardPage.tsx`, `StoresPage.tsx`, `InventoryPage.tsx`, `EmployeeRolePermissionsModal.tsx`, `StoreCustomRolesModal.tsx`, `StockBranchTransferModal.tsx`, `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`):
   - **Gestão Completa de Funcionários e Papéis Customizados (`/team` e `/global-admin?tab=users`)**:
     - `STORE_ADMIN` e `GLOBAL_ADMIN` podem cadastrar/editar funcionários via RPC `public.upsert_store_employee`, definindo matrícula (`employee_code`), cargo (`job_title`), papel base (`STORE_ADMIN`, `STOCK_APPROVER`, `MANAGER`, `SELLER`, `CASHIER`, `INVENTORY`, `FINANCE`, `VIEWER`), papel customizado da loja (`public.store_custom_roles`) e matriz de permissões granulares individuais (`granted_permissions` e `revoked_permissions`) para todos os recursos do sistema.
