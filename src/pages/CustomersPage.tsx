@@ -1350,7 +1350,7 @@ export function CustomersPage() {
                 </Button>
 
                 {statusDropdownOpen && (
-                  <div className="absolute right-0 mt-1.5 w-80 sm:w-96 rounded-xl border border-border bg-card shadow-xl z-50 p-3 space-y-3">
+                  <div className="absolute left-0 sm:left-auto sm:right-0 mt-1.5 w-80 sm:w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-card shadow-xl z-50 p-3 space-y-3">
                     <div className="flex items-center justify-between border-b border-border pb-2">
                       <span className="text-xs font-bold text-foreground">
                         Seleção Múltipla de Status

@@ -104,7 +104,7 @@ Header empilha (`flex-col`) e vira `sm:flex-row`. Formulário `max-w-md` central
 
 ## Menus Dropdown via Portal (`DropdownMenu`)
 
-`src/components/ui/dropdown-menu.tsx` renderiza o menu flutuante via `createPortal(..., document.body)` com cálculo automático de coordenadas (`getBoundingClientRect`), garantindo que o botão **Ações Rápidas** nas tabelas de `/global-admin`, `/stores` e `/team` nunca seja cortado por containers com `overflow-hidden` ou `overflow-x-auto`.
+`src/components/ui/dropdown-menu.tsx` renderiza o menu flutuante via `createPortal(..., document.body)` com medição real das dimensões do DOM (`useLayoutEffect`, `ResizeObserver` e `getBoundingClientRect`), respeitando margens seguras de viewport (`12px` em todos os lados, `width: 'max-content'`, `maxWidth: 'calc(100vw - 24px)'`, `maxHeight: 'calc(100vh - 24px)'`) e exibindo os rótulos completos das opções sem truncamento (`whitespace-normal sm:whitespace-nowrap break-words`), garantindo que o menu **Ações Rápidas** em todas as páginas (`/global-admin`, `/global-admin/stores/:storeId/edit`, `/global-admin/finance/*`, `/global-admin/users/:userId/*`, `/stores`, `/team`, `/expiration`, `/dashboard`) nunca saia da tela na lateral nem corte o nome das opções.
 
 ## Dashboard Executivo Multi-Loja (`DashboardPage`)
 

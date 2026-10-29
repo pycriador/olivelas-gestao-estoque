@@ -39,28 +39,49 @@ export function DropdownMenu({
   const updatePosition = React.useCallback(() => {
     if (!buttonRef.current) return
     const rect = buttonRef.current.getBoundingClientRect()
-    const menuWidth = 200 // default min-width in px
-    const windowWidth = window.innerWidth
-    const windowHeight = window.innerHeight
+    const viewportWidth = document.documentElement.clientWidth || window.innerWidth
+    const viewportHeight = document.documentElement.clientHeight || window.innerHeight
+    const margin = 12
 
-    let top = rect.bottom + 4
+    const measuredRect = menuRef.current?.getBoundingClientRect()
+    const maxAllowedWidth = Math.max(200, viewportWidth - margin * 2)
+    const maxAllowedHeight = Math.max(160, viewportHeight - margin * 2)
+
+    const menuWidth = measuredRect
+      ? Math.min(measuredRect.width, maxAllowedWidth)
+      : Math.min(280, maxAllowedWidth)
+    const menuHeight = measuredRect
+      ? Math.min(measuredRect.height, maxAllowedHeight)
+      : Math.min(items.length * 38 + 16, maxAllowedHeight)
+
     let left = align === 'right' ? rect.right - menuWidth : rect.left
 
-    // Adjust horizontal boundary
-    if (left + menuWidth > windowWidth - 12) {
-      left = windowWidth - menuWidth - 12
+    // Keep menu strictly inside horizontal viewport bounds
+    if (left + menuWidth > viewportWidth - margin) {
+      left = viewportWidth - menuWidth - margin
     }
-    if (left < 12) {
-      left = 12
-    }
-
-    // Adjust vertical boundary if bottom exceeds screen
-    const estimatedHeight = items.length * 36 + 12
-    if (top + estimatedHeight > windowHeight - 12 && rect.top > estimatedHeight) {
-      top = rect.top - estimatedHeight - 4
+    if (left < margin) {
+      left = margin
     }
 
-    setMenuPosition({ top, left })
+    // Keep menu strictly inside vertical viewport bounds (flip above trigger if needed)
+    let top = rect.bottom + 6
+    if (top + menuHeight > viewportHeight - margin) {
+      const spaceAbove = rect.top - margin
+      const spaceBelow = viewportHeight - rect.bottom - margin
+      if (spaceAbove >= menuHeight || spaceAbove > spaceBelow) {
+        top = Math.max(margin, rect.top - menuHeight - 6)
+      } else {
+        top = Math.max(margin, viewportHeight - menuHeight - margin)
+      }
+    }
+
+    setMenuPosition((prev) => {
+      if (prev && Math.abs(prev.top - top) < 0.5 && Math.abs(prev.left - left) < 0.5) {
+        return prev
+      }
+      return { top, left }
+    })
   }, [align, items.length])
 
   const toggleOpen = (e: React.MouseEvent) => {
@@ -73,6 +94,20 @@ export function DropdownMenu({
       setIsOpen(false)
     }
   }
+
+  // Re-measure actual rendered menu dimensions synchronously before browser paint
+  React.useLayoutEffect(() => {
+    if (!isOpen) return
+    updatePosition()
+
+    if (typeof ResizeObserver !== 'undefined' && menuRef.current) {
+      const observer = new ResizeObserver(() => {
+        updatePosition()
+      })
+      observer.observe(menuRef.current)
+      return () => observer.disconnect()
+    }
+  }, [isOpen, items, updatePosition])
 
   React.useEffect(() => {
     if (!isOpen) return
@@ -95,20 +130,27 @@ export function DropdownMenu({
       if (event.key === 'Escape') setIsOpen(false)
     }
 
-    const handleScrollOrResize = () => {
-      setIsOpen(false)
+    const handleResize = () => {
+      updatePosition()
+    }
+
+    const handleScroll = (event: Event) => {
+      if (menuRef.current && event.target instanceof Node && menuRef.current.contains(event.target)) {
+        return
+      }
+      updatePosition()
     }
 
     document.addEventListener('mousedown', handlePointerDown)
     document.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('resize', handleScrollOrResize)
-    window.addEventListener('scroll', handleScrollOrResize, true)
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('scroll', handleScroll, true)
 
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
       document.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('resize', handleScrollOrResize)
-      window.removeEventListener('scroll', handleScrollOrResize, true)
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('scroll', handleScroll, true)
     }
   }, [isOpen, updatePosition])
 
@@ -122,7 +164,7 @@ export function DropdownMenu({
   }
 
   return (
-    <div className={`inline-block ${className}`}>
+    <div className={`inline-block shrink-0 ${className}`}>
       <button
         ref={buttonRef}
         type="button"
@@ -131,7 +173,7 @@ export function DropdownMenu({
         aria-expanded={isOpen}
         aria-label={triggerLabel || 'Mais ações'}
         title={triggerLabel}
-        className={`inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium transition-colors cursor-pointer select-none ${
+        className={`inline-flex items-center justify-center gap-1.5 h-8 px-2.5 rounded-lg text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer select-none ${
           triggerLabel
             ? 'border border-border bg-background/80 text-foreground hover:bg-muted shadow-xs'
             : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -139,11 +181,11 @@ export function DropdownMenu({
       >
         {triggerLabel ? (
           <>
-            <span className="text-xs font-semibold">{triggerLabel}</span>
-            <MoreHorizontal className="h-3.5 w-3.5 opacity-70" />
+            <span className="text-xs font-semibold whitespace-nowrap">{triggerLabel}</span>
+            <MoreHorizontal className="h-3.5 w-3.5 opacity-70 shrink-0" />
           </>
         ) : (
-          <MoreHorizontal className="h-4 w-4" />
+          <MoreHorizontal className="h-4 w-4 shrink-0" />
         )}
       </button>
 
@@ -159,9 +201,12 @@ export function DropdownMenu({
               top: `${menuPosition.top}px`,
               left: `${menuPosition.left}px`,
               zIndex: 999999,
-              minWidth: '12.5rem',
+              minWidth: '13rem',
+              width: 'max-content',
+              maxWidth: 'calc(100vw - 24px)',
+              maxHeight: 'calc(100vh - 24px)',
             }}
-            className="rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-hidden p-1 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md"
+            className="rounded-xl border border-border bg-popover text-popover-foreground shadow-2xl overflow-y-auto overflow-x-hidden custom-scrollbar p-1.5 space-y-0.5 animate-in fade-in zoom-in-95 duration-100 backdrop-blur-md"
             onClick={(e) => e.stopPropagation()}
           >
             {items.map((item) => (
@@ -171,14 +216,16 @@ export function DropdownMenu({
                 role="menuitem"
                 disabled={item.disabled}
                 onClick={(e) => handleSelect(e, item)}
-                className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+                className={`w-full text-left px-2.5 py-2 rounded-lg text-xs font-medium flex items-center gap-2.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
                   item.variant === 'danger'
                     ? 'text-danger hover:bg-danger/10 hover:text-danger font-semibold'
                     : 'text-foreground hover:bg-muted/80'
                 }`}
               >
-                <span className="shrink-0">{item.icon}</span>
-                <span className="truncate">{item.label}</span>
+                {item.icon && <span className="shrink-0 flex items-center justify-center">{item.icon}</span>}
+                <span className="whitespace-normal sm:whitespace-nowrap break-words leading-snug text-left">
+                  {item.label}
+                </span>
               </button>
             ))}
           </div>,
