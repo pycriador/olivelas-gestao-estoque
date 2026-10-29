@@ -27,6 +27,7 @@ import {
   TrendingUp,
   BarChart3,
   Palette,
+  Webhook,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
@@ -126,6 +127,7 @@ export function AppLayout() {
 
   const bottomNavItems: NavItem[] = [
     { label: t.nav.sales, path: '/sales', icon: ShoppingBag },
+    { label: t.nav.integrations, path: '/integrations', icon: Webhook },
     { label: t.nav.notifications, path: '/notifications', icon: Bell },
     { label: t.nav.audit, path: '/audit', icon: Shield },
     { label: t.nav.settings, path: '/settings', icon: Settings },

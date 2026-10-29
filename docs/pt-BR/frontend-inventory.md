@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-02
+updated: 2026-10-29
 language: pt-BR
 classification: Confirmed
 source:
@@ -62,6 +62,7 @@ source:
 | `/notifications` | `NotificationsPage` | |
 | `/audit` | `AuditLogsPage` | |
 | `/team` | `TeamPage` | |
+| `/integrations` | `ApiIntegrationsPage` | API Studio & Conector de Serviços estilo Postman (De → Para, Dry-Run, Upsert e cURL) |
 | `/settings` | `SettingsPage` | |
 | `*` | `NotFoundPage` | fora dos layouts acima |
 
@@ -77,7 +78,7 @@ Grupos (ids no código):
 | `control` | `/inventory`, `/expiration`, `/purchases` |
 | `management` | `/orders`, `/reports`, `/team` |
 
-Links soltos (grid 2 colunas no mobile): `/sales`, `/notifications`, `/audit`, `/settings`.
+Links soltos (grid 2 colunas no mobile): `/sales`, `/integrations`, `/notifications`, `/audit`, `/settings`.
 
 Link “Catálogo Público” se `storeSlug` existe e não é `'global'`. Link “+ Gerenciar Todas as Lojas” no switcher só se `isGlobalAdmin`.
 
@@ -93,6 +94,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | `InventoryPage` | KPI de valorização a custo/venda + abas de saldos, lotes, movimentações, centros de custo, motivos de perda e `BulkStockWriteoffModal` |
 | `ReportsPage` | menu segmentado com 9 abas analíticas, KPI summary, barra contextual de filtros por categoria/status/classe/urgência/segmento, busca instantânea, sincronização de URL e exportação CSV |
 | `GlobalAdminDashboardPage` | métricas globais + abas de Lojas, Usuários, `GlobalDbExplorerPanel` (CRUD dinâmico), `GlobalBackupPanel` (Dumps SQL/ZIP/JSON) e `GlobalApiKeyHbacPanel` (Gestor de Chaves HBAC) |
+| `ApiIntegrationsPage` | API Studio estilo Postman (`grid-cols-1 lg:grid-cols-12`): Request Builder HTTP, Importar/Exportar cURL, Templates Prontos, Mapeador Visual De → Para com Auto-Map, Simulação Dry-Run e Sincronização em lote com Clientes, Categorias, Produtos, Fornecedores e Estoque |
 | `PurchasingPage` | ordens de compra com cálculo de custo unitário, markup, preço de venda sugerido e lucro previsto |
 | Maioria cadastros | `ResponsiveTable` e/ou tabela + `Modal` CRUD; rodapé de modal `flex-col-reverse sm:flex-row` |
 | `CatalogPublicPage` | grade de produtos, modal de carrinho, WhatsApp |
@@ -162,6 +164,7 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `dbManagerService` | `listTableData`, `createRow`, `updateRow`, `deleteRow` para CRUD dinâmico de 12 tabelas no painel admin |
 | `backupService` | `generateSqlDump`, `generateImagesZip`, `generateJsonBackup` (multi-loja e loja individual) |
 | `apiKeyService` | `listApiKeys`, `createApiKey`, `toggleApiKeyStatus`, `revokeApiKey`, validação e documentação interativa de escopos HBAC |
+| `apiIntegrationService` | `listIntegrations`, `saveIntegration`, `deleteIntegration`, `listLogs`, `executeHttpRequest`, `extractRecordsArray`, `simulateSync`, `executeSync`, `parseCurlCommand`, `generateCurlCommand`, `detectJsonArrays`, `autoMapFields` |
 | `notificationService` | list, mark read, `generateStockAlerts` (RPC) |
 | `auditService` | `listAuditLogs`, `logAction` |
 | `reportService` | `getRetailSummaryKPIs`, `getValuationReport`, `getAbcCurveReport`, `getConsumptionDemandReport`, `getCustomerTicketReport`, `getCapitalInvestmentReport`, `getPurchasingReport`, `getLossesReport`, `getStockoutsReport`, `getSalesPerformanceReport`, `getAvailableReportsList`, `getGlobalAdminMetrics` |
@@ -173,7 +176,7 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 ## Tipos
 
 Reexport em `src/types/index.ts`: `database`, `auth`, `store`, `product`, `inventory`, `order`.
-Módulos dedicados: `report.types.ts`, `apiKey.types.ts`, `backup.types.ts`, `dbManager.types.ts`, `customer.types.ts`, `supplier.types.ts`, `purchasing.types.ts`, `user.types.ts`.
+Módulos dedicados: `report.types.ts`, `apiKey.types.ts`, `apiIntegration.types.ts`, `backup.types.ts`, `dbManager.types.ts`, `customer.types.ts`, `supplier.types.ts`, `purchasing.types.ts`, `user.types.ts`.
 
 ## i18n
 

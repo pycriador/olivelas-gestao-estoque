@@ -36,6 +36,7 @@ import { NotificationsPage } from '@/pages/NotificationsPage'
 import { AuditLogsPage } from '@/pages/AuditLogsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { TeamPage } from '@/pages/TeamPage'
+import { ApiIntegrationsPage } from '@/pages/ApiIntegrationsPage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 export function AppRoutes() {
@@ -93,6 +94,7 @@ export function AppRoutes() {
         <Route path="/notifications" element={<NotificationsPage />} />
         <Route path="/audit" element={<AuditLogsPage />} />
         <Route path="/team" element={<TeamPage />} />
+        <Route path="/integrations" element={<ApiIntegrationsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
       </Route>
 

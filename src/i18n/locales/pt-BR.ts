@@ -71,6 +71,7 @@ export const ptBR = {
     reports: 'Relatórios',
     notifications: 'Notificações',
     audit: 'Auditoria & Logs',
+    integrations: 'Integrações API',
     settings: 'Configurações',
     team: 'Equipe',
     groupRegistry: 'Cadastro',

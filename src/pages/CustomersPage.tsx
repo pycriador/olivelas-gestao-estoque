@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { customerService } from '@/services/customerService'
 import { useTenant } from '@/hooks/useTenant'
@@ -15,7 +16,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
-import { Users, Plus, Search, Download, Trash2, Edit2, Phone, Mail } from 'lucide-react'
+import { Users, Plus, Search, Download, Trash2, Edit2, Phone, Mail, Webhook } from 'lucide-react'
 import type { Customer } from '@/types/customer.types'
 
 import { PageHeader } from '@/components/common/PageHeader'
@@ -192,6 +193,11 @@ export function CustomersPage() {
             <option value="INACTIVE">Inativos</option>
           </select>
 
+          <Link to="/integrations?service=customers">
+            <Button variant="outline" size="sm" className="h-8 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10">
+              <Webhook className="h-3.5 w-3.5 mr-1" /> Sincronizar API
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={handleExportCSV} disabled={customerList.length === 0} className="h-8 text-xs px-2.5">
             <Download className="h-3.5 w-3.5 mr-1" /> Exportar
           </Button>

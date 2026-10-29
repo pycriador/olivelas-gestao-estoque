@@ -1,6 +1,7 @@
 import React from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Search, Plus, Tags, Pencil, Trash2, FolderTree } from 'lucide-react'
+import { Search, Plus, Tags, Pencil, Trash2, FolderTree, Webhook } from 'lucide-react'
 
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -175,13 +176,20 @@ export function CategoriesPage() {
         </div>
 
         {canCreate && (
-          <Button
-            size="sm"
-            onClick={handleOpenCreate}
-            className="h-8 text-xs px-2.5 shadow-xs font-semibold ml-auto"
-          >
-            <Plus className="h-3.5 w-3.5 mr-1" /> Nova Categoria
-          </Button>
+          <div className="flex items-center gap-2 ml-auto">
+            <Link to="/integrations?service=categories">
+              <Button variant="outline" size="sm" className="h-8 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10">
+                <Webhook className="h-3.5 w-3.5 mr-1" /> Sincronizar API
+              </Button>
+            </Link>
+            <Button
+              size="sm"
+              onClick={handleOpenCreate}
+              className="h-8 text-xs px-2.5 shadow-xs font-semibold"
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" /> Nova Categoria
+            </Button>
+          </div>
         )}
       </div>
 

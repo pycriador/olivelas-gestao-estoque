@@ -71,6 +71,7 @@ export const esES = {
     reports: 'Reportes',
     notifications: 'Notificaciones',
     audit: 'Auditoría y Logs',
+    integrations: 'Integraciones API',
     settings: 'Configuraciones',
     team: 'Equipo',
     groupRegistry: 'Registros',

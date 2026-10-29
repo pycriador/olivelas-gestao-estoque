@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import { productImageService } from '@/services/productImageService'
@@ -47,6 +48,7 @@ import {
   ImageOff,
   ImagePlus,
   ArrowDownRight,
+  Webhook,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 
@@ -401,6 +403,11 @@ export function ProductsPage() {
             ))}
           </select>
 
+          <Link to="/integrations?service=products">
+            <Button variant="outline" size="sm" className="h-8 text-xs px-2.5 border-primary/40 text-primary hover:bg-primary/10">
+              <Webhook className="h-3.5 w-3.5 mr-1" /> Sincronizar API
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={handleOpenImport} className="h-8 text-xs px-2.5">
             <Upload className="h-3.5 w-3.5 mr-1" /> Importar
           </Button>

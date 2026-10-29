@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-28
+updated: 2026-10-29
 language: pt-BR
 classification: Confirmed
 source:
@@ -37,6 +37,7 @@ Ordem incremental observada (arquivos datados):
 18. `20261015000018_fix_restore_stock_after_delete_cancelled_orders.sql`
 19. `20261019000019_allow_delete_cancelled_orders_on_edit.sql`
 20. `20261028000020_hbac_api_integration.sql`
+21. `20261029000021_external_api_integrator.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -71,7 +72,7 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 
 ### Operação & Integrações
 
-`notifications`, `audit_logs`, `security_logs`, `api_tokens` (tokens de acesso HBAC `olv_live_...` com prefixo `key_prefix`, `store_id`, escopos `jsonb`, controle de validade `expires_at`, `is_active` e `last_used_at`).
+`notifications`, `audit_logs`, `security_logs`, `api_tokens` (tokens de acesso HBAC `olv_live_...` com prefixo `key_prefix`, `store_id`, escopos `jsonb`, controle de validade `expires_at`, `is_active` e `last_used_at`), `api_integrations` (conectores de API externa estilo Postman por loja com `target_service`, `method`, `url`, `auth_type`, `auth_config`, `headers`, `query_params`, `response_root_path`, `unique_key_field` e `field_mappings`), `api_integration_logs` (histórico auditável de execuções e sincronizações de API externa por loja).
 
 ## Helpers RLS e HBAC (migrations 02 e 20)
 

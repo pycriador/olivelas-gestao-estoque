@@ -71,6 +71,7 @@ export const enUS = {
     reports: 'Reports',
     notifications: 'Notifications',
     audit: 'Audit & Logs',
+    integrations: 'API Integrations',
     settings: 'Settings',
     team: 'Team',
     groupRegistry: 'Registry',
