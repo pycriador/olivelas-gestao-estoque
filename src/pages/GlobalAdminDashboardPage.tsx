@@ -347,8 +347,58 @@ export function GlobalAdminDashboardPage() {
     0
   )
 
+  const activeSectionMeta = React.useMemo(() => {
+    switch (activeTab) {
+      case 'users':
+        return {
+          title: `Usuários Planos (${totalUsers})`,
+          subtitle: 'Titulares de assinatura comercial (STORE_ADMIN) e Global Admins',
+          icon: Users,
+        }
+      case 'finance':
+        return {
+          title: 'Central Financeira & Licenciamento',
+          subtitle: 'Franquia de funcionários por loja, planos comerciais e faturamento',
+          icon: DollarSign,
+        }
+      case 'backups':
+        return {
+          title: 'Backups & Exportação SQL',
+          subtitle: 'Snapshots completos por loja ou instância global',
+          icon: HardDrive,
+        }
+      case 'db-explorer':
+        return {
+          title: 'Explorador de Banco de Dados',
+          subtitle: 'Inspeção e manutenção direta de registros (CRUD)',
+          icon: Database,
+        }
+      case 'api-hbac':
+        return {
+          title: 'Chaves de API & Regras HBAC',
+          subtitle: 'Controle de acesso baseado em host e credenciais externas',
+          icon: Sparkles,
+        }
+      case 'delete':
+        return {
+          title: 'Exclusão Definitiva (Hard Delete)',
+          subtitle: 'Remoção permanente de lojas, produtos ou registros órfãos',
+          icon: Trash2,
+        }
+      case 'stores':
+      default:
+        return {
+          title: `Lojas & Filiais (${globalMetrics?.totalStores ?? allStoresRaw.length})`,
+          subtitle: 'Hierarquia de matrizes, filiais vinculadas e licenças de equipe',
+          icon: Building2,
+        }
+    }
+  }, [activeTab, totalUsers, globalMetrics?.totalStores, allStoresRaw.length])
+
+  const ActiveSectionIcon = activeSectionMeta.icon
+
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+    <div className="space-y-3 pb-6 animate-in fade-in duration-150">
       {/* Top Navbar Title & Search */}
       <PageHeader
         title="Gestão Multi-Lojas"
@@ -377,7 +427,7 @@ export function GlobalAdminDashboardPage() {
 
       {/* Flash Notifications */}
       {successMessage && (
-        <div className="p-2.5 rounded-lg bg-success/15 border border-success/30 flex items-center justify-between text-xs text-foreground animate-in fade-in flex-shrink-0">
+        <div className="p-2.5 rounded-lg bg-success/15 border border-success/30 flex items-center justify-between text-xs text-foreground animate-in fade-in">
           <span>{successMessage}</span>
           <button
             onClick={() => setSuccessMessage(null)}
@@ -388,7 +438,7 @@ export function GlobalAdminDashboardPage() {
         </div>
       )}
       {errorMessage && (
-        <div className="p-2.5 rounded-lg bg-danger/15 border border-danger/30 flex items-center justify-between text-xs text-danger animate-in fade-in flex-shrink-0">
+        <div className="p-2.5 rounded-lg bg-danger/15 border border-danger/30 flex items-center justify-between text-xs text-danger animate-in fade-in">
           <span>{errorMessage}</span>
           <button
             onClick={() => setErrorMessage(null)}
@@ -399,84 +449,21 @@ export function GlobalAdminDashboardPage() {
         </div>
       )}
 
-      {/* Main Tab Switcher & Action Toolbar */}
-      <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">
-        {/* Tab Pills */}
-        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border flex-wrap gap-0.5">
-          <button
-            onClick={() => selectTab('stores')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'stores'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Building2 className="h-3.5 w-3.5 inline mr-1.5" /> Lojas & Filiais (
-            {globalMetrics?.totalStores ?? allStoresRaw.length})
-          </button>
-          <button
-            onClick={() => selectTab('users')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'users'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Users className="h-3.5 w-3.5 inline mr-1.5" /> Usuários Planos ({totalUsers})
-          </button>
-          <button
-            onClick={() => selectTab('finance')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'finance'
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <DollarSign className="h-3.5 w-3.5 inline mr-1" /> Financeiro
-          </button>
-          <button
-            onClick={() => selectTab('backups')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'backups'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <HardDrive className="h-3.5 w-3.5 inline mr-1.5" /> Backups & SQL
-          </button>
-          <button
-            onClick={() => selectTab('db-explorer')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'db-explorer'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Database className="h-3.5 w-3.5 inline mr-1.5" /> Banco de Dados
-          </button>
-          <button
-            onClick={() => selectTab('api-hbac')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'api-hbac'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Sparkles className="h-3.5 w-3.5 inline mr-1.5" /> API & HBAC
-          </button>
-          <button
-            onClick={() => selectTab('delete')}
-            className={`px-3 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
-              activeTab === 'delete'
-                ? 'bg-danger text-white shadow-xs'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Trash2 className="h-3.5 w-3.5 inline mr-1.5" /> Exclusão Definitiva
-          </button>
+      {/* Contextual Section Header & Action Toolbar (sem menu de abas na página) */}
+      <div className="flex items-center justify-between gap-2 flex-wrap bg-card border border-border rounded-xl px-3 py-2 shadow-2xs">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
+            <ActiveSectionIcon className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <h2 className="text-xs font-bold text-foreground truncate">{activeSectionMeta.title}</h2>
+            <p className="text-[11px] text-muted-foreground truncate hidden sm:block">
+              {activeSectionMeta.subtitle}
+            </p>
+          </div>
         </div>
 
-        {/* Tab Filters + Unified "Ações Rápidas" Dropdown */}
+        {/* Section Filters + Unified "Ações Rápidas" Dropdown */}
         <div className="flex items-center gap-2 ml-auto">
           {activeTab === 'stores' && (
             <select
@@ -640,7 +627,7 @@ export function GlobalAdminDashboardPage() {
 
       {/* TAB 3: FINANCEIRO (DEDICATED HUB & STORE SEAT LICENSING TABLE) */}
       {activeTab === 'finance' && (
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-8 pr-1 space-y-3">
+        <div className="space-y-3">
           {/* 3 Dedicated Full-Screen Finance Pages Navigation Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Card className="border border-emerald-500/30 bg-emerald-500/5 shadow-xs hover:border-emerald-500/60 transition-all">
@@ -922,7 +909,7 @@ export function GlobalAdminDashboardPage() {
 
       {/* OTHER TAB PANELS: SCROLLABLE VIEWPORT */}
       {activeTab !== 'stores' && activeTab !== 'users' && activeTab !== 'finance' && (
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar pb-8 pr-1 space-y-4">
+        <div className="space-y-4">
           {activeTab === 'backups' && <GlobalBackupPanel stores={allStoresRaw} />}
           {activeTab === 'db-explorer' && <GlobalDbExplorerPanel stores={allStoresRaw} />}
           {activeTab === 'api-hbac' && <GlobalApiKeyHbacPanel stores={allStoresRaw} />}
@@ -932,8 +919,8 @@ export function GlobalAdminDashboardPage() {
 
       {/* Main Table Card (Stores or Users Viewport) */}
       {(activeTab === 'stores' || activeTab === 'users') && (
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
-          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Card className="border border-border shadow-xs bg-card overflow-hidden">
+          <CardContent className="p-0">
             {/* TAB 1: STORES TABLE (HIERARCHICAL: MATRIZ -> FILIAIS) */}
             {activeTab === 'stores' &&
               (loadingStores ? (
@@ -941,7 +928,7 @@ export function GlobalAdminDashboardPage() {
                   <LoadingSkeleton count={5} className="h-10" />
                 </div>
               ) : hierarchicalStoreList.length === 0 ? (
-                <div className="flex-1 flex items-center justify-center p-8">
+                <div className="flex items-center justify-center p-8">
                   <EmptyState
                     icon={<Building2 className="h-10 w-10 text-primary" />}
                     title="Nenhuma loja encontrada"
@@ -951,7 +938,7 @@ export function GlobalAdminDashboardPage() {
                   />
                 </div>
               ) : (
-                <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                <div className="overflow-x-auto custom-scrollbar">
                   <ResponsiveTable className="w-full text-xs text-left">
                     <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                       <tr>
@@ -1295,7 +1282,7 @@ export function GlobalAdminDashboardPage() {
                     />
                   </div>
                 ) : (
-                  <div className="flex-1 min-h-0 overflow-y-auto overflow-x-auto custom-scrollbar">
+                  <div className="overflow-x-auto custom-scrollbar">
                     <ResponsiveTable className="w-full text-xs text-left">
                       <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-muted-foreground font-semibold uppercase text-[10px]">
                         <tr>

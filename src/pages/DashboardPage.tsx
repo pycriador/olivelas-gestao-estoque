@@ -683,7 +683,7 @@ export function DashboardPage() {
   const kpis = analytics?.kpis
 
   return (
-    <div className="flex-1 min-h-0 w-full h-full overflow-y-auto pr-1 sm:pr-2 space-y-5 pb-10 animate-in fade-in duration-150 custom-scrollbar">
+    <div className="w-full space-y-5 pb-10 animate-in fade-in duration-150">
       {/* Top Header */}
       <PageHeader
         title="Dashboard Analítico & Inteligência Comercial"

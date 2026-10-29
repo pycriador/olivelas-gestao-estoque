@@ -43,7 +43,7 @@ Raiz: `h-dvh max-h-dvh flex flex-col md:flex-row overflow-hidden`.
 | Grupos de nav | botão accordion `md:hidden`; filhos `hidden` salvo grupo aberto | título `hidden md:flex`; filhos `md:block` |
 | Links inferiores | `grid grid-cols-1` no mobile | `md:block md:space-y-1` |
 | Header | coluna (`flex-col`); altura `min-h-12` | `md:h-12 md:flex-row` |
-| Main | `overflow-y-auto` | `lg:overflow-hidden` a partir de `lg` |
+| Main | `overflow-y-auto overflow-x-hidden` | `overflow-y-auto overflow-x-hidden` (scroll vertical unificado em todas as páginas) |
 
 Command palette (`GlobalCommandK`) está sempre montada no layout.
 
@@ -56,8 +56,7 @@ O menu lateral autenticado organiza todas as páginas e telas dedicadas em seç�
 1. **Topo**:
    - `/dashboard` — Painel Geral (Dashboard Executivo Multi-Loja)
 2. **Seção `Admin Global` (`id: 'global-admin'`, exclusiva para `GLOBAL_ADMIN`)**:
-   - `/global-admin` — Painel Admin Global
-   - `/global-admin?tab=stores` — Lojas & Filiais (Matriz) (também destaca `/global-admin/stores/:storeId/edit`)
+   - `/global-admin?tab=stores` — Lojas & Filiais (Matriz) (também destaca `/global-admin` sem `tab` e `/global-admin/stores/:storeId/edit`; o item duplicado "Painel Admin Global" e o menu horizontal de abas dentro da página `/global-admin` foram removidos)
    - `/global-admin/stores/new` — Nova Loja / Filial
    - `/global-admin?tab=users` — Usuários Store Admin (também destaca `/global-admin/users/:userId/*`)
    - `/global-admin/users/new` — Novo Admin de Loja

@@ -932,7 +932,7 @@ export function ReportsPage() {
   const currentTabMeta = reportTabs.find((t) => t.id === activeTab) || reportTabs[0]
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 overflow-y-auto custom-scrollbar pb-4 animate-in fade-in duration-150">
+    <div className="space-y-3 pb-6 animate-in fade-in duration-150">
       {/* Top Navbar Title & Global Actions */}
       <PageHeader title={t.nav.reports}>
         <div className="flex items-center gap-2 flex-wrap">

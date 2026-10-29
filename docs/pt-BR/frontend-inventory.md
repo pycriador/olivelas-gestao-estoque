@@ -87,7 +87,7 @@ Grupos (ids no código):
 
 | Grupo `id` | Paths |
 | --- | --- |
-| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin`, `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
+| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
 | `registry` | `/products`, `/categories`, `/customers`, `/suppliers` |
 | `control` | `/inventory`, `/expiration`, `/purchases` |
 | `management` | `/orders`, `/reports`, `/stores`, `/team`, `/team/new` |

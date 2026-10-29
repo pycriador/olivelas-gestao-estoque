@@ -102,12 +102,16 @@ export function AppLayout() {
       if (location.pathname === targetPath && location.search === `?${targetSearch}`) {
         return true
       }
-      if (
-        itemPath === '/global-admin?tab=stores' &&
-        location.pathname.startsWith('/global-admin/stores/') &&
-        location.pathname !== '/global-admin/stores/new'
-      ) {
-        return true
+      if (itemPath === '/global-admin?tab=stores') {
+        if (location.pathname === '/global-admin' && !location.search) {
+          return true
+        }
+        if (
+          location.pathname.startsWith('/global-admin/stores/') &&
+          location.pathname !== '/global-admin/stores/new'
+        ) {
+          return true
+        }
       }
       if (
         itemPath === '/global-admin?tab=users' &&
@@ -117,9 +121,6 @@ export function AppLayout() {
         return true
       }
       return false
-    }
-    if (itemPath === '/global-admin') {
-      return location.pathname === '/global-admin' && !location.search
     }
     if (itemPath === '/team') {
       return (
@@ -143,7 +144,6 @@ export function AppLayout() {
             label: t.nav.groupGlobalAdmin,
             icon: Shield,
             items: [
-              { label: t.nav.globalAdmin, path: '/global-admin', icon: Shield },
               { label: t.nav.globalStores, path: '/global-admin?tab=stores', icon: Building2 },
               { label: t.nav.globalNewStore, path: '/global-admin/stores/new', icon: GitBranch },
               { label: t.nav.globalUsers, path: '/global-admin?tab=users', icon: Users },
@@ -513,7 +513,7 @@ export function AppLayout() {
         </header>
 
         {/* Page Viewport */}
-        <main className="flex-1 min-h-0 overflow-y-auto lg:overflow-hidden p-2.5 sm:p-3 md:p-3.5 w-full flex flex-col">
+        <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar p-2.5 sm:p-3 md:p-4 w-full">
           <Outlet />
         </main>
       </div>

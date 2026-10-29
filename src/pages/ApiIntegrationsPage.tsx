@@ -532,7 +532,7 @@ export function ApiIntegrationsPage() {
   const activeSchema = SERVICE_SCHEMAS[targetService]
 
   return (
-    <div className="flex flex-col gap-3 flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
+    <div className="flex flex-col gap-3 pb-6">
       <PageHeader
         title="API Studio & Conector de Serviços"
         badge={
@@ -763,7 +763,7 @@ export function ApiIntegrationsPage() {
         </Card>
 
         {/* CENTER + RIGHT WORKSPACE (9 cols) */}
-        <div className="lg:col-span-9 flex flex-col gap-3 min-h-0 overflow-hidden">
+        <div className="lg:col-span-9 flex flex-col gap-3">
           {/* TOP BAR: Connection Name + Postman URL Bar */}
           <Card className="shrink-0 border-border/70">
             <CardContent className="p-3 space-y-2.5">
@@ -826,7 +826,7 @@ export function ApiIntegrationsPage() {
           </Card>
 
           {/* SPLIT PANELS: Request Builder & Service Mapper (Left 7 cols) + Response & Dry-Run Inspector (Right 5 cols) */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-3 flex-1 min-h-0 overflow-hidden">
+          <div className="grid grid-cols-1 xl:grid-cols-12 gap-3">
             {/* LEFT PANEL: Request Config & Visual Field Mapper */}
             <Card className="xl:col-span-7 flex flex-col min-h-0 overflow-hidden border-border/70">
               {/* Tabs Header */}

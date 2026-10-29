@@ -522,10 +522,10 @@ export function SalesPage() {
       )}
 
       {/* Main POS Grid */}
-      <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-12 gap-2.5 overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">
         {/* Left Column: Products Grid (8 cols on desktop) */}
-        <div className="lg:col-span-8 flex flex-col min-h-0 h-full overflow-hidden">
-          <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+        <div className="lg:col-span-8 flex flex-col">
+          <Card className="flex flex-col border border-border shadow-xs bg-card">
             <CardHeader className="py-2.5 px-3 border-b border-border/60 flex flex-col gap-2 flex-shrink-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-foreground">Catálogo de Produtos</span>
@@ -710,8 +710,8 @@ export function SalesPage() {
         </div>
 
         {/* Right Column: Sleek Compact Cart & Checkout (4 cols on desktop) */}
-        <div className="lg:col-span-4 flex flex-col min-h-0 h-full overflow-hidden">
-          <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+        <div className="lg:col-span-4 flex flex-col">
+          <Card className="flex flex-col border border-border shadow-xs bg-card">
             {/* Compact Cart Header */}
             <CardHeader className="py-2.5 px-3 border-b border-border/60 flex flex-row items-center justify-between flex-shrink-0">
               <div className="flex items-center gap-1.5">
