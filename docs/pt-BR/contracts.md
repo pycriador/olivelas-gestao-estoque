@@ -24,6 +24,7 @@ Não há OpenAPI próprio neste repositório. O contrato é o **PostgREST / RPC 
 
 - `persistSession`, `autoRefreshToken`, `detectSessionInUrl`
 - `storageKey: 'olivelas_supabase_auth_token'`
+- `global.fetch` com `credentials: 'omit'` (ignora cabeçalhos `Set-Cookie` da infraestrutura Cloudflare como `__cf_bm` em chamadas `fetch`, já que a autenticação usa exclusivamente JWT no header `Authorization` + `localStorage`)
 - Realtime `eventsPerSecond: 10`
 
 `isSupabaseConfigured` é false se URL contém `placeholder` ou key é `placeholder_key`.

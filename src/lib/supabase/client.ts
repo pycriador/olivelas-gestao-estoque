@@ -34,6 +34,9 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     detectSessionInUrl: true,
     storageKey: 'olivelas_supabase_auth_token',
   },
+  global: {
+    fetch: (input, init) => fetch(input, { ...init, credentials: 'omit' }),
+  },
   realtime: {
     params: {
       eventsPerSecond: 10,
