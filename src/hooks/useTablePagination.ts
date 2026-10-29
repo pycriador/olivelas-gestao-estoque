@@ -144,6 +144,29 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
     [updateParams]
   )
 
+  const setFilters = React.useCallback(
+    (updates: Record<string, string | null | undefined>) => {
+      updateParams((params) => {
+        Object.entries(updates).forEach(([key, value]) => {
+          const valStr = value !== null && value !== undefined ? String(value).trim() : ''
+          if (
+            !valStr ||
+            valStr.toUpperCase() === 'ALL' ||
+            valStr.toLowerCase() === 'all' ||
+            valStr.toLowerCase() === 'todos' ||
+            valStr.toUpperCase() === 'TODOS'
+          ) {
+            params.delete(key)
+          } else {
+            params.set(key, valStr)
+          }
+        })
+        params.delete('page') // reset to page 1 on filter change
+      })
+    },
+    [updateParams]
+  )
+
   const resetAll = React.useCallback(() => {
     const empty = new URLSearchParams()
     latestParamsRef.current = empty
@@ -162,6 +185,7 @@ export function useTablePagination(options: TablePaginationOptions = {}) {
     setSearch,
     toggleSort,
     setFilter,
+    setFilters,
     resetAll,
   }
 }

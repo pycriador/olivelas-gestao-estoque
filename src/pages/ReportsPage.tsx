@@ -32,6 +32,8 @@ import {
   Users,
   Activity,
   Wallet,
+  Building2,
+  RefreshCw,
 } from 'lucide-react'
 import type {
   ValuationReportItem,
@@ -56,9 +58,28 @@ type ReportTab =
   | 'stockouts'
   | 'sales'
 
+const VALID_REPORT_TABS: ReportTab[] = [
+  'valuation',
+  'abc',
+  'demand',
+  'customers',
+  'investment',
+  'purchasing',
+  'losses',
+  'stockouts',
+  'sales',
+]
+
+const DEFAULT_REPORT_FILTERS = {
+  tab: 'valuation',
+  category: 'ALL',
+  status: 'ALL',
+}
+
 export function ReportsPage() {
-  const { storeId, storeName, hasActiveStore } = useTenant()
+  const { storeId, storeName, userStores } = useTenant()
   const { t } = useI18n()
+  const reportTableRef = React.useRef<HTMLDivElement>(null)
 
   const {
     page,
@@ -69,24 +90,50 @@ export function ReportsPage() {
     setPageSize,
     setSearch,
     setFilter,
+    setFilters,
   } = useTablePagination({
     defaultPage: 1,
     defaultPageSize: 15,
-    defaultFilters: {
-      tab: 'valuation',
-      category: 'ALL',
-      status: 'ALL',
-    },
+    defaultFilters: DEFAULT_REPORT_FILTERS,
   })
 
-  const activeTab = (filters.tab as ReportTab) || 'valuation'
+  const urlTab = VALID_REPORT_TABS.includes(filters.tab as ReportTab)
+    ? (filters.tab as ReportTab)
+    : 'valuation'
+
+  const [activeTab, setActiveTab] = React.useState<ReportTab>(urlTab)
+  const [selectedStoreId, setSelectedStoreId] = React.useState<string>(storeId || 'all')
+
+  React.useEffect(() => {
+    setActiveTab(urlTab)
+  }, [urlTab])
+
+  React.useEffect(() => {
+    if (storeId) {
+      setSelectedStoreId(storeId)
+    }
+  }, [storeId])
+
+  const effectiveStoreId = selectedStoreId || storeId || 'all'
+  const effectiveStoreName = React.useMemo(() => {
+    if (effectiveStoreId === 'all') return 'Todas as Lojas (Consolidado)'
+    const found = userStores.find((s) => s.storeId === effectiveStoreId)
+    return found?.storeName || storeName || 'Loja'
+  }, [effectiveStoreId, userStores, storeName])
+
   const categoryFilter = filters.category || 'ALL'
   const statusFilter = filters.status || 'ALL'
 
   const handleTabChange = (tab: ReportTab) => {
-    setFilter('tab', tab)
-    setFilter('status', 'ALL')
-    setPage(1)
+    setActiveTab(tab)
+    setFilters({
+      tab,
+      status: 'ALL',
+      category: 'ALL',
+    })
+    requestAnimationFrame(() => {
+      reportTableRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+    })
   }
 
   const handleSearchChange = (val: string) => {
@@ -110,73 +157,71 @@ export function ReportsPage() {
   }
 
   // 1. Retail Summary KPIs
-  const { data: summaryKPIs, isLoading: isSummaryLoading } = useQuery({
-    queryKey: ['report-retail-summary', storeId],
-    queryFn: () => reportService.getRetailSummaryKPIs(storeId),
-    enabled: Boolean(hasActiveStore),
+  const { data: summaryKPIs, isLoading: isSummaryLoading, refetch: refetchSummary } = useQuery({
+    queryKey: ['report-retail-summary', effectiveStoreId],
+    queryFn: () => reportService.getRetailSummaryKPIs(effectiveStoreId),
   })
 
-  // 2. Valuation Report Query
-  const { data: valuationData = [], isLoading: isValuationLoading } = useQuery({
-    queryKey: ['report-valuation', storeId],
-    queryFn: () => reportService.getValuationReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'valuation',
+  // 2. Valuation Report Query (always loaded so categories & base metrics are ready)
+  const { data: valuationData = [], isLoading: isValuationLoading, isError: isValuationError, refetch: refetchValuation } = useQuery({
+    queryKey: ['report-valuation', effectiveStoreId],
+    queryFn: () => reportService.getValuationReport(effectiveStoreId),
   })
 
   // 3. ABC Curve Report Query
-  const { data: abcData = [], isLoading: isAbcLoading } = useQuery({
-    queryKey: ['report-abc', storeId],
-    queryFn: () => reportService.getAbcCurveReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'abc',
+  const { data: abcData = [], isLoading: isAbcLoading, isError: isAbcError, refetch: refetchAbc } = useQuery({
+    queryKey: ['report-abc', effectiveStoreId],
+    queryFn: () => reportService.getAbcCurveReport(effectiveStoreId),
+    enabled: activeTab === 'abc',
   })
 
   // 4. Purchasing Report Query
-  const { data: purchasingData = [], isLoading: isPurchasingLoading } = useQuery({
-    queryKey: ['report-purchasing', storeId],
-    queryFn: () => reportService.getPurchasingReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'purchasing',
+  const { data: purchasingData = [], isLoading: isPurchasingLoading, isError: isPurchasingError, refetch: refetchPurchasing } = useQuery({
+    queryKey: ['report-purchasing', effectiveStoreId],
+    queryFn: () => reportService.getPurchasingReport(effectiveStoreId),
+    enabled: activeTab === 'purchasing',
   })
 
   // 5. Losses Report Query
-  const { data: lossesData = [], isLoading: isLossesLoading } = useQuery({
-    queryKey: ['report-losses', storeId],
-    queryFn: () => reportService.getLossesReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'losses',
+  const { data: lossesData = [], isLoading: isLossesLoading, isError: isLossesError, refetch: refetchLosses } = useQuery({
+    queryKey: ['report-losses', effectiveStoreId],
+    queryFn: () => reportService.getLossesReport(effectiveStoreId),
+    enabled: activeTab === 'losses',
   })
 
   // 6. Stockouts Report Query
-  const { data: stockoutsData = [], isLoading: isStockoutsLoading } = useQuery({
-    queryKey: ['report-stockouts', storeId],
-    queryFn: () => reportService.getStockoutsReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'stockouts',
+  const { data: stockoutsData = [], isLoading: isStockoutsLoading, isError: isStockoutsError, refetch: refetchStockouts } = useQuery({
+    queryKey: ['report-stockouts', effectiveStoreId],
+    queryFn: () => reportService.getStockoutsReport(effectiveStoreId),
+    enabled: activeTab === 'stockouts',
   })
 
   // 7. Sales Report Query
-  const { data: salesData = [], isLoading: isSalesLoading } = useQuery({
-    queryKey: ['report-sales', storeId],
-    queryFn: () => reportService.getSalesPerformanceReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'sales',
+  const { data: salesData = [], isLoading: isSalesLoading, isError: isSalesError, refetch: refetchSales } = useQuery({
+    queryKey: ['report-sales', effectiveStoreId],
+    queryFn: () => reportService.getSalesPerformanceReport(effectiveStoreId),
+    enabled: activeTab === 'sales',
   })
 
   // 8. Demand & Consumption Query
-  const { data: demandData = [], isLoading: isDemandLoading } = useQuery({
-    queryKey: ['report-demand', storeId],
-    queryFn: () => reportService.getConsumptionDemandReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'demand',
+  const { data: demandData = [], isLoading: isDemandLoading, isError: isDemandError, refetch: refetchDemand } = useQuery({
+    queryKey: ['report-demand', effectiveStoreId],
+    queryFn: () => reportService.getConsumptionDemandReport(effectiveStoreId),
+    enabled: activeTab === 'demand',
   })
 
   // 9. Customers & LTV Query
-  const { data: customersData = [], isLoading: isCustomersLoading } = useQuery({
-    queryKey: ['report-customers', storeId],
-    queryFn: () => reportService.getCustomerTicketReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'customers',
+  const { data: customersData = [], isLoading: isCustomersLoading, isError: isCustomersError, refetch: refetchCustomers } = useQuery({
+    queryKey: ['report-customers', effectiveStoreId],
+    queryFn: () => reportService.getCustomerTicketReport(effectiveStoreId),
+    enabled: activeTab === 'customers',
   })
 
   // 10. Capital Investment Query
-  const { data: investmentData = [], isLoading: isInvestmentLoading } = useQuery({
-    queryKey: ['report-investment', storeId],
-    queryFn: () => reportService.getCapitalInvestmentReport(storeId),
-    enabled: Boolean(hasActiveStore) && activeTab === 'investment',
+  const { data: investmentData = [], isLoading: isInvestmentLoading, isError: isInvestmentError, refetch: refetchInvestment } = useQuery({
+    queryKey: ['report-investment', effectiveStoreId],
+    queryFn: () => reportService.getCapitalInvestmentReport(effectiveStoreId),
+    enabled: activeTab === 'investment',
   })
 
   // Unique categories for filters
@@ -388,9 +433,41 @@ export function ReportsPage() {
       ? isStockoutsLoading
       : isSalesLoading
 
+  const isCurrentTabError =
+    activeTab === 'valuation'
+      ? isValuationError
+      : activeTab === 'abc'
+      ? isAbcError
+      : activeTab === 'demand'
+      ? isDemandError
+      : activeTab === 'customers'
+      ? isCustomersError
+      : activeTab === 'investment'
+      ? isInvestmentError
+      : activeTab === 'purchasing'
+      ? isPurchasingError
+      : activeTab === 'losses'
+      ? isLossesError
+      : activeTab === 'stockouts'
+      ? isStockoutsError
+      : isSalesError
+
+  const handleRefreshCurrentTab = () => {
+    refetchSummary()
+    if (activeTab === 'valuation') refetchValuation()
+    else if (activeTab === 'abc') refetchAbc()
+    else if (activeTab === 'demand') refetchDemand()
+    else if (activeTab === 'customers') refetchCustomers()
+    else if (activeTab === 'investment') refetchInvestment()
+    else if (activeTab === 'purchasing') refetchPurchasing()
+    else if (activeTab === 'losses') refetchLosses()
+    else if (activeTab === 'stockouts') refetchStockouts()
+    else if (activeTab === 'sales') refetchSales()
+  }
+
   // Export CSV handler per active tab
   const handleExportCSV = () => {
-    const filenamePrefix = `relatorio_${activeTab}_${storeName.toLowerCase().replace(/\s+/g, '_')}`
+    const filenamePrefix = `relatorio_${activeTab}_${effectiveStoreName.toLowerCase().replace(/\s+/g, '_')}`
 
     if (activeTab === 'valuation') {
       exportToCSV(
@@ -554,8 +631,8 @@ export function ReportsPage() {
   const handlePrintSummary = () => {
     const html = `
       <div style="margin-bottom: 20px;">
-        <h2 style="margin: 0 0 6px 0;">Demonstrativo Executivo de Varejo - ${storeName}</h2>
-        <p style="color: #666; font-size: 13px; margin: 0;">Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
+        <h2 style="margin: 0 0 6px 0;">Demonstrativo Executivo de Varejo - ${effectiveStoreName}</h2>
+        <p style="color: #666; font-size: 13px; margin: 0;">Gerado em: ${new Date().toLocaleString('pt-BR')} · Relatório ativo: ${currentTabMeta.label}</p>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px;">
@@ -606,7 +683,7 @@ export function ReportsPage() {
         </tbody>
       </table>
     `
-    printFormattedDocument(`Relatório Executivo - ${storeName}`, html)
+    printFormattedDocument(`Relatório Executivo - ${effectiveStoreName}`, html)
   }
 
   const reportTabs = [
@@ -699,21 +776,52 @@ export function ReportsPage() {
   const currentTabMeta = reportTabs.find((t) => t.id === activeTab) || reportTabs[0]
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
+    <div className="flex-1 min-h-0 flex flex-col space-y-2.5 overflow-y-auto custom-scrollbar pb-4 animate-in fade-in duration-150">
       {/* Top Navbar Title & Global Actions */}
       <PageHeader title={t.nav.reports}>
-        <Input
-          placeholder="Buscar no relatório ativo..."
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="h-8 text-xs bg-background/90"
-          icon={<Search className="h-3.5 w-3.5" />}
-        />
+        <div className="flex items-center gap-2 flex-wrap">
+          {userStores.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-background/90 border border-input rounded-lg px-2.5 h-8 shadow-2xs">
+              <Building2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+              <select
+                value={effectiveStoreId}
+                onChange={(e) => {
+                  setSelectedStoreId(e.target.value)
+                  setPage(1)
+                }}
+                aria-label="Selecionar loja do relatório"
+                className="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
+              >
+                <option value="all">Todas as Lojas (Consolidado)</option>
+                {userStores
+                  .filter((s) => s.storeId !== 'all')
+                  .map((s) => (
+                    <option key={s.storeId} value={s.storeId}>
+                      {s.storeName}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
+
+          <Input
+            placeholder="Buscar no relatório ativo..."
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="h-8 text-xs bg-background/90 w-48 sm:w-64"
+            icon={<Search className="h-3.5 w-3.5" />}
+          />
+        </div>
       </PageHeader>
 
       {/* Retail Performance KPI Summary Bar */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 flex-shrink-0">
-        <Card className="p-2.5 bg-card border-border shadow-xs">
+        <Card
+          onClick={() => handleTabChange('valuation')}
+          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'valuation' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          }`}
+        >
           <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
             <Layers className="h-3.5 w-3.5 text-blue-500" />
             Estoque em Custo
@@ -726,7 +834,12 @@ export function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-2.5 bg-card border-border shadow-xs">
+        <Card
+          onClick={() => handleTabChange('investment')}
+          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'investment' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          }`}
+        >
           <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
             <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
             Estoque em Venda
@@ -739,7 +852,12 @@ export function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-2.5 bg-card border-border shadow-xs">
+        <Card
+          onClick={() => handleTabChange('abc')}
+          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'abc' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          }`}
+        >
           <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
             <Percent className="h-3.5 w-3.5 text-primary" />
             Margem Bruta
@@ -752,7 +870,12 @@ export function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-2.5 bg-card border-border shadow-xs">
+        <Card
+          onClick={() => handleTabChange('sales')}
+          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'sales' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          }`}
+        >
           <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
             <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
             Vendas no Mês
@@ -765,7 +888,12 @@ export function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-2.5 bg-card border-border shadow-xs">
+        <Card
+          onClick={() => handleTabChange('losses')}
+          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'losses' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          }`}
+        >
           <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
             <ShieldAlert className="h-3.5 w-3.5 text-rose-500" />
             Perdas Operacionais
@@ -778,7 +906,12 @@ export function ReportsPage() {
           </div>
         </Card>
 
-        <Card className="p-2.5 bg-card border-border shadow-xs">
+        <Card
+          onClick={() => handleTabChange('stockouts')}
+          className={`p-2.5 bg-card border-border shadow-xs cursor-pointer transition-all hover:border-primary/40 ${
+            activeTab === 'stockouts' ? 'ring-1 ring-primary/50 border-primary/50' : ''
+          }`}
+        >
           <div className="text-[10px] uppercase font-semibold text-muted-foreground flex items-center gap-1">
             <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
             Ruptura & Alerta
@@ -795,7 +928,7 @@ export function ReportsPage() {
       {/* Reports Navigation Tabs & Action Bar */}
       <div className="space-y-2 flex-shrink-0">
         {/* Modern Segmented Navigation Bar */}
-        <div className="bg-card border border-border rounded-xl p-1 shadow-xs">
+        <div className="bg-card border border-border rounded-xl p-1 shadow-xs" role="tablist" aria-label="Abas de Relatórios">
           <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar pb-0.5">
             {reportTabs.map((tab) => {
               const Icon = tab.icon
@@ -804,6 +937,8 @@ export function ReportsPage() {
                 <button
                   key={tab.id}
                   type="button"
+                  role="tab"
+                  aria-selected={isActive}
                   onClick={() => handleTabChange(tab.id)}
                   className={`relative flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 cursor-pointer flex-1 sm:flex-initial justify-center sm:justify-start ${
                     isActive
@@ -844,12 +979,15 @@ export function ReportsPage() {
               })}
             </div>
             <div className="min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs font-bold text-foreground">
                   {currentTabMeta.label}
                 </span>
                 <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 font-mono font-normal">
                   {totalFiltered} {totalFiltered === 1 ? 'registro' : 'registros'}
+                </Badge>
+                <Badge variant="secondary" className="text-[10px] h-4.5 px-1.5 font-normal">
+                  {effectiveStoreName}
                 </Badge>
               </div>
               <p className="text-[11px] text-muted-foreground truncate hidden md:block">
@@ -958,6 +1096,16 @@ export function ReportsPage() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleRefreshCurrentTab}
+                className="h-8 text-xs px-2 bg-background hover:bg-muted/80 shadow-2xs cursor-pointer"
+                title="Atualizar dados do relatório ativo"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 text-muted-foreground ${isCurrentTabLoading ? 'animate-spin' : ''}`} />
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleExportCSV}
                 className="h-8 text-xs px-2.5 bg-background hover:bg-muted/80 shadow-2xs cursor-pointer"
                 title="Exportar dados do relatório atual para planilha CSV"
@@ -982,22 +1130,35 @@ export function ReportsPage() {
       </div>
 
       {/* Main Report Table Card with Viewport Fitting & Pagination */}
-      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
-        <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
-          {isCurrentTabLoading ? (
-            <div className="p-6">
-              <LoadingSkeleton count={8} />
-            </div>
-          ) : currentItems.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center p-6">
-              <EmptyState
-                icon={<BarChart3 className="h-10 w-10 text-muted-foreground" />}
-                title="Nenhum registro encontrado"
-                description="Não há dados correspondentes para os filtros e parâmetros selecionados."
-              />
-            </div>
-          ) : (
-            <>
+      <div ref={reportTableRef} className="flex-1 flex flex-col min-h-[480px]">
+        <Card className="flex-1 min-h-[480px] flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+          <CardContent className="p-0 flex-1 min-h-[400px] flex flex-col overflow-hidden">
+            {isCurrentTabLoading ? (
+              <div className="p-6">
+                <LoadingSkeleton count={8} />
+              </div>
+            ) : isCurrentTabError ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-6 gap-3">
+                <EmptyState
+                  icon={<AlertTriangle className="h-10 w-10 text-amber-500" />}
+                  title="Não foi possível carregar este relatório"
+                  description="Verifique sua conexão ou clique em Atualizar para tentar novamente."
+                />
+                <Button variant="outline" size="sm" onClick={handleRefreshCurrentTab}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                  Tentar Novamente
+                </Button>
+              </div>
+            ) : currentItems.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center p-6">
+                <EmptyState
+                  icon={<BarChart3 className="h-10 w-10 text-muted-foreground" />}
+                  title="Nenhum registro encontrado"
+                  description="Não há dados correspondentes para os filtros e parâmetros selecionados."
+                />
+              </div>
+            ) : (
+              <>
               {/* TAB 1: VALUATION REPORT */}
               {activeTab === 'valuation' && (
                 <>
@@ -1938,18 +2099,19 @@ export function ReportsPage() {
           )}
         </CardContent>
 
-        {/* Pinned Pagination at the bottom of the card */}
-        <div className="p-3 border-t border-border bg-surface flex-shrink-0">
-          <Pagination
-            currentPage={page}
-            totalPages={totalPages}
-            totalItems={totalFiltered}
-            pageSize={pageSize}
-            onPageChange={setPage}
-            onPageSizeChange={handlePageSizeChange}
-          />
-        </div>
-      </Card>
+          {/* Pinned Pagination at the bottom of the card */}
+          <div className="p-3 border-t border-border bg-surface flex-shrink-0">
+            <Pagination
+              currentPage={page}
+              totalPages={totalPages}
+              totalItems={totalFiltered}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              onPageSizeChange={handlePageSizeChange}
+            />
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }

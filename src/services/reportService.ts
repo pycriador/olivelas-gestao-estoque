@@ -128,9 +128,10 @@ export const reportService = {
   async getRetailSummaryKPIs(storeId: string): Promise<RetailSummaryKPIs> {
     const todayStr = new Date().toISOString().slice(0, 10)
     const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
 
     // 1. Saldos de Estoque e Valores
-    const { data: stockRows, error: stockErr } = await supabase
+    let stockQuery = supabase
       .from('stock_balances')
       .select(`
         quantity,
@@ -142,8 +143,13 @@ export const reportService = {
           deleted_at
         )
       `)
-      .eq('store_id', storeId)
       .is('products.deleted_at', null)
+
+    if (isSpecificStore) {
+      stockQuery = stockQuery.eq('store_id', storeId)
+    }
+
+    const { data: stockRows, error: stockErr } = await stockQuery
 
     if (stockErr) throw stockErr
 
@@ -179,24 +185,34 @@ export const reportService = {
     const marginPercent = totalSellingValue > 0 ? (potentialProfit / totalSellingValue) * 100 : 0
 
     // 2. Vendas Hoje e no Mês
-    const { data: ordersToday } = await supabase
+    let ordersTodayQuery = supabase
       .from('orders')
       .select('total_amount, status')
-      .eq('store_id', storeId)
       .gte('created_at', todayStr)
       .neq('status', 'CANCELLED')
+
+    if (isSpecificStore) {
+      ordersTodayQuery = ordersTodayQuery.eq('store_id', storeId)
+    }
+
+    const { data: ordersToday } = await ordersTodayQuery
 
     const salesTodayTotal = (ordersToday || []).reduce(
       (acc: number, o: any) => acc + (Number(o.total_amount) || 0),
       0
     )
 
-    const { data: ordersMonth } = await supabase
+    let ordersMonthQuery = supabase
       .from('orders')
       .select('total_amount, status')
-      .eq('store_id', storeId)
       .gte('created_at', firstDayOfMonth)
       .neq('status', 'CANCELLED')
+
+    if (isSpecificStore) {
+      ordersMonthQuery = ordersMonthQuery.eq('store_id', storeId)
+    }
+
+    const { data: ordersMonth } = await ordersMonthQuery
 
     const salesMonthTotal = (ordersMonth || []).reduce(
       (acc: number, o: any) => acc + (Number(o.total_amount) || 0),
@@ -205,12 +221,17 @@ export const reportService = {
     const ordersMonthCount = ordersMonth?.length || 0
 
     // 3. Perdas e Baixas do Mês
-    const { data: lossMovements } = await supabase
+    let lossQuery = supabase
       .from('stock_movements')
       .select('quantity, unit_cost, movement_type, reason_code')
-      .eq('store_id', storeId)
       .gte('created_at', firstDayOfMonth)
-      .or('movement_type.eq.OUT,movement_type.eq.LOSS,reason_code.not.is.null')
+      .or('movement_type.eq.LOSS,movement_type.eq.DAMAGE,movement_type.eq.EXPIRATION,movement_type.eq.EXIT,reason_code.not.is.null')
+
+    if (isSpecificStore) {
+      lossQuery = lossQuery.eq('store_id', storeId)
+    }
+
+    const { data: lossMovements } = await lossQuery
 
     const totalLossValueMonth = (lossMovements || []).reduce((acc: number, m: any) => {
       const q = Math.abs(Number(m.quantity) || 0)
@@ -219,11 +240,16 @@ export const reportService = {
     }, 0)
 
     // 4. Lotes e Validades
-    const { data: batches } = await supabase
+    let batchesQuery = supabase
       .from('stock_batches')
       .select('expiration_date, quantity')
-      .eq('store_id', storeId)
       .gt('quantity', 0)
+
+    if (isSpecificStore) {
+      batchesQuery = batchesQuery.eq('store_id', storeId)
+    }
+
+    const { data: batches } = await batchesQuery
 
     const now = new Date()
     const in30d = new Date()
@@ -264,10 +290,13 @@ export const reportService = {
    * 1. Relatório de Avaliação Financeira e Rentabilidade por Produto
    */
   async getValuationReport(storeId: string): Promise<ValuationReportItem[]> {
-    const { data, error } = await supabase
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
+
+    let balanceQuery = supabase
       .from('stock_balances')
       .select(`
         id,
+        store_id,
         quantity,
         product_id,
         products!inner (
@@ -282,13 +311,47 @@ export const reportService = {
           categories ( name )
         )
       `)
-      .eq('store_id', storeId)
       .is('products.deleted_at', null)
 
-    if (error) throw error
+    if (isSpecificStore) {
+      balanceQuery = balanceQuery.eq('store_id', storeId)
+    }
 
-    return (data || []).map((row: any) => {
+    const { data: balanceRows, error: balanceErr } = await balanceQuery
+    if (balanceErr) throw balanceErr
+
+    // Also fetch active products in the store that might not have a stock_balances row yet
+    let productsQuery = supabase
+      .from('products')
+      .select(`
+        id,
+        store_id,
+        name,
+        sku,
+        unit,
+        min_stock,
+        cost_price,
+        selling_price,
+        deleted_at,
+        categories ( name )
+      `)
+      .is('deleted_at', null)
+
+    if (isSpecificStore) {
+      productsQuery = productsQuery.eq('store_id', storeId)
+    }
+
+    const { data: allProducts } = await productsQuery
+
+    const seenProductIds = new Set<string>()
+    const items: ValuationReportItem[] = []
+
+    for (const row of (balanceRows || []) as any[]) {
       const prod = Array.isArray(row.products) ? row.products[0] : row.products
+      if (!prod) continue
+      const prodId = prod.id || row.product_id
+      seenProductIds.add(prodId)
+
       const cat = Array.isArray(prod?.categories) ? prod?.categories[0] : prod?.categories
       const qty = Number(row.quantity) || 0
       const minStock = Number(prod?.min_stock) || 0
@@ -307,9 +370,9 @@ export const reportService = {
         status = 'LOW_STOCK'
       }
 
-      return {
+      items.push({
         id: row.id,
-        productId: prod?.id || row.product_id,
+        productId: prodId,
         productName: prod?.name || 'Produto',
         productSku: prod?.sku || '',
         categoryName: cat?.name || 'Sem categoria',
@@ -323,8 +386,38 @@ export const reportService = {
         potentialProfit,
         marginPercent,
         status,
-      }
-    })
+      })
+    }
+
+    for (const prod of (allProducts || []) as any[]) {
+      if (seenProductIds.has(prod.id)) continue
+      seenProductIds.add(prod.id)
+
+      const cat = Array.isArray(prod?.categories) ? prod?.categories[0] : prod?.categories
+      const minStock = Number(prod?.min_stock) || 0
+      const costPrice = Number(prod?.cost_price) || 0
+      const sellingPrice = Number(prod?.selling_price) || 0
+
+      items.push({
+        id: `prod-${prod.id}`,
+        productId: prod.id,
+        productName: prod?.name || 'Produto',
+        productSku: prod?.sku || '',
+        categoryName: cat?.name || 'Sem categoria',
+        unit: prod?.unit || 'UN',
+        quantity: 0,
+        minStock,
+        costPrice,
+        sellingPrice,
+        totalCostValue: 0,
+        totalSellingValue: 0,
+        potentialProfit: 0,
+        marginPercent: sellingPrice > 0 ? ((sellingPrice - costPrice) / sellingPrice) * 100 : 0,
+        status: 'OUT_OF_STOCK',
+      })
+    }
+
+    return items.sort((a, b) => b.totalSellingValue - a.totalSellingValue || a.productName.localeCompare(b.productName))
   },
 
   /**
@@ -337,7 +430,7 @@ export const reportService = {
     const validItems = valuation
       .map((item) => ({
         ...item,
-        totalValue: item.totalSellingValue > 0 ? item.totalSellingValue : item.totalCostValue,
+        totalValue: item.totalSellingValue > 0 ? item.totalSellingValue : item.totalCostValue > 0 ? item.totalCostValue : item.sellingPrice,
       }))
       .sort((a, b) => b.totalValue - a.totalValue)
 
@@ -382,7 +475,9 @@ export const reportService = {
    * 3. Relatório de Compras & Entrada de Mercadorias
    */
   async getPurchasingReport(storeId: string): Promise<PurchasingReportItem[]> {
-    const { data, error } = await supabase
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
+
+    let query = supabase
       .from('purchase_orders')
       .select(`
         id,
@@ -402,8 +497,13 @@ export const reportService = {
           products ( cost_price, selling_price )
         )
       `)
-      .eq('store_id', storeId)
       .order('created_at', { ascending: false })
+
+    if (isSpecificStore) {
+      query = query.eq('store_id', storeId)
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -443,7 +543,9 @@ export const reportService = {
    * 4. Relatório de Perdas, Avarias & Baixas Operacionais
    */
   async getLossesReport(storeId: string): Promise<LossesReportItem[]> {
-    const { data, error } = await supabase
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
+
+    let query = supabase
       .from('stock_movements')
       .select(`
         id,
@@ -458,9 +560,14 @@ export const reportService = {
         products ( name, sku, cost_price ),
         profiles:operator_id ( full_name )
       `)
-      .eq('store_id', storeId)
-      .or('movement_type.eq.OUT,movement_type.eq.LOSS,reason_code.not.is.null')
+      .or('movement_type.eq.LOSS,movement_type.eq.DAMAGE,movement_type.eq.EXPIRATION,movement_type.eq.EXIT,reason_code.not.is.null')
       .order('created_at', { ascending: false })
+
+    if (isSpecificStore) {
+      query = query.eq('store_id', storeId)
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -536,7 +643,9 @@ export const reportService = {
    * 6. Relatório de Desempenho de Vendas & Faturamento
    */
   async getSalesPerformanceReport(storeId: string): Promise<SalesReportItem[]> {
-    const { data, error } = await supabase
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
+
+    let query = supabase
       .from('orders')
       .select(`
         id,
@@ -550,8 +659,13 @@ export const reportService = {
         customers ( name ),
         order_items ( quantity )
       `)
-      .eq('store_id', storeId)
       .order('created_at', { ascending: false })
+
+    if (isSpecificStore) {
+      query = query.eq('store_id', storeId)
+    }
+
+    const { data, error } = await query
 
     if (error) throw error
 
@@ -580,22 +694,50 @@ export const reportService = {
    */
   async getConsumptionDemandReport(storeId: string): Promise<ConsumptionDemandReportItem[]> {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString()
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
 
     // 1. Produtos e saldos atuais
     const valuation = await this.getValuationReport(storeId)
 
     // 2. Vendas dos últimos 30 dias para calcular o consumo médio
-    const { data: salesMovements } = await supabase
+    let movQuery = supabase
       .from('stock_movements')
       .select('product_id, quantity')
-      .eq('store_id', storeId)
       .gte('created_at', thirtyDaysAgo)
-      .in('movement_type', ['SALE', 'EXIT', 'OUT'])
+      .in('movement_type', ['SALE', 'EXIT'])
+
+    if (isSpecificStore) {
+      movQuery = movQuery.eq('store_id', storeId)
+    }
+
+    const { data: salesMovements } = await movQuery
 
     const consumptionMap = new Map<string, number>()
     for (const mov of (salesMovements || []) as any[]) {
       const q = Math.abs(Number(mov.quantity) || 0)
       consumptionMap.set(mov.product_id, (consumptionMap.get(mov.product_id) || 0) + q)
+    }
+
+    // Fallback: also count quantities from non-cancelled order_items in the last 30 days if stock_movements didn't log all sales
+    if (consumptionMap.size === 0) {
+      let ordItemsQuery = supabase
+        .from('orders')
+        .select('id, created_at, status, order_items ( product_id, quantity )')
+        .gte('created_at', thirtyDaysAgo)
+        .neq('status', 'CANCELLED')
+
+      if (isSpecificStore) {
+        ordItemsQuery = ordItemsQuery.eq('store_id', storeId)
+      }
+
+      const { data: recentOrders } = await ordItemsQuery
+      for (const ord of (recentOrders || []) as any[]) {
+        for (const it of (ord.order_items || []) as any[]) {
+          if (!it.product_id) continue
+          const q = Math.abs(Number(it.quantity) || 0)
+          consumptionMap.set(it.product_id, (consumptionMap.get(it.product_id) || 0) + q)
+        }
+      }
     }
 
     return valuation.map((item) => {
@@ -652,21 +794,33 @@ export const reportService = {
    * 8. Relatório de Ticket Médio por Cliente & Comportamento (LTV)
    */
   async getCustomerTicketReport(storeId: string): Promise<CustomerTicketReportItem[]> {
+    const isSpecificStore = Boolean(storeId && storeId !== 'all')
+
     // 1. Clientes
-    const { data: customers, error: custErr } = await supabase
+    let custQuery = supabase
       .from('customers')
       .select('id, name, document, phone, email, status')
-      .eq('store_id', storeId)
+
+    if (isSpecificStore) {
+      custQuery = custQuery.eq('store_id', storeId)
+    }
+
+    const { data: customers, error: custErr } = await custQuery
 
     if (custErr) throw custErr
 
     // 2. Pedidos válidos
-    const { data: orders, error: ordErr } = await supabase
+    let ordQuery = supabase
       .from('orders')
       .select('id, customer_id, total_amount, channel, created_at, status')
-      .eq('store_id', storeId)
       .neq('status', 'CANCELLED')
       .order('created_at', { ascending: false })
+
+    if (isSpecificStore) {
+      ordQuery = ordQuery.eq('store_id', storeId)
+    }
+
+    const { data: orders, error: ordErr } = await ordQuery
 
     if (ordErr) throw ordErr
 

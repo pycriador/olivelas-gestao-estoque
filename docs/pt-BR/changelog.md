@@ -14,6 +14,14 @@ classification: Confirmed
 
 ## 2026-10-29
 
+- **Correção da Abertura e Renderização das Abas de Relatórios em `/reports`** (`src/pages/ReportsPage.tsx`, `src/services/reportService.ts`, `src/hooks/useTablePagination.ts`):
+  - **Causa Raiz 1 — Enum Inválido `'OUT'` em `stock_movement_type_enum` (`reportService.ts`)**:
+    - As consultas `getRetailSummaryKPIs`, `getLossesReport` (aba *Perdas & Baixas*) e `getConsumptionDemandReport` (aba *Giro & Compra por Consumo*) filtravam `stock_movements` com `movement_type = 'OUT'`, valor inexistente no enum PostgreSQL `stock_movement_type_enum` (`'ENTRY'`, `'EXIT'`, `'SALE'`, `'RETURN'`, `'ADJUSTMENT'`, `'LOSS'`, `'DAMAGE'`, `'EXPIRATION'`, `'TRANSFER'`, `'INVENTORY_COUNT'`), gerando erro HTTP 400 do PostgREST e impedindo a abertura do relatório. Substituído pelos valores válidos do enum (`LOSS`, `DAMAGE`, `EXPIRATION`, `EXIT`, `SALE`) com fallback para `order_items` nos últimos 30 dias.
+  - **Causa Raiz 2 — Suporte à Visão Consolidada (`storeId === 'all'`) e Seletor de Loja (`ReportsPage.tsx`, `reportService.ts`)**:
+    - Quando o `GLOBAL_ADMIN` operava em `Visão Global (Todas as Lojas)` (`storeId === 'all'`), `hasActiveStore` avaliava `false` e bloqueava a execução de todas as 9 queries (`enabled: false`). Agora todos os 9 métodos de relatório suportam consulta consolidada multi-loja (`storeId === 'all'`) ou filtrada por loja específica, com seletor de unidade diretamente no cabeçalho de `/reports`.
+  - **Causa Raiz 3 — Troca Atômica de Abas e Prevenção de Colapso de Altura (`useTablePagination.ts`, `ReportsPage.tsx`)**:
+    - Adicionado `setFilters` em lote em `useTablePagination.ts` e estado local sincronizado `activeTab` em `ReportsPage.tsx`, garantindo troca instantânea de aba em uma única atualização de URL (`?tab=...`) e `min-h-[480px]` no card principal para que a tabela do relatório nunca colapse em telas menores.
+
 - **Dashboard Executivo Completo (`/dashboard`) com Gráficos por Loja, Top Produtos Mais Vendidos, Vendas Mensais (12 Meses), Filtros de Período/Tempo e Exportação de Dados (CSV, JSON e PDF)** (`src/pages/DashboardPage.tsx`, `src/services/reportService.ts`, `src/types/report.types.ts`):
   - **Barra de Filtros Dinâmica com Sincronização na URL (`?period=30d&from=...&to=...&store=ALL&channel=ALL&granularity=day`)**:
     - Presets rápidos de período (`Hoje`, `7 Dias`, `30 Dias`, `90 Dias`, `Este Mês`, `Mês Passado`, `Este Ano`, `Tudo`), seletores customizados `De / Até`, seletor de unidade (`Todas as Lojas Consolidado` ou `Matriz` / `Filial` específica), filtro por canal (`PDV`, `WhatsApp`, `Online`) e granularidade do gráfico (`Diário`, `Semanal`, `Mensal`).
