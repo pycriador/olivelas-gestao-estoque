@@ -16,7 +16,7 @@ standard: Documentation Standard v1.0 (adapted)
 # Documentação Olivelas (pt-BR)
 
 > Status: DRAFT  
-> Fonte: código e SQL deste repositório, inventariados e sincronizados até 2026-10-29 (migrations `01` a `25`).
+> Fonte: código e SQL deste repositório, inventariados e sincronizados até 2026-10-30 (migrations `01` a `27`).
 
 ## Como ler (progressive disclosure)
 

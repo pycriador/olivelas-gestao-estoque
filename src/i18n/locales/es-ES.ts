@@ -66,6 +66,7 @@ export const esES = {
     globalFinanceRules: 'Reglas y Licencias (10 Gratis)',
     globalFinancePlans: 'Planes y Pantallas SaaS',
     globalFinancePayments: 'Pagos y Facturas',
+    globalContracts: 'Nuevos Contratos',
     globalBackups: 'Backups Multi-Tienda',
     globalDbExplorer: 'Explorador BD',
     globalApiHbac: 'Claves API y HBAC',

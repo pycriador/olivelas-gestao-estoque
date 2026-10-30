@@ -66,6 +66,7 @@ export const ptBR = {
     globalFinanceRules: 'Regras & Licenças (10 Grátis)',
     globalFinancePlans: 'Planos & Telas SaaS',
     globalFinancePayments: 'Pagamentos & Faturas',
+    globalContracts: 'Novos Contratos',
     globalBackups: 'Backups Multi-Loja',
     globalDbExplorer: 'DB Explorer (Banco)',
     globalApiHbac: 'Chaves API & HBAC',

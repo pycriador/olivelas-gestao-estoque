@@ -3,14 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   ArrowLeft,
+  CheckCircle2,
   CreditCard,
   DollarSign,
   Edit,
+  ExternalLink,
+  FileSignature,
+  Globe,
   Layers,
-  Plus,
   Save,
   Sliders,
   Sparkles,
+  Star,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Card } from '@/components/ui/card'
@@ -55,6 +59,9 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
   const [baseMonthlyPrice, setBaseMonthlyPrice] = useState('99.90')
   const [annualPrice, setAnnualPrice] = useState('999.00')
   const [setupFee, setSetupFee] = useState('0')
+  const [showOnLandingPage, setShowOnLandingPage] = useState(true)
+  const [isHighlightedOnLanding, setIsHighlightedOnLanding] = useState(false)
+  const [togglingLandingGroupId, setTogglingLandingGroupId] = useState<string | null>(null)
   const [enabledModules, setEnabledModules] = useState<ModuleCode[]>([
     'MOD_CATALOG_WA',
     'MOD_INVENTORY',
@@ -89,6 +96,8 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
     setBaseMonthlyPrice(String(grp.baseMonthlyPrice))
     setAnnualPrice(String(grp.annualPrice))
     setSetupFee(String(grp.setupFee))
+    setShowOnLandingPage(grp.showOnLandingPage !== false)
+    setIsHighlightedOnLanding(Boolean(grp.isHighlightedOnLanding))
     setEnabledModules(grp.enabledModules)
   }
 
@@ -101,7 +110,59 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
     setBaseMonthlyPrice('99.90')
     setAnnualPrice('999.00')
     setSetupFee('0')
+    setShowOnLandingPage(true)
+    setIsHighlightedOnLanding(false)
     setEnabledModules(['MOD_CATALOG_WA', 'MOD_INVENTORY'])
+  }
+
+  const handleQuickToggleLanding = async (grp: PermissionGroup) => {
+    const nextShow = grp.showOnLandingPage === false
+    setTogglingLandingGroupId(grp.id)
+    try {
+      const updatedList = await permissionGroupService.toggleLandingPageVisibility(
+        grp.id,
+        nextShow,
+        grp.isHighlightedOnLanding
+      )
+      setGroups(updatedList)
+      if (editingGroupId === grp.id) {
+        setShowOnLandingPage(nextShow)
+      }
+      toast.success(
+        nextShow
+          ? `Plano "${grp.name}" vinculado à Landing Page com sucesso!`
+          : `Plano "${grp.name}" removido da vitrine da Landing Page.`
+      )
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao atualizar vinculação na Landing Page.')
+    } finally {
+      setTogglingLandingGroupId(null)
+    }
+  }
+
+  const handleQuickToggleHighlight = async (grp: PermissionGroup) => {
+    const nextHighlight = !grp.isHighlightedOnLanding
+    setTogglingLandingGroupId(grp.id)
+    try {
+      const updatedList = await permissionGroupService.toggleLandingPageVisibility(
+        grp.id,
+        grp.showOnLandingPage !== false,
+        nextHighlight
+      )
+      setGroups(updatedList)
+      if (editingGroupId === grp.id) {
+        setIsHighlightedOnLanding(nextHighlight)
+      }
+      toast.success(
+        nextHighlight
+          ? `Plano "${grp.name}" marcado como Destaque na Landing Page!`
+          : `Destaque removido do plano "${grp.name}".`
+      )
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao atualizar destaque na Landing Page.')
+    } finally {
+      setTogglingLandingGroupId(null)
+    }
   }
 
   const handleToggleGroupModule = (code: ModuleCode) => {
@@ -129,6 +190,8 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
         baseMonthlyPrice: Number(baseMonthlyPrice || 0),
         annualPrice: Number(annualPrice || 0),
         setupFee: Number(setupFee || 0),
+        showOnLandingPage,
+        isHighlightedOnLanding,
       })
       toast.success('Pacote / Grupo Comercial salvo com sucesso!')
       handleResetGroupForm()
@@ -205,6 +268,22 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
           >
             <CreditCard className="mr-1.5 h-4 w-4" />
             Controle de Pagamentos
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => navigate('/global-admin/contracts')}
+          >
+            <FileSignature className="mr-1.5 h-4 w-4" />
+            Novos Contratos & Gerenciador
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/#personalizar-plano')}
+          >
+            <ExternalLink className="mr-1.5 h-4 w-4" />
+            Ver na Landing Page
           </Button>
         </div>
       </div>
@@ -322,6 +401,44 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
                 </div>
               </div>
 
+              {/* Flag de Vinculação com a Landing Page */}
+              <div className="space-y-2 rounded-xl border border-primary/25 bg-primary/5 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-primary shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-foreground">
+                        Vincular na Landing Page
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Exibe este plano no personalizador interativo da Landing Page (`/` e `/pricing`)
+                      </p>
+                    </div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={showOnLandingPage}
+                    onChange={(e) => setShowOnLandingPage(e.target.checked)}
+                    className="h-4 w-4 rounded border-border text-primary cursor-pointer"
+                  />
+                </div>
+
+                {showOnLandingPage && (
+                  <label className="flex items-center justify-between gap-2 border-t border-primary/15 pt-2 cursor-pointer">
+                    <span className="flex items-center gap-1.5 text-[11px] font-semibold text-foreground">
+                      <Star className="h-3.5 w-3.5 text-amber-500" />
+                      Destacar como "Mais Popular / Recomendado"
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={isHighlightedOnLanding}
+                      onChange={(e) => setIsHighlightedOnLanding(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-border text-primary cursor-pointer"
+                    />
+                  </label>
+                )}
+              </div>
+
               <div className="space-y-1.5 pt-2">
                 <label className="text-xs font-semibold text-foreground">
                   Telas Inclusas no Pacote ({enabledModules.length})
@@ -371,53 +488,122 @@ export const GlobalAdminFinancePlansPage: React.FC = () => {
           {/* Col 2 & 3: Lista de Pacotes Comerciais + Tabela de Preços Individuais de Telas */}
           <div className="space-y-6 lg:col-span-2">
             <Card className="space-y-4 p-6">
-              <div className="border-b border-border pb-3">
-                <h2 className="text-base font-bold text-foreground">
-                  Pacotes Comerciais Cadastrados ({groups.length})
-                </h2>
-                <p className="text-xs text-muted-foreground">
-                  Clique em "Editar" em qualquer pacote para alterar suas telas inclusas ou seu valor mensal.
-                </p>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+                <div>
+                  <h2 className="text-base font-bold text-foreground">
+                    Pacotes Comerciais Cadastrados ({groups.length})
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    Ative ou desative a flag <strong>Vincular na Landing Page</strong> em qualquer plano para disponibilizá-lo no simulador interativo de pré-cadastro.
+                  </p>
+                </div>
+                <Badge variant="success">
+                  {groups.filter((g) => g.showOnLandingPage !== false).length} vinculados na Landing Page
+                </Badge>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {groups.map((grp) => (
-                  <div
-                    key={grp.id}
-                    className="flex flex-col justify-between rounded-xl border border-border p-4 hover:bg-muted/20"
-                  >
-                    <div>
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-bold text-foreground">
-                          {grp.name}
-                        </span>
-                        <Badge variant="default">
-                          {formatCurrency(grp.baseMonthlyPrice)}/mês
-                        </Badge>
+                {groups.map((grp) => {
+                  const isLinkedToLanding = grp.showOnLandingPage !== false
+                  const isToggling = togglingLandingGroupId === grp.id
+                  return (
+                    <div
+                      key={grp.id}
+                      className={cn(
+                        'flex flex-col justify-between rounded-xl border p-4 transition-all hover:bg-muted/20',
+                        isLinkedToLanding
+                          ? 'border-primary/35 bg-primary/[0.02]'
+                          : 'border-border'
+                      )}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-bold text-foreground leading-snug">
+                            {grp.name}
+                          </span>
+                          <Badge variant="default" className="shrink-0">
+                            {formatCurrency(grp.baseMonthlyPrice)}/mês
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <span className="font-mono text-[10px] text-muted-foreground">
+                            Código: {grp.code}
+                          </span>
+                          {isLinkedToLanding ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                              <CheckCircle2 className="h-3 w-3" /> Na Landing Page
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
+                              Oculto na Landing
+                            </span>
+                          )}
+                          {grp.isHighlightedOnLanding && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                              <Star className="h-3 w-3" /> Destaque
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          {grp.description}
+                        </p>
                       </div>
-                      <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
-                        Código: {grp.code}
-                      </div>
-                      <p className="mt-1.5 text-xs text-muted-foreground">
-                        {grp.description}
-                      </p>
-                    </div>
 
-                    <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {grp.enabledModules.length} módulos de tela ativos
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleSelectGroupForEdit(grp)}
-                      >
-                        <Edit className="mr-1.5 h-3.5 w-3.5" />
-                        Editar Pacote
-                      </Button>
+                      <div className="mt-3 space-y-2 border-t border-border pt-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            disabled={isToggling}
+                            onClick={() => handleQuickToggleLanding(grp)}
+                            className={cn(
+                              'inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all cursor-pointer',
+                              isLinkedToLanding
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20'
+                                : 'border-border bg-muted/40 text-muted-foreground hover:text-foreground'
+                            )}
+                          >
+                            <Globe className="h-3.5 w-3.5" />
+                            {isLinkedToLanding
+                              ? 'Vinculado na Landing Page'
+                              : 'Vincular na Landing Page'}
+                          </button>
+
+                          {isLinkedToLanding && (
+                            <button
+                              type="button"
+                              disabled={isToggling}
+                              onClick={() => handleQuickToggleHighlight(grp)}
+                              title="Marcar/desmarcar como plano em destaque na Landing Page"
+                              className={cn(
+                                'inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-all cursor-pointer',
+                                grp.isHighlightedOnLanding
+                                  ? 'border-amber-500/40 bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                  : 'border-border bg-background text-muted-foreground hover:text-foreground'
+                              )}
+                            >
+                              <Star className="h-3 w-3" />
+                              {grp.isHighlightedOnLanding ? 'Destacado' : 'Destacar'}
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {grp.enabledModules.length} módulos de tela inclusos
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSelectGroupForEdit(grp)}
+                          >
+                            <Edit className="mr-1.5 h-3.5 w-3.5" />
+                            Editar Pacote
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </Card>
 

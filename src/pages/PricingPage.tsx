@@ -1,62 +1,37 @@
-import { Link } from 'react-router-dom'
-import { Check, Users, ShieldCheck, Building2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Check, Users, ShieldCheck, Building2, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { permissionGroupService } from '@/services/permissionGroupService'
+import { InteractivePlanBuilderSection } from '@/components/commercial/InteractivePlanBuilderSection'
+import type { PermissionGroup, PermissionModule } from '@/types/permissionGroup.types'
+
+const FREE_EMPLOYEES_PER_STORE = 10
 
 export function PricingPage() {
-  const plans = [
-    {
-      name: 'Catálogo & Pedidos WhatsApp',
-      price: 'R$ 49,90',
-      period: '/mês por Store Admin',
-      description: 'Ideal para comércios que desejam vender pelo catálogo digital com pedidos diretos no WhatsApp.',
-      features: [
-        'Catálogo Público Online (/store/sua-loja)',
-        'Produtos unitários e pesáveis (KG / gramas)',
-        'Gestão de Clientes com histórico de pedidos',
-        'Visões de filtros salvas no banco por loja',
-        'Até 10 funcionários operacionais grátis por loja',
-        'Exportação detalhada dos pedidos visíveis (CSV)',
-      ],
-      cta: 'Começar com Catálogo',
-      popular: false,
-    },
-    {
-      name: 'Controle de Estoque & Validades',
-      price: 'R$ 99,90',
-      period: '/mês por Store Admin',
-      description: 'Para operações focadas em controle rigoroso de lotes, validades, compras e aprovadores de baixa.',
-      features: [
-        'Tudo do plano Catálogo WhatsApp',
-        'Controle completo de Saldos, Lotes & Validades',
-        'Alertas automáticos de vencimento (7 e 30 dias)',
-        'Fluxo de Aprovador de Baixa (STOCK_APPROVER)',
-        'Ordens de Compra, Fornecedores & Cálculo de Markup',
-        'Até 10 funcionários operacionais grátis por loja',
-      ],
-      cta: 'Escolher Controle de Estoque',
-      popular: false,
-    },
-    {
-      name: 'ERP Completo + PDV + Filiais',
-      price: 'R$ 189,90',
-      period: '/mês por Store Admin',
-      description: 'Solução completa com Frente de Caixa (PDV), Matriz & Filiais, Dashboard BI, 9 Relatórios e API Studio.',
-      features: [
-        'Frente de Caixa (PDV) ilimitado (UN e KG)',
-        'Hierarquia Matriz → Filiais & Remessa Sem Venda',
-        'Dashboard Executivo Multi-Loja & Vendas Mensais',
-        'Todos os 9 Relatórios Analíticos com Data e Hora',
-        'API Studio (Postman) & Chaves REST HBAC',
-        'Até 10 funcionários grátis por loja (+ R$ 19,90/licença extra)',
-      ],
-      cta: 'Assinar ERP Completo',
-      popular: true,
-    },
-  ]
+  const [plans, setPlans] = useState<PermissionGroup[]>([])
+  const [modules, setModules] = useState<PermissionModule[]>([])
+
+  useEffect(() => {
+    Promise.all([
+      permissionGroupService.listPublicLandingPlans(),
+      permissionGroupService.listModules(),
+    ])
+      .then(([loadedPlans, loadedModules]) => {
+        setPlans(loadedPlans)
+        setModules(loadedModules)
+      })
+      .catch(() => {})
+  }, [])
+
+  const getModuleName = (code: string) =>
+    modules.find((m) => m.code === code)?.name || code
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 space-y-16">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-20">
       <div className="text-center max-w-3xl mx-auto space-y-4">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+          <Sparkles className="h-3.5 w-3.5" /> Planos Vinculados pelo Global Admin
+        </div>
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
           Planos modulares sob medida para sua operação
         </h1>
@@ -65,19 +40,20 @@ export function PricingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {plans.map((plan, idx) => (
+      {/* Vitrine dos Planos Vinculados na Landing Page */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        {plans.map((plan) => (
           <div
-            key={idx}
+            key={plan.id}
             className={`p-8 rounded-3xl bg-surface border transition-all flex flex-col justify-between ${
-              plan.popular
-                ? 'border-primary ring-2 ring-primary shadow-xl relative scale-105'
+              plan.isHighlightedOnLanding
+                ? 'border-primary ring-2 ring-primary shadow-xl relative md:scale-105'
                 : 'border-border shadow-sm'
             }`}
           >
-            {plan.popular && (
+            {plan.isHighlightedOnLanding && (
               <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full bg-primary text-primary-foreground text-[11px] font-extrabold uppercase tracking-wider shadow-md">
-                Mais Completo
+                Mais Popular
               </span>
             )}
 
@@ -90,37 +66,49 @@ export function PricingPage() {
               </div>
 
               <div className="pt-2">
-                <span className="text-4xl font-extrabold text-foreground">{plan.price}</span>
-                <span className="text-xs text-muted-foreground ml-1">{plan.period}</span>
+                <span className="text-4xl font-extrabold text-foreground">
+                  R$ {Number(plan.baseMonthlyPrice || 0).toFixed(2)}
+                </span>
+                <span className="text-xs text-muted-foreground ml-1">/mês por Store Admin</span>
+                <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
+                  ou R$ {Number(plan.annualPrice || 0).toFixed(2)}/ano no plano anual
+                </div>
               </div>
 
               <div className="space-y-2.5 pt-4 border-t border-border">
-                {plan.features.map((feat, fIdx) => (
-                  <div key={fIdx} className="flex items-center gap-2.5 text-xs text-foreground">
+                <div className="flex items-center gap-2.5 text-xs text-foreground font-semibold">
+                  <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                  <span>Até {FREE_EMPLOYEES_PER_STORE} funcionários operacionais grátis por loja</span>
+                </div>
+                {(plan.enabledModules || []).map((code) => (
+                  <div key={code} className="flex items-center gap-2.5 text-xs text-foreground">
                     <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span>{feat}</span>
+                    <span>{getModuleName(code)}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             <div className="pt-8">
-              <Link to="/register">
+              <a href="#personalizar-plano">
                 <Button
-                  variant={plan.popular ? 'default' : 'outline'}
+                  variant={plan.isHighlightedOnLanding ? 'default' : 'outline'}
                   size="lg"
                   className="w-full text-xs font-bold"
                 >
-                  {plan.cta}
+                  Personalizar & Solicitar {plan.name}
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         ))}
       </div>
 
+      {/* Configurador Interativo de Planos + Adicionais Avulsos + Pré-Cadastro */}
+      <InteractivePlanBuilderSection id="personalizar-plano" />
+
       {/* Regras Comerciais & Licenciamento Transparente */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 max-w-6xl mx-auto">
         <div className="p-6 rounded-2xl bg-surface border border-border space-y-2">
           <div className="flex items-center gap-2 text-primary font-bold text-sm">
             <Users className="h-4 w-4" />

@@ -57,6 +57,8 @@ export interface PermissionGroup {
   setupFee: number
   isSystemDefault: boolean
   isActive: boolean
+  showOnLandingPage?: boolean
+  isHighlightedOnLanding?: boolean
   sortOrder: number
   createdAt?: string
   updatedAt?: string

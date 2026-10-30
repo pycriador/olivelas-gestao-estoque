@@ -56,8 +56,9 @@ source:
 | `/global-admin/users/:userId/permissions` | `GlobalAdminUserPermissionsPage` | Gestão em tela inteira de grupo de permissões, módulos liberados e grafo de dependências |
 | `/global-admin/users/:userId/billing` | `GlobalAdminUserBillingPage` | Controle de pagamentos, faturas, cálculo de licenças de funcionários e histórico financeiro |
 | `/global-admin/finance/rules` | `GlobalAdminFinanceRulesPage` | Regras financeiras globais (10 funcionários grátis por loja, valor por licença adicional) e exceções por loja |
-| `/global-admin/finance/plans` | `GlobalAdminFinancePlansPage` | Catálogo comercial de grupos de permissões e tabela de valores por módulo |
+| `/global-admin/finance/plans` | `GlobalAdminFinancePlansPage` | Catálogo comercial de grupos de permissões, flag de vinculação na Landing Page (`showOnLandingPage` / `isHighlightedOnLanding`) e tabela de valores por módulo |
 | `/global-admin/finance/payments` | `GlobalAdminFinancePaymentsPage` | Livro-razão consolidado de faturas e histórico de pagamentos de todas as contas |
+| `/global-admin/contracts` | `GlobalAdminContractsPage` | Seção **Novos Contratos** (solicitações e pré-cadastros da Landing Page) + **Gerenciador de Contratos** (termos personalizados, exportação HTML/DOCX/PDF, armazenamento no Supabase e vínculo com Google Drive do Global Admin) |
 | `/stores` | `StoresPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/products` | `ProductsPage` | Catálogo mestre com entrada em lote e galeria; `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
 | `/categories` | `CategoriesPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
@@ -87,7 +88,7 @@ Grupos (ids no código):
 
 | Grupo `id` | Paths |
 | --- | --- |
-| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
+| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin/contracts`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
 | `registry` | `/products`, `/categories`, `/customers`, `/suppliers` |
 | `control` | `/inventory`, `/expiration`, `/purchases` |
 | `management` | `/orders`, `/reports`, `/stores`, `/team`, `/team/new` |
@@ -134,6 +135,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | Pasta | Arquivos |
 | --- | --- |
 | `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx`, `UserPermissionsAndPricingModal.tsx`, `UserBillingHistoryModal.tsx`, `PermissionGroupsManagerModal.tsx` |
+| `commercial/` | `InteractivePlanBuilderSection.tsx` (configurador interativo de planos + módulos adicionais avulsos + pré-cadastro com Nome, E-mail e Celular na Landing Page `/` e `/pricing`) |
 | `inventory/` | `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`, `StockBranchTransferModal.tsx`, `StockImportModal.tsx` |
 | `team/` | `EmployeeRolePermissionsModal.tsx`, `StoreCustomRolesModal.tsx` |
 | `products/` | `ProductGalleryModal.tsx`, `BulkStockEntryModal.tsx` |
@@ -185,7 +187,8 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `backupService` | `generateSqlDump`, `generateImagesZip`, `generateJsonBackup` (multi-loja e loja individual) |
 | `apiKeyService` | `listApiKeys`, `createApiKey`, `toggleApiKeyStatus`, `revokeApiKey`, validação e documentação interativa de escopos HBAC |
 | `apiIntegrationService` | `listIntegrations`, `saveIntegration`, `deleteIntegration`, `listLogs`, `executeHttpRequest`, `extractRecordsArray`, `simulateSync`, `executeSync`, `parseCurlCommand`, `generateCurlCommand`, `detectJsonArrays`, `autoMapFields` |
-| `permissionGroupService` | `listModules`, `updateModulePrice`, `listGroups`, `saveGroup`, `deleteGroup`, `listAllUserProfiles`, `getUserProfile`, `saveUserProfile`, `listUserPayments`, `createPayment`, `markPaymentAsPaid`, `updatePaymentStatus`, `listUserAuditLogs` |
+| `permissionGroupService` | `listModules`, `updateModulePrice`, `listGroups`, `listLandingPageGroups`, `toggleLandingPageVisibility`, `saveGroup`, `deleteGroup`, `listAllUserProfiles`, `getUserProfile`, `saveUserProfile`, `listUserPayments`, `createPayment`, `markPaymentAsPaid`, `updatePaymentStatus`, `listUserAuditLogs` |
+| `contractService` | `generateContractNumber`, `submitProposal`, `listProposals`, `updateProposalStatus`, `deleteProposal`, `interpolateContractTerms`, `buildStandaloneContractHtml`, `listContracts`, `saveContract`, `deleteContract`, `exportContractAsHTML`, `exportContractAsDOCX`, `exportContractAsPDF`, `getGoogleDriveConfig`, `saveGoogleDriveConfig`, `syncContractToGoogleDrive` |
 | `notificationService` | list, mark read, `generateStockAlerts` (RPC) |
 | `auditService` | `listAuditLogs`, `logAction` |
 | `reportService` | `getRetailSummaryKPIs`, `getValuationReport`, `getAbcCurveReport`, `getConsumptionDemandReport`, `getCustomerTicketReport`, `getCapitalInvestmentReport`, `getPurchasingReport`, `getLossesReport`, `getStockoutsReport`, `getSalesPerformanceReport`, `getAvailableReportsList`, `getGlobalAdminMetrics` |

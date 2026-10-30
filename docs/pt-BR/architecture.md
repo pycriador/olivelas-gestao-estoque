@@ -52,7 +52,7 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 | SPA estática | `dist/` após `npm run build` | UI |
 | Projeto Supabase | migrations em `supabase/migrations/` | Auth, DB, Storage, RPCs, Realtime, HBAC |
 
-`FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261030000025`.
+`FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261030000027`.
 
 ## Componentes de responsabilidade (não cada arquivo)
 
@@ -60,7 +60,7 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 | --- | --- | --- |
 | Rotas, `ProtectedRoute` e `PermissionGate` | Shell marketing / auth / app / catálogo e guarda de módulos SaaS + permissões granulares | Transações SQL |
 | Stores Zustand | Sessão (`authStore`), tema (`themeStore`), carrinho público (`cartStore`), i18n | RLS |
-| Services | Chamadas `supabase.from` / `rpc` (`orderService`, `inventoryService`, `reportService`, `customerService`, `savedViewService`, `saasBillingService`, etc.) | Render |
+| Services | Chamadas `supabase.from` / `rpc` (`orderService`, `inventoryService`, `reportService`, `customerService`, `savedViewService`, `saasBillingService`, `contractService`, etc.) | Render |
 | PostgreSQL + RLS + RPCs | Isolamento multi-tenant, vendas atômicas, alçada de baixa (`can_user_approve_writeoff`), remessa entre filiais (`execute_stock_transfer_to_branch`) | Layout |
 | Storage | Imagens produtos/loja/avatar | Metadados de produto (tabelas SQL) |
 
@@ -76,15 +76,15 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 
 ```text
 src/
-  components/admin|common|inventory|products|sales|settings|team|ui
+  components/admin|commercial|common|inventory|products|sales|settings|team|ui
   constants/      featureDependencies.ts, granularPermissions.ts
   hooks/          useAuth, useTenant, usePermissions, useRealtime, useI18n, useTheme, useTablePagination
   i18n/           pt-BR, en-US, es-ES
   layouts/        AppLayout, AuthLayout, PublicLayout
   lib/            supabase/client.ts, storeThemes.ts
-  pages/          34 páginas (incluindo rotas dedicadas de edição do Global Admin e Equipe)
+  pages/          35 páginas (incluindo Novos Contratos & Gerenciador de Contratos e rotas dedicadas de edição do Global Admin e Equipe)
   routes/         AppRoutes, ProtectedRoute, PermissionGate
-  services/       23 services de domínio
+  services/       24 services de domínio
   stores/         authStore, cartStore, themeStore
   types/          database.types.ts e tipos de domínio
   utils/          formatters, currency, barcode, dates, export, importParser, productUtils, errorHandler

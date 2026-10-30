@@ -46,11 +46,16 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
 - **Central de 9 Relatórios Analíticos de Varejo com Filtros de Período e Data/Hora (`/reports`):**
   - 9 relatórios especializados: **Valorização & Lucratividade**, **Curva ABC & Pareto (80/15/5)**, **Giro & Compra por Consumo (Runout em dias)**, **Ticket Médio & Clientes (LTV)** (com todos os pedidos do cliente, data/hora e deep-link para `/customers`), **Capital de Giro & GMROI por Categoria**, **Ruptura & Reposição**, **Compras & Fornecedores** (com registro de data e hora exatas e resumo de itens), **Perdas & Baixas Operacionais** e **Vendas & Desempenho** (com data e hora exatas e itens detalhados).
   - Filtros de período (`Hoje`, `Esta Semana`, `Este Mês`, `Mês Passado`, `Últimos 90 Dias`, `Este Ano` e `Data Personalizada De/Até`), seletor de loja ou visão consolidada (`storeId === 'all'`) e exportação `Exportar Visíveis`.
-- **Gestão de Funcionários, 47 Permissões Granulares & Franquia de 10 Funcionários Grátis (`/team`, `/global-admin`):**
-  - Cadastro de funcionários e papéis customizados por loja (`store_custom_roles`) com matriz de **47 permissões granulares** em 12 módulos e telas dedicadas de edição (`/team/stores/:storeId/employees/:employeeId`, `/global-admin/stores/:storeId/employees/:employeeId`).
+- **Gestão de Funcionários, 47 Permissões Granulares, Política de PIN & Franquia de 10 Funcionários Grátis (`/team`, `/global-admin`):**
+  - Cadastro de funcionários e papéis customizados por loja (`store_custom_roles`) com matriz de **47 permissões granulares** em 12 módulos e telas dedicadas de edição (`/team/:employeeId`, `/team/stores/:storeId/employees/:employeeId`, `/global-admin/stores/:storeId/employees/:employeeId`).
+  - **Reset Obrigatório de PIN no Próximo Login & Pré-requisitos de Complexidade (`require_pin_reset`, `pin_requirements`, `complete_employee_pin_reset`):** configuração individual para forçar troca de PIN no próximo login e definição de regras de complexidade (mínimo de caracteres, números, letras maiúsculas, letras minúsculas, símbolos especiais e bloqueio de sequências repetidas como `1111` ou `1234`) com checklist visual em tempo real.
   - **Regra de Licenciamento (`global_billing_rules`):** funcionários operacionais não pagam plano individual e não poluem a aba de usuários titulares; cada loja possui **10 funcionários ativos grátis** e licenças adicionais são cobradas automaticamente na fatura do `STORE_ADMIN`.
-- **Planos Comerciais SaaS, Grafo de Dependências de Telas & Hub Financeiro (`/global-admin?tab=finance`):**
-  - Criação de grupos de permissão em tela com precificação comercial (`saas_permission_groups`), **motor de grafo de dependências (`featureDependencies.ts`)** que alerta o administrador sobre impactos cruzados ao desmarcar telas (mesmo para `STORE_ADMIN`), e rotas dedicadas para Regras (`/global-admin/finance/rules`), Planos (`/global-admin/finance/plans`) e Pagamentos (`/global-admin/finance/payments`).
+- **Planos Comerciais SaaS, Vinculação na Landing Page, Grafo de Dependências & Hub Financeiro (`/global-admin?tab=finance`, `/global-admin/finance/plans`):**
+  - Criação de grupos de permissão em tela com precificação comercial (`saas_permission_groups`), flags de **Vinculação na Landing Page (`show_on_landing_page`)** e **Destaque "Mais Popular" (`is_highlighted_on_landing`)**, **motor de grafo de dependências (`featureDependencies.ts`)** que alerta o administrador sobre impactos cruzados ao desmarcar telas (mesmo para `STORE_ADMIN`), e rotas dedicadas para Regras (`/global-admin/finance/rules`), Planos (`/global-admin/finance/plans`) e Pagamentos (`/global-admin/finance/payments`).
+- **Configurador Interativo de Planos + Adicionais Avulsos na Landing Page & Seção "Novos Contratos" (`/`, `/pricing`, `/global-admin/contracts`):**
+  - **Monte seu Plano Personalizado (`InteractivePlanBuilderSection`):** sessão interativa na Landing Page e na página de Preços onde o visitante escolhe o ciclo (`Mensal`/`Anual`), seleciona um plano base vinculado pelo Global Admin, marca **módulos adicionais avulsos** e ajusta estimativas de lojas e funcionários com cálculo em tempo real.
+  - **Pré-Cadastro Comercial (`submit_commercial_proposal`):** preenchimento de Nome, E-mail, Celular/WhatsApp, Empresa, CNPJ/CPF e observações para registrar a proposta em `public.commercial_plan_proposals`, ficando imediatamente visível para o Global Admin entrar em contato na seção **"Novos Contratos" (`/global-admin/contracts`)**.
+  - **Gerenciador de Contratos Completo (`GlobalAdminContractsPage`, `contractService`):** editor de minutas contratuais com interpolação dinâmica de variáveis (`{{contractor_name}}`, `{{client_name}}`, `{{product_purchased}}`, `{{plan_name}}`, `{{addons_list}}`, `{{monthly_value}}`, etc.), conversão direta de propostas em contrato, exportação pronta para assinatura em **HTML**, **DOCX (Microsoft Word OpenXML)** e **PDF**, armazenamento em nuvem no **Supabase (`platform_contracts` + Storage)** e opção de **vincular e enviar diretamente para o Google Drive do Global Admin**.
 - **Integrador de APIs Estilo Postman (`/integrations`) & Tokens HBAC (`/global-admin?tab=apikeys`):**
   - Request Builder completo com vinculação visual de dados (*Service Binding*) para sincronizar Clientes, Categorias, Produtos, Fornecedores e Estoque.
   - Tokens HBAC (`olv_live_...`) com 23 escopos granulares e RPC `get_ai_report` para agentes de IA externos.
@@ -73,7 +78,7 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
   - **Supabase Auth:** Email/senha e Google OAuth, controle de sessão resiliente (`credentials: 'omit'` no fetch para evitar rejeição de cookies Cloudflare `__cf_bm` em domínios cruzados).
   - **Supabase Storage:** Buckets organizados e protegidos por loja (`products/{store_id}/...`, `stores`, `avatars`).
   - **Supabase Realtime:** Atualização automática de saldos de estoque, pedidos e alertas.
-  - **Stored Procedures (RPC):** Operações atômicas protegidas contra condições de corrida (`create_order_with_stock`, `restore_sale_stock`, `receive_purchase_order_stock`, `apply_stock_movement`, `can_user_approve_writeoff`, `review_stock_writeoff_request`, `execute_stock_transfer_to_branch`, `upsert_store_employee`, `assign_user_permission_group`, `record_subscription_payment`, `get_ai_report`).
+  - **Stored Procedures (RPC):** Operações atômicas protegidas contra condições de corrida (`create_order_with_stock`, `restore_sale_stock`, `receive_purchase_order_stock`, `apply_stock_movement`, `can_user_approve_writeoff`, `review_stock_writeoff_request`, `execute_stock_transfer_to_branch`, `upsert_store_employee`, `complete_employee_pin_reset`, `assign_user_permission_group`, `record_subscription_payment`, `submit_commercial_proposal`, `get_ai_report`).
 - **CI/CD:** GitHub Actions com lint, typecheck e deploy automatizado para o GitHub Pages.
 
 ---
@@ -92,6 +97,7 @@ olivelas-gestao-estoque/
 ├── src/
 │   ├── components/
 │   │   ├── admin/                  # GlobalBackupPanel, GlobalDbExplorerPanel, GlobalApiKeyHbacPanel, GlobalSaasBillingPanel, SubscriptionGuardModal
+│   │   ├── commercial/             # InteractivePlanBuilderSection (Configurador Interativo de Planos + Adicionais Avulsos + Pré-Cadastro)
 │   │   ├── common/                 # ThemeToggle, LanguageSelector, CommandK, EmptyState, ResponsiveTable, PageHeader
 │   │   ├── inventory/              # StockWriteoffModal, BulkStockWriteoffModal, StockBranchTransferModal, StockImportModal, ProductStockDetailsModal
 │   │   ├── products/               # ProductGalleryModal, BulkStockEntryModal
@@ -103,14 +109,14 @@ olivelas-gestao-estoque/
 │   ├── i18n/                       # pt-BR, en-US, es-ES
 │   ├── layouts/                    # AppLayout, AuthLayout, PublicLayout
 │   ├── lib/supabase/               # Client singleton com tipagem do banco
-│   ├── pages/                      # Dashboard, Lojas, Produtos, Estoque, Validades, PDV, Pedidos, Clientes, Compras, Relatórios, Global Admin e Páginas Dedicadas de Edição
+│   ├── pages/                      # Dashboard, Lojas, Produtos, Estoque, Validades, PDV, Pedidos, Clientes, Compras, Relatórios, Global Admin, Novos Contratos e Páginas Dedicadas de Edição
 │   ├── routes/                     # AppRoutes, ProtectedRoute, PermissionGate
-│   ├── services/                   # Camada de serviços (auth, store, product, inventory, order, customer, savedView, report, saasBilling, apiKey, apiIntegrator, backup, etc.)
+│   ├── services/                   # Camada de serviços (auth, store, product, inventory, order, customer, savedView, report, saasBilling, contract, apiKey, apiIntegrator, backup, etc.)
 │   ├── stores/                     # authStore, cartStore, themeStore
-│   ├── types/                      # database.types.ts, auth, store, product, inventory, customer, report, saasBilling, apiKey, backup
+│   ├── types/                      # database.types.ts, auth, store, product, inventory, customer, report, saasBilling, contract, apiKey, backup
 │   └── utils/                      # formatters, currency, barcode, dates, export, importParser, productUtils, errorHandler
 ├── supabase/
-│   ├── migrations/                 # 25 migrations versionadas e incrementais SQL (20260925..01 a 20261030..25)
+│   ├── migrations/                 # 27 migrations versionadas e incrementais SQL (20260925..01 a 20261030..27)
 │   └── seed/                       # Roles & Permissões iniciais
 ├── test-automation/                # Roteiro E2E, casos de teste JSON e runner automatizado
 ├── .env.example

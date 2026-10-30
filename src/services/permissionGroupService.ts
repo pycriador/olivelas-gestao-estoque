@@ -22,6 +22,7 @@ import type {
 
 const LOCAL_PROFILES_CACHE_KEY = 'olivelas_user_perm_profiles_v1'
 const LOCAL_GROUPS_CACHE_KEY = 'olivelas_perm_groups_v1'
+const LOCAL_GROUP_LANDING_FLAGS_KEY = 'olivelas_perm_groups_landing_flags_v1'
 const LOCAL_MODULES_CACHE_KEY = 'olivelas_perm_modules_v1'
 const LOCAL_PAYMENTS_CACHE_KEY = 'olivelas_sub_payments_v1'
 const LOCAL_AUDIT_CACHE_KEY = 'olivelas_perm_billing_audit_v1'
@@ -76,6 +77,29 @@ function mapModuleRow(row: any): PermissionModule {
 }
 
 function mapGroupRow(row: any): PermissionGroup {
+  const localFlags = readLocalCache<
+    Record<string, { showOnLandingPage?: boolean; isHighlightedOnLanding?: boolean }>
+  >(LOCAL_GROUP_LANDING_FLAGS_KEY, {})
+  const flagOverride = localFlags[row.id] || localFlags[row.code]
+
+  const dbShowOnLanding =
+    row.show_on_landing_page !== undefined
+      ? Boolean(row.show_on_landing_page)
+      : row.showOnLandingPage !== undefined
+        ? Boolean(row.showOnLandingPage)
+        : flagOverride?.showOnLandingPage !== undefined
+          ? Boolean(flagOverride.showOnLandingPage)
+          : true
+
+  const dbHighlighted =
+    row.is_highlighted_on_landing !== undefined
+      ? Boolean(row.is_highlighted_on_landing)
+      : row.isHighlightedOnLanding !== undefined
+        ? Boolean(row.isHighlightedOnLanding)
+        : flagOverride?.isHighlightedOnLanding !== undefined
+          ? Boolean(flagOverride.isHighlightedOnLanding)
+          : row.code === 'PLAN_PRO_MANAGEMENT' || row.code === 'PLAN_FULL_ENTERPRISE'
+
   return {
     id: row.id,
     code: row.code,
@@ -93,6 +117,8 @@ function mapGroupRow(row: any): PermissionGroup {
     setupFee: Number(row.setup_fee ?? row.setupFee ?? 0),
     isSystemDefault: Boolean(row.is_system_default ?? row.isSystemDefault),
     isActive: row.is_active !== false,
+    showOnLandingPage: dbShowOnLanding,
+    isHighlightedOnLanding: dbHighlighted,
     sortOrder: Number(row.sort_order ?? row.sortOrder ?? 0),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -274,11 +300,76 @@ export const permissionGroupService = {
     } catch {
       // Fallback
     }
-    return readLocalCache<PermissionGroup[]>(LOCAL_GROUPS_CACHE_KEY, DEFAULT_PERMISSION_GROUPS)
+    const cached = readLocalCache<PermissionGroup[]>(LOCAL_GROUPS_CACHE_KEY, DEFAULT_PERMISSION_GROUPS)
+    return cached.map(mapGroupRow)
   },
 
   /**
-   * Cria ou atualiza um Grupo de Perfil Comercial (com Valores)
+   * Lista os planos ativos marcados com a flag de vinculação na Landing Page
+   */
+  async listPublicLandingPlans(): Promise<PermissionGroup[]> {
+    const all = await this.listPermissionGroups()
+    return all.filter((g) => g.isActive !== false && g.showOnLandingPage !== false)
+  },
+
+  /**
+   * Alterna rapidamente a flag de vinculação / destaque de um plano na Landing Page
+   */
+  async toggleLandingPageVisibility(
+    groupId: string,
+    showOnLandingPage: boolean,
+    isHighlightedOnLanding?: boolean
+  ): Promise<PermissionGroup[]> {
+    const localFlags = readLocalCache<
+      Record<string, { showOnLandingPage?: boolean; isHighlightedOnLanding?: boolean }>
+    >(LOCAL_GROUP_LANDING_FLAGS_KEY, {})
+
+    const existingFlag = localFlags[groupId] || {}
+    localFlags[groupId] = {
+      showOnLandingPage,
+      isHighlightedOnLanding:
+        isHighlightedOnLanding !== undefined
+          ? isHighlightedOnLanding
+          : existingFlag.isHighlightedOnLanding,
+    }
+    writeLocalCache(LOCAL_GROUP_LANDING_FLAGS_KEY, localFlags)
+
+    try {
+      if (!groupId.startsWith('default-') && !groupId.startsWith('custom-')) {
+        const updatePayload: Record<string, any> = {
+          show_on_landing_page: showOnLandingPage,
+        }
+        if (isHighlightedOnLanding !== undefined) {
+          updatePayload.is_highlighted_on_landing = isHighlightedOnLanding
+        }
+        await supabase.from('permission_groups').update(updatePayload).eq('id', groupId)
+      }
+    } catch {
+      // Ignore if column not yet migrated; local override + cache handles it seamlessly
+    }
+
+    const current = await this.listPermissionGroups()
+    const next = current.map((g) => {
+      if (g.id === groupId || g.code === groupId) {
+        localFlags[g.code] = localFlags[groupId]
+        return {
+          ...g,
+          showOnLandingPage,
+          isHighlightedOnLanding:
+            isHighlightedOnLanding !== undefined
+              ? isHighlightedOnLanding
+              : g.isHighlightedOnLanding,
+        }
+      }
+      return g
+    })
+    writeLocalCache(LOCAL_GROUP_LANDING_FLAGS_KEY, localFlags)
+    writeLocalCache(LOCAL_GROUPS_CACHE_KEY, next)
+    return next
+  },
+
+  /**
+   * Cria ou atualiza um Grupo de Perfil Comercial (com Valores e Flag da Landing Page)
    */
   async savePermissionGroup(input: {
     id?: string
@@ -291,10 +382,31 @@ export const permissionGroupService = {
     baseMonthlyPrice: number
     annualPrice: number
     setupFee: number
+    showOnLandingPage?: boolean
+    isHighlightedOnLanding?: boolean
     sortOrder?: number
   }): Promise<PermissionGroup> {
-    const payload = {
-      code: input.code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_'),
+    const normalizedCode = input.code.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_')
+    const showOnLanding = input.showOnLandingPage !== false
+    const isHighlighted = Boolean(input.isHighlightedOnLanding)
+
+    const localFlags = readLocalCache<
+      Record<string, { showOnLandingPage?: boolean; isHighlightedOnLanding?: boolean }>
+    >(LOCAL_GROUP_LANDING_FLAGS_KEY, {})
+    localFlags[normalizedCode] = {
+      showOnLandingPage: showOnLanding,
+      isHighlightedOnLanding: isHighlighted,
+    }
+    if (input.id) {
+      localFlags[input.id] = {
+        showOnLandingPage: showOnLanding,
+        isHighlightedOnLanding: isHighlighted,
+      }
+    }
+    writeLocalCache(LOCAL_GROUP_LANDING_FLAGS_KEY, localFlags)
+
+    const basePayload: Record<string, any> = {
+      code: normalizedCode,
       name: input.name.trim(),
       description: input.description.trim(),
       badge_color: input.badgeColor || 'indigo',
@@ -307,22 +419,56 @@ export const permissionGroupService = {
       is_active: true,
     }
 
+    const fullPayload = {
+      ...basePayload,
+      show_on_landing_page: showOnLanding,
+      is_highlighted_on_landing: isHighlighted,
+    }
+
     try {
-      if (input.id && !input.id.startsWith('default-')) {
+      if (input.id && !input.id.startsWith('default-') && !input.id.startsWith('custom-')) {
         const { data, error } = await supabase
           .from('permission_groups')
-          .update(payload)
+          .update(fullPayload)
           .eq('id', input.id)
           .select('*')
           .single()
-        if (!error && data) return mapGroupRow(data)
+        if (!error && data) {
+          localFlags[data.id] = {
+            showOnLandingPage: showOnLanding,
+            isHighlightedOnLanding: isHighlighted,
+          }
+          writeLocalCache(LOCAL_GROUP_LANDING_FLAGS_KEY, localFlags)
+          return mapGroupRow(data)
+        }
+        // Retry without new columns if remote DB hasn't run migration 27 yet
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from('permission_groups')
+          .update(basePayload)
+          .eq('id', input.id)
+          .select('*')
+          .single()
+        if (!fallbackErr && fallbackData) return mapGroupRow(fallbackData)
       } else {
         const { data, error } = await supabase
           .from('permission_groups')
-          .upsert(payload, { onConflict: 'code' })
+          .upsert(fullPayload, { onConflict: 'code' })
           .select('*')
           .single()
-        if (!error && data) return mapGroupRow(data)
+        if (!error && data) {
+          localFlags[data.id] = {
+            showOnLandingPage: showOnLanding,
+            isHighlightedOnLanding: isHighlighted,
+          }
+          writeLocalCache(LOCAL_GROUP_LANDING_FLAGS_KEY, localFlags)
+          return mapGroupRow(data)
+        }
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from('permission_groups')
+          .upsert(basePayload, { onConflict: 'code' })
+          .select('*')
+          .single()
+        if (!fallbackErr && fallbackData) return mapGroupRow(fallbackData)
       }
     } catch {
       // Fallback
@@ -334,18 +480,20 @@ export const permissionGroupService = {
     )
     const saved: PermissionGroup = {
       id: input.id || `custom-group-${Date.now()}`,
-      code: payload.code,
-      name: payload.name,
-      description: payload.description,
-      badgeColor: payload.badge_color,
-      enabledModules: payload.enabled_modules,
-      enabledPermissions: payload.enabled_permissions,
-      baseMonthlyPrice: payload.base_monthly_price,
-      annualPrice: payload.annual_price,
-      setupFee: payload.setup_fee,
+      code: basePayload.code,
+      name: basePayload.name,
+      description: basePayload.description,
+      badgeColor: basePayload.badge_color,
+      enabledModules: basePayload.enabled_modules,
+      enabledPermissions: basePayload.enabled_permissions,
+      baseMonthlyPrice: basePayload.base_monthly_price,
+      annualPrice: basePayload.annual_price,
+      setupFee: basePayload.setup_fee,
       isSystemDefault: false,
       isActive: true,
-      sortOrder: payload.sort_order,
+      showOnLandingPage: showOnLanding,
+      isHighlightedOnLanding: isHighlighted,
+      sortOrder: basePayload.sort_order,
     }
     const idx = current.findIndex((g) => g.id === saved.id || g.code === saved.code)
     const next = idx >= 0 ? current.map((g, i) => (i === idx ? saved : g)) : [...current, saved]

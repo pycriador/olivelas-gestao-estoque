@@ -190,6 +190,8 @@ export const DEFAULT_PERMISSION_GROUPS: PermissionGroup[] = [
     setupFee: 0,
     isSystemDefault: false,
     isActive: true,
+    showOnLandingPage: true,
+    isHighlightedOnLanding: false,
     sortOrder: 1,
   },
   {
@@ -232,6 +234,8 @@ export const DEFAULT_PERMISSION_GROUPS: PermissionGroup[] = [
     setupFee: 150.0,
     isSystemDefault: false,
     isActive: true,
+    showOnLandingPage: true,
+    isHighlightedOnLanding: false,
     sortOrder: 2,
   },
   {
@@ -275,6 +279,8 @@ export const DEFAULT_PERMISSION_GROUPS: PermissionGroup[] = [
     setupFee: 150.0,
     isSystemDefault: false,
     isActive: true,
+    showOnLandingPage: true,
+    isHighlightedOnLanding: false,
     sortOrder: 3,
   },
   {
@@ -316,6 +322,8 @@ export const DEFAULT_PERMISSION_GROUPS: PermissionGroup[] = [
     setupFee: 250.0,
     isSystemDefault: true,
     isActive: true,
+    showOnLandingPage: true,
+    isHighlightedOnLanding: true,
     sortOrder: 4,
   },
   {
@@ -332,6 +340,8 @@ export const DEFAULT_PERMISSION_GROUPS: PermissionGroup[] = [
     setupFee: 350.0,
     isSystemDefault: false,
     isActive: true,
+    showOnLandingPage: true,
+    isHighlightedOnLanding: false,
     sortOrder: 5,
   },
 ]

@@ -30,6 +30,7 @@ import { GlobalAdminUserBillingPage } from '@/pages/admin/GlobalAdminUserBilling
 import { GlobalAdminFinanceRulesPage } from '@/pages/admin/GlobalAdminFinanceRulesPage'
 import { GlobalAdminFinancePlansPage } from '@/pages/admin/GlobalAdminFinancePlansPage'
 import { GlobalAdminFinancePaymentsPage } from '@/pages/admin/GlobalAdminFinancePaymentsPage'
+import { GlobalAdminContractsPage } from '@/pages/admin/GlobalAdminContractsPage'
 import { StoresPage } from '@/pages/StoresPage'
 import { ProductsPage } from '@/pages/ProductsPage'
 import { CategoriesPage } from '@/pages/CategoriesPage'
@@ -174,6 +175,14 @@ export function AppRoutes() {
           element={
             <ProtectedRoute requireGlobalAdmin>
               <GlobalAdminFinancePaymentsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/contracts"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminContractsPage />
             </ProtectedRoute>
           }
         />

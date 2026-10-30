@@ -28,6 +28,7 @@ import {
   UserCheck,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { InteractivePlanBuilderSection } from '@/components/commercial/InteractivePlanBuilderSection'
 
 export function LandingPage() {
   const mainFeatures = [
@@ -244,19 +245,19 @@ export function LandingPage() {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
-          <Link to="/register">
+          <a href="#personalizar-plano">
             <Button size="lg" className="h-12 px-8 text-sm sm:text-base font-semibold shadow-lg shadow-primary/25">
-              Começar Agora Gratuitamente <ArrowRight className="ml-2 h-4 w-4" />
+              Personalizar Plano & Pré-Cadastro <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </a>
+          <Link to="/register">
+            <Button variant="outline" size="lg" className="h-12 px-7 text-sm sm:text-base font-semibold">
+              Criar Conta Gratuita
             </Button>
           </Link>
           <Link to="/login">
-            <Button variant="outline" size="lg" className="h-12 px-8 text-sm sm:text-base font-semibold">
-              Acessar Painel
-            </Button>
-          </Link>
-          <Link to="/features">
             <Button variant="ghost" size="lg" className="h-12 px-6 text-sm sm:text-base font-semibold">
-              Ver Todos os Recursos
+              Acessar Painel
             </Button>
           </Link>
         </div>
@@ -471,6 +472,9 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Interactive Plan Customizer & Pre-Registration */}
+      <InteractivePlanBuilderSection id="personalizar-plano" />
 
       {/* Enterprise Architecture & Security Strip */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6">

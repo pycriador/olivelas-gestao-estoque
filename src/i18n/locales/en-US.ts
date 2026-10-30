@@ -66,6 +66,7 @@ export const enUS = {
     globalFinanceRules: 'Rules & Licenses (10 Free)',
     globalFinancePlans: 'SaaS Plans & Screens',
     globalFinancePayments: 'Payments & Invoices',
+    globalContracts: 'New Contracts',
     globalBackups: 'Multi-Store Backups',
     globalDbExplorer: 'DB Explorer',
     globalApiHbac: 'API Keys & HBAC',

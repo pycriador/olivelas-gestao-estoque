@@ -43,6 +43,7 @@ Ordem incremental observada (arquivos datados):
 24. `20261030000024_global_finance_licensing_rules.sql`
 25. `20261030000025_store_saved_views.sql`
 26. `20261030000026_employee_pin_reset_and_policy.sql`
+27. `20261030000027_landing_leads_and_contracts.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -64,7 +65,9 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | `store_custom_roles` | papéis operacionais customizados por loja (`code`, `name`, `base_role`, `permissions`, `can_approve_writeoff`, `max_writeoff_value`) |
 | `roles`, `permissions`, `role_permissions` | catálogo de permissões (seed + 24 permissões granulares adicionais na migration 23) |
 | `permission_modules` | catálogo de módulos de tela comercializáveis com preço mensal (`monthly_price`) |
-| `permission_groups` | pacotes comerciais de permissões (ex.: Catálogo WhatsApp, Controle de Estoque, ERP Completo) com preços base |
+| `permission_groups` | pacotes comerciais de permissões (ex.: Catálogo WhatsApp, Controle de Estoque, ERP Completo) com preços base e flags de vinculação na Landing Page (`show_on_landing_page`, `is_highlighted_on_landing`) |
+| `commercial_plan_proposals` | solicitações de pré-cadastro e propostas personalizadas criadas pelo visitante na Landing Page ("Novos Contratos"), com Nome (`customer_name`), E-mail (`customer_email`), Celular/WhatsApp (`customer_phone`), plano base (`plan_id`, `plan_name`, `base_plan_price`), módulos adicionais avulsos (`addon_modules`, `addons_price`), ciclo, protocolo (`protocol_code`) e status comercial (`NEW`, `CONTACTED`, `CONTRACT_GENERATED`, `SIGNED`, `ARCHIVED`) |
+| `platform_contracts` | contratos comerciais emitidos no Gerenciador de Contratos pelo Global Admin (`contract_number`, `title`, `provider_name`, `customer_name`, `product_name`, `addon_modules`, `monthly_value`, `custom_terms`, `rendered_html`, `supabase_storage_path`, `supabase_public_url`, `google_drive_file_id`, `google_drive_web_link`, `status`) |
 | `user_permission_profiles` | perfil efetivo de permissões e assinatura por usuário (`enabled_modules`, `enforce_over_store_admin`, `agreed_monthly_value`, `payment_status`, `next_due_date`) |
 | `subscription_payments` | livro-razão de faturas e histórico de pagamentos SaaS por usuário (`reference_month`, `amount`, `paid_amount`, `payment_method`, `status`, `due_date`, `paid_at`) |
 | `global_billing_rules` | regras globais de licenciamento comercial SaaS (franquia padrão `default_free_employees_per_store = 10`, preço por funcionário excedente `extra_employee_price = 19.90`, carência e cobrança de filiais) |
@@ -115,6 +118,7 @@ Usadas pelo frontend (`supabase.rpc`):
 | `execute_stock_transfer_to_branch` | `inventoryService.executeStockTransferToBranch` (transfere produtos e lotes do estoque para uma filial sem venda, sincronizando catálogo, imagens e saldos no destino) |
 | `upsert_store_employee` | `userService.upsertStoreEmployee` (cria/atualiza funcionário na loja com papel, matrícula, credencial de aprovador de baixa, política de pré-requisitos do PIN, flag de reset no próximo login e permissões granulares sem deslogar o admin atual) |
 | `complete_employee_pin_reset` | `userService.completeEmployeePinReset` (conclui o reset obrigatório de PIN pelo próprio funcionário no login, validando contra `pin_requirements` e limpando `require_pin_reset`) |
+| `submit_commercial_proposal` | `contractService.submitProposal` (registra proposta comercial personalizada e pré-cadastro a partir da Landing Page `/` ou `/pricing` para `anon` e `authenticated`, gerando protocolo `PROP-YYYYMMDD-XXXXXX`) |
 | `set_batch_disposition` | `inventoryService.setBatchDisposition` |
 | `clear_batch_disposition` | `inventoryService.clearBatchDisposition` |
 | `generate_stock_alerts` | `notificationService.generateStockAlerts` |

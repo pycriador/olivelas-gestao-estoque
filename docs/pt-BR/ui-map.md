@@ -64,6 +64,7 @@ O menu lateral autenticado organiza todas as páginas e telas dedicadas em seç�
    - `/global-admin/finance/rules` — Regras & Licenças (10 Grátis)
    - `/global-admin/finance/plans` — Planos & Telas SaaS
    - `/global-admin/finance/payments` — Pagamentos & Faturas
+   - `/global-admin/contracts` — Novos Contratos & Gerenciador de Contratos (HTML, DOCX, PDF, Supabase & Google Drive)
    - `/global-admin?tab=backups` — Backups Multi-Loja
    - `/global-admin?tab=db-explorer` — DB Explorer (Banco)
    - `/global-admin?tab=api-hbac` — Chaves API & HBAC
@@ -154,7 +155,8 @@ Estrutura visual e responsividade:
   - `/global-admin/stores/:storeId/edit` (edição da loja, filiação Matriz/Filial e administradores `STORE_ADMIN`)
   - `/global-admin/stores/:storeId/employees/:employeeId`, `/team/:employeeId` e `/team/stores/:storeId/employees/:employeeId` (cadastro/edição de funcionário com resolução automática da loja pelo ID do vínculo ou usuário, **Configuração de Reset de PIN no Próximo Login** (`requirePinReset`), **Política de Pré-requisitos do PIN** (`pinRequirements`: números `0-9`, letras maiúsculas `A-Z`, minúsculas `a-z`, símbolos `@#$%&*!?`, bloqueio de sequências/repetições `1234`/`0000`, tamanho mínimo/máximo e presets rápidos), gerador de PIN compatível com checklist interativo em tempo real e matriz de 47 permissões granulares)
   - `/global-admin/users/:userId/edit`, `/global-admin/users/:userId/permissions` e `/global-admin/users/:userId/billing`
-  - `/global-admin/finance/rules` (franquia de 10 funcionários grátis por loja e valor por licença extra), `/global-admin/finance/plans` (planos SaaS com grafo de dependências) e `/global-admin/finance/payments` (histórico e lançamento de pagamentos).
+  - `/global-admin/finance/rules` (franquia de 10 funcionários grátis por loja e valor por licença extra), `/global-admin/finance/plans` (planos SaaS com grafo de dependências e flags `showOnLandingPage` / `isHighlightedOnLanding` para vincular na Landing Page) e `/global-admin/finance/payments` (histórico e lançamento de pagamentos)
+  - `/global-admin/contracts` (**Novos Contratos & Gerenciador de Contratos**: visualização das solicitações de pré-cadastro feitas no configurador interativo da Landing Page com contato rápido via WhatsApp/E-mail, conversão em 1 clique para o Gerenciador de Contratos com variáveis dinâmicas, exportação para assinatura em **HTML**, **DOCX** e **PDF**, armazenamento no **Supabase** e sincronização com o **Google Drive** do Global Admin).
 
 ## PDV (`SalesPage`)
 

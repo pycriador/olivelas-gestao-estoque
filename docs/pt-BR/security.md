@@ -20,6 +20,8 @@ source:
   - supabase/migrations/20261030000023_staff_roles_approvers_and_branches.sql
   - supabase/migrations/20261030000024_global_finance_licensing_rules.sql
   - supabase/migrations/20261030000025_store_saved_views.sql
+  - supabase/migrations/20261030000026_employee_pin_reset_and_policy.sql
+  - supabase/migrations/20261030000027_landing_leads_and_contracts.sql
   - src/routes/ProtectedRoute.tsx
   - src/routes/PermissionGate.tsx
   - src/hooks/usePermissions.ts
@@ -70,12 +72,15 @@ Duas correções de fechamento da auditoria de 2026-09-27:
 
 Qualquer “esconder botão” ou bloqueio de rota no cliente é camada de UX/governança visual. Operações indevidas são barradas no PostgreSQL por RLS e RPCs.
 
-## Padrões RLS (migrations 02, 19, 20, 22, 23, 24 e 25)
+## Padrões RLS (migrations 02, 19, 20, 22, 23, 24, 25, 26 e 27)
 
 - **Perfil:** usuário vê/edita o próprio `profiles` (policies em 13 para admin global).
 - **Lojas:** membro ou catálogo público ativo; insert autenticado / global admin; update admin da loja ou global; delete (soft) global admin.
 - **Cadastros com `store_id`:** `has_store_access` no SELECT; papéis staff no write (varia: produtos, estoque, compras, pedidos).
 - **Visões Salvas por Loja/Filial (`store_saved_views`, migration 25):** `has_store_access(store_id) OR is_global_admin()` em `SELECT`, `INSERT`, `UPDATE` e `DELETE`, garantindo que cada loja ou filial acesse e gerencie exclusivamente suas próprias visões de filtros.
+- **Reset Obrigatório de PIN e Requisitos de Complexidade (`store_users`, migration 26):** RPC `public.complete_employee_pin_reset` (`SECURITY DEFINER`) permite que o próprio membro autenticado (`user_id = auth.uid()`), `STORE_ADMIN` ou `is_global_admin()` atualize o `access_pin` e limpe a flag `require_pin_reset = false`.
+- **Propostas Comerciais da Landing Page (`commercial_plan_proposals`, migration 27):** `INSERT` público (`anon` e `authenticated`) e RPC `public.submit_commercial_proposal` permitem o envio de pré-cadastros comerciais a partir da Landing Page (`/` e `/pricing`); `SELECT`, `UPDATE` e `DELETE` são restritos a `is_global_admin()` (com `SELECT` adicional para o próprio `user_id` quando autenticado).
+- **Contratos da Plataforma (`platform_contracts`, migration 27):** `SELECT`, `INSERT`, `UPDATE` e `DELETE` restritos a `is_global_admin()`, garantindo que apenas o Administrador Global gerencie minutas, termos personalizados e arquivos de contrato exportados.
 - **Produtos SELECT:** membro **ou** produto publicado no catálogo (`is_published_catalog` e loja ativa — ver SQL exato).
 - **Imagens de produto SELECT:** policy `"Product images select: all"` (leitura ampla no SQL).
 - **Pedidos INSERT:** staff **ou** checkout público (condição na policy; o catálogo atual usa WhatsApp).
