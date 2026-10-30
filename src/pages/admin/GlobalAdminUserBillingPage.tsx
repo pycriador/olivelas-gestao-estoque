@@ -235,7 +235,7 @@ export const GlobalAdminUserBillingPage: React.FC = () => {
               <span className="font-mono text-xs font-semibold text-primary">
                 /global-admin/users/{userId}/billing
               </span>
-              <Badge variant="warning">STORE_ADMIN Titular</Badge>
+              <Badge variant="warning">Admin Loja Titular</Badge>
               <span className="text-xs font-semibold text-foreground">
                 {user?.fullName} ({user?.email})
               </span>
@@ -512,7 +512,7 @@ export const GlobalAdminUserBillingPage: React.FC = () => {
 
               {payments.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                  Nenhuma fatura ou pagamento registrado para este STORE_ADMIN ainda.
+                  Nenhuma fatura ou pagamento registrado para este Admin Loja ainda.
                 </div>
               ) : (
                 <div className="overflow-x-auto">

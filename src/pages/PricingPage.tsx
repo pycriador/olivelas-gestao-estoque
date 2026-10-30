@@ -36,7 +36,7 @@ export function PricingPage() {
           Planos modulares sob medida para sua operação
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground">
-          Monte pacotes de funcionalidades de acordo com a necessidade de cada cliente. Funcionários operacionais da loja não pagam plano individual — apenas o titular Store Admin possui assinatura.
+          Monte pacotes de funcionalidades de acordo com a necessidade de cada cliente. Funcionários operacionais da loja não pagam plano individual — apenas o titular Admin Loja possui assinatura.
         </p>
       </div>
 
@@ -69,7 +69,7 @@ export function PricingPage() {
                 <span className="text-4xl font-extrabold text-foreground">
                   R$ {Number(plan.baseMonthlyPrice || 0).toFixed(2)}
                 </span>
-                <span className="text-xs text-muted-foreground ml-1">/mês por Store Admin</span>
+                <span className="text-xs text-muted-foreground ml-1">/mês por Admin Loja</span>
                 <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">
                   ou R$ {Number(plan.annualPrice || 0).toFixed(2)}/ano no plano anual
                 </div>
@@ -125,7 +125,7 @@ export function PricingPage() {
             <span>Módulos Avulsos & Grafo de Telas</span>
           </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            O Global Admin pode personalizar quais módulos cada Store Admin contrata, visualizando em tempo real a relação de dependência entre telas e o valor mensal resultante.
+            O Global Admin pode personalizar quais módulos cada Admin Loja contrata, visualizando em tempo real a relação de dependência entre telas e o valor mensal resultante.
           </p>
         </div>
 

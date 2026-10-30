@@ -106,7 +106,7 @@ export function LandingPage() {
       icon: CreditCard,
       title: 'Planos SaaS, Grafo de Telas & Financeiro',
       description:
-        'Grupos de permissões com valores comerciais, grafo que avisa impactos ao desmarcar telas (mesmo para Store Admin), regras de licenças e livro-razão de faturas.',
+        'Grupos de permissões com valores comerciais, grafo que avisa impactos ao desmarcar telas (mesmo para Admin Loja), regras de licenças e livro-razão de faturas.',
       badge: 'Monetização SaaS',
     },
     {
@@ -215,11 +215,11 @@ export function LandingPage() {
     },
     {
       q: 'Como funcionam as licenças de funcionários e o papel de Aprovador de Baixa?',
-      a: 'Cada loja possui 10 funcionários grátis no plano do Store Admin (os funcionários operacionais não pagam plano individual). Caso a loja ultrapasse a franquia, o valor por licença adicional é gerenciado na área Financeiro do Global Admin. Além disso, somente usuários com credencial de Aprovador de Baixa de Estoque podem autorizar baixas por perda ou avaria.',
+      a: 'Cada loja possui 10 funcionários grátis no plano do Admin Loja (os funcionários operacionais não pagam plano individual). Caso a loja ultrapasse a franquia, o valor por licença adicional é gerenciado na área Financeiro do Global Admin. Além disso, somente usuários com credencial de Aprovador de Baixa de Estoque podem autorizar baixas por perda ou avaria.',
     },
     {
       q: 'O que acontece quando o Global Admin desmarca uma tela no grupo de permissões?',
-      a: 'A plataforma possui um motor de grafo de dependências entre telas. Ao desmarcar um módulo (por exemplo, Vendas PDV, Estoque ou Compras) para um usuário — mesmo que ele seja Store Admin —, o sistema informa imediatamente quais funcionalidades dependentes em outras telas serão impactadas.',
+      a: 'A plataforma possui um motor de grafo de dependências entre telas. Ao desmarcar um módulo (por exemplo, Vendas PDV, Estoque ou Compras) para um usuário — mesmo que ele seja Admin Loja —, o sistema informa imediatamente quais funcionalidades dependentes em outras telas serão impactadas.',
     },
     {
       q: 'Posso integrar o sistema com ERPs externos ou Agentes de IA?',

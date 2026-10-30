@@ -43,6 +43,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { formatRoleLabel } from '@/constants/granularPermissions'
 import { useTenant } from '@/hooks/useTenant'
 import { usePermissions } from '@/hooks/usePermissions'
 import { useI18n } from '@/hooks/useI18n'
@@ -288,7 +289,7 @@ export function AppLayout() {
                 </div>
                 <div className="text-[10px] text-muted-foreground flex items-center gap-1">
                   <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                    {role}
+                    {formatRoleLabel(role)}
                   </Badge>
                 </div>
               </div>
@@ -317,7 +318,7 @@ export function AppLayout() {
                     }`}
                   >
                     <span className="truncate font-semibold">{s.storeName}</span>
-                    <span className="text-[10px] opacity-75 shrink-0 ml-1">{s.role}</span>
+                    <span className="text-[10px] opacity-75 shrink-0 ml-1">{formatRoleLabel(s.role)}</span>
                   </button>
                 ))}
               </div>

@@ -316,7 +316,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
     setAddingAdmin(true)
     try {
       await userService.transferStoreOwnership(storeId, selectedAdminUserId)
-      toast.success('Usuário definido como Administrador (STORE_ADMIN) desta loja!')
+      toast.success('Usuário definido como Admin Loja desta loja!')
       setSelectedAdminUserId('')
       await loadData()
     } catch (err: any) {
@@ -328,7 +328,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
 
   const handleCreateNewStoreAdmin = async () => {
     if (!storeId || !newAdminEmail.trim() || !newAdminName.trim()) {
-      toast.error('Informe nome e e-mail do novo Administrador da Loja.')
+      toast.error('Informe nome e e-mail do novo Admin Loja.')
       return
     }
     setCreatingNewAdmin(true)
@@ -341,13 +341,13 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
         canApproveWriteoff: true,
         isActive: true,
       })
-      toast.success(`Administrador ${newAdminName} criado e vinculado à loja!`)
+      toast.success(`Admin Loja ${newAdminName} criado e vinculado à loja!`)
       setNewAdminName('')
       setNewAdminEmail('')
       setNewAdminPassword('')
       await loadData()
     } catch (err: any) {
-      toast.error(err?.message || 'Erro ao criar Administrador da Loja.')
+      toast.error(err?.message || 'Erro ao criar Admin Loja.')
     } finally {
       setCreatingNewAdmin(false)
     }
@@ -429,7 +429,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
           <p className="text-xs text-muted-foreground">
             {isCreateMode
               ? 'Configure os dados cadastrais, filiação (Matriz ou Filial) e cota de licenças.'
-              : `ID da Loja: ${storeId} • Gerencie filiação (Matriz/Filial), usuários STORE_ADMIN e funcionários.`}
+              : `ID da Loja: ${storeId} • Gerencie filiação (Matriz/Filial), usuários Admin Loja e funcionários.`}
           </p>
         </div>
 
@@ -496,7 +496,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                   <p className="mt-0.5 text-xs text-muted-foreground">
                     {isBranch && parentStoreId
                       ? `Filial vinculada à Matriz: ${allStores.find((s) => s.id === parentStoreId)?.name || parentStoreId}`
-                      : `Matriz com ${childBranches.length} filial(is) vinculada(s) • ${storeAdmins.length} STORE_ADMIN • ${activeEmployeesCount}/${freeQuota} funcionários na cota gratuita`}
+                      : `Matriz com ${childBranches.length} filial(is) vinculada(s) • ${storeAdmins.length} Admin Loja • ${activeEmployeesCount}/${freeQuota} funcionários na cota gratuita`}
                   </p>
                 </div>
               </div>
@@ -968,26 +968,26 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
             </Card>
           )}
 
-          {/* Gestão de Usuários Administradores da Loja (STORE_ADMIN) */}
+          {/* Gestão de Usuários Administradores da Loja (Admin Loja) */}
           {!isCreateMode && (
             <Card className="space-y-5 p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
                 <div>
                   <h2 className="flex items-center gap-2 text-base font-bold text-foreground">
                     <Crown className="h-5 w-5 text-amber-500" />
-                    4. Usuários Administradores da Loja (STORE_ADMIN)
+                    4. Usuários Administradores da Loja (Admin Loja)
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    Somente o <strong>STORE_ADMIN</strong> possui plano de assinatura comercial e aparece na aba de Usuários Pagantes do Global Admin.
+                    Somente o <strong>Admin Loja</strong> possui plano de assinatura comercial e aparece na aba de Usuários Pagantes do Global Admin.
                   </p>
                 </div>
               </div>
 
-              {/* Lista de STORE_ADMIN atuais */}
+              {/* Lista de Admin Loja atuais */}
               <div className="divide-y divide-border rounded-xl border border-border">
                 {storeAdmins.length === 0 ? (
                   <div className="p-6 text-center text-sm text-muted-foreground">
-                    Nenhum STORE_ADMIN vinculado a esta loja. Adicione ou promova um abaixo.
+                    Nenhum Admin Loja vinculado a esta loja. Adicione ou promova um abaixo.
                   </div>
                 ) : (
                   storeAdmins.map((admin) => (
@@ -1004,7 +1004,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                             <span className="font-semibold text-foreground">
                               {admin.fullName || 'Sem nome'}
                             </span>
-                            <Badge variant="warning">STORE_ADMIN (Titular do Plano)</Badge>
+                            <Badge variant="warning">Admin Loja (Titular do Plano)</Badge>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             {admin.email} • ID: {admin.userId}
@@ -1049,11 +1049,11 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Vincular usuário existente ou criar novo STORE_ADMIN */}
+              {/* Vincular usuário existente ou criar novo Admin Loja */}
               <div className="grid grid-cols-1 gap-4 pt-2 lg:grid-cols-2">
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground">
-                    Vincular Conta Existente como STORE_ADMIN
+                    Vincular Conta Existente como Admin Loja
                   </h3>
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
@@ -1083,7 +1083,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
 
                 <div className="rounded-xl border border-border bg-muted/30 p-4">
                   <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-foreground">
-                    Criar Novo Usuário STORE_ADMIN para esta Loja
+                    Criar Novo Usuário Admin Loja para esta Loja
                   </h3>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <Input
@@ -1238,7 +1238,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                                   },
                                   {
                                     key: 'promote-admin',
-                                    label: 'Promover a STORE_ADMIN',
+                                    label: 'Promover a Admin Loja',
                                     icon: <Crown className="h-4 w-4" />,
                                     onSelect: async () => {
                                       await userService.transferStoreOwnership(
@@ -1246,7 +1246,7 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                                         emp.userId
                                       )
                                       toast.success(
-                                        `${emp.fullName || emp.email} promovido a STORE_ADMIN!`
+                                        `${emp.fullName || emp.email} promovido a Admin Loja!`
                                       )
                                       loadData()
                                     },

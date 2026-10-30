@@ -125,7 +125,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
   return (
     <div className="h-full flex-1 min-h-0 flex flex-col space-y-2.5 animate-in fade-in duration-150">
       <PageHeader
-        title="Financeiro: Controle de Pagamentos & Assinaturas (STORE_ADMIN)"
+        title="Financeiro: Controle de Pagamentos & Assinaturas (Admin Loja)"
         badge={
           <Badge variant="success">
             MRR Total: {formatCurrency(mrrBasePlans + mrrExtraEmployeeSeats)}
@@ -139,7 +139,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
               setSearch(e.target.value)
               setPage(1)
             }}
-            placeholder="Buscar STORE_ADMIN ou loja..."
+            placeholder="Buscar Admin Loja ou loja..."
             className="h-8 text-xs w-56"
             icon={<Search className="h-3.5 w-3.5" />}
           />
@@ -169,7 +169,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
             /global-admin/finance/payments
           </span>
           <Badge variant="warning" className="text-[10px]">
-            Apenas Titulares STORE_ADMIN
+            Apenas Titulares Admin Loja
           </Badge>
           <span className="hidden xl:inline text-[11px] text-muted-foreground">
             — Funcionários operacionais não pagam plano individual (10 grátis/loja).
@@ -210,7 +210,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
       {/* Compact 1-Line KPI Pills (matching /expiration) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 flex-shrink-0">
         <div className="px-3 py-1.5 rounded-lg border bg-card border-border flex items-center justify-between">
-          <span className="text-xs font-medium text-muted-foreground">Assinantes (STORE_ADMIN)</span>
+          <span className="text-xs font-medium text-muted-foreground">Assinantes (Admin Loja)</span>
           <span className="text-sm font-bold font-mono text-foreground">{storeAdminUsers.length}</span>
         </div>
 
@@ -236,7 +236,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Tabela de Assinantes STORE_ADMIN (Viewport-fitted with pinned bottom Pagination) */}
+      {/* Tabela de Assinantes Admin Loja (Viewport-fitted with pinned bottom Pagination) */}
       <Card className="flex-1 min-h-0 flex flex-col border border-border shadow-sm bg-card overflow-hidden">
         <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
           {loading ? (
@@ -248,7 +248,7 @@ export const GlobalAdminFinancePaymentsPage: React.FC = () => {
               <table className="w-full text-left text-sm border-collapse">
                 <thead className="sticky top-0 z-10 bg-muted/90 backdrop-blur-xs border-b border-border text-[11px] uppercase text-muted-foreground tracking-wider">
                   <tr>
-                    <th className="py-2.5 px-4 font-semibold">Titular (STORE_ADMIN)</th>
+                    <th className="py-2.5 px-4 font-semibold">Titular (Admin Loja)</th>
                     <th className="px-3 py-2.5 font-semibold">Lojas & Cota de Funcionários</th>
                     <th className="px-3 py-2.5 font-semibold">Plano de Telas</th>
                     <th className="px-3 py-2.5 font-semibold">Mensalidade + Licenças</th>

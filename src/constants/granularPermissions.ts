@@ -426,8 +426,8 @@ export const ROLE_METADATA: Record<
     defaultCanApproveWriteoff: true,
   },
   STORE_ADMIN: {
-    label: 'Administrador da Loja',
-    shortLabel: 'Admin da Loja',
+    label: 'Admin Loja',
+    shortLabel: 'Admin Loja',
     variant: 'default',
     badgeClass: 'bg-primary/15 text-primary border-primary/30',
     description: 'Gestão completa da loja, filiais, equipe, aprovadores, estoque e vendas.',
@@ -623,3 +623,12 @@ export function isMemberStockApprover(member: StoreMember): boolean {
   })
   return resolved.canApproveWriteoff
 }
+
+export function formatRoleLabel(role?: string | null): string {
+  if (!role) return 'Visualizador'
+  if (role === 'STORE_ADMIN') return 'Admin Loja'
+  if (role === 'GLOBAL_ADMIN') return 'Global Admin'
+  const meta = ROLE_METADATA[role as UserRole]
+  return meta?.shortLabel || meta?.label || role
+}
+

@@ -292,7 +292,7 @@ export const GlobalAdminUserPermissionsPage: React.FC = () => {
               <span className="font-mono text-xs font-semibold text-primary">
                 /global-admin/users/{userId}/permissions
               </span>
-              <Badge variant="warning">STORE_ADMIN</Badge>
+              <Badge variant="warning">Admin Loja</Badge>
               <span className="text-xs font-semibold text-foreground">
                 {user?.fullName} ({user?.email})
               </span>
@@ -434,7 +434,7 @@ export const GlobalAdminUserPermissionsPage: React.FC = () => {
                   ) : (
                     <Unlock className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
-                  Restringir mesmo sendo STORE_ADMIN
+                  Restringir mesmo sendo Admin Loja
                 </label>
               </div>
 

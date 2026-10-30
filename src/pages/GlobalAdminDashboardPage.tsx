@@ -352,7 +352,7 @@ export function GlobalAdminDashboardPage() {
       case 'users':
         return {
           title: `Usuários Planos (${totalUsers})`,
-          subtitle: 'Titulares de assinatura comercial (STORE_ADMIN) e Global Admins',
+          subtitle: 'Titulares de assinatura comercial (Admin Loja) e Global Admins',
           icon: Users,
         }
       case 'finance':
@@ -426,7 +426,7 @@ export function GlobalAdminDashboardPage() {
             activeTab === 'stores'
               ? 'Buscar matriz, filial, slug, CNPJ...'
               : activeTab === 'users'
-                ? 'Buscar STORE_ADMIN, email...'
+                ? 'Buscar Admin Loja, email...'
                 : activeTab === 'finance'
                   ? 'Buscar loja ou regra financeira...'
                   : 'Buscar registro...'
@@ -498,9 +498,9 @@ export function GlobalAdminDashboardPage() {
               aria-label="Filtrar tipo de usuário"
               className="h-8 px-2.5 rounded-lg border border-input bg-background text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
             >
-              <option value="ALL">Todos (STORE_ADMIN & Global Admin)</option>
+              <option value="ALL">Todos (Admin Loja & Global Admin)</option>
               <option value="GLOBAL_ADMIN">Apenas Global Admins</option>
-              <option value="STANDARD">Apenas Administradores de Loja (STORE_ADMIN)</option>
+              <option value="STANDARD">Apenas Admin Loja</option>
             </select>
           )}
 
@@ -529,7 +529,7 @@ export function GlobalAdminDashboardPage() {
               },
               {
                 key: 'new-user',
-                label: 'Cadastrar Novo Usuário (STORE_ADMIN)',
+                label: 'Cadastrar Novo Usuário (Admin Loja)',
                 icon: <UserPlus className="h-3.5 w-3.5 text-blue-500" />,
                 onSelect: () => navigate('/global-admin/users/new'),
               },
@@ -605,7 +605,7 @@ export function GlobalAdminDashboardPage() {
             <div className="flex items-center gap-2 min-w-0">
               <Users className="h-3.5 w-3.5 text-blue-500 shrink-0" />
               <span className="text-[11px] font-medium text-muted-foreground truncate">
-                Titulares STORE_ADMIN ({billingRules?.defaultFreeEmployeesPerStore ?? 10} grátis/loja)
+                Titulares Admin Loja ({billingRules?.defaultFreeEmployeesPerStore ?? 10} grátis/loja)
               </span>
             </div>
             <span className="text-sm font-bold text-foreground font-mono ml-2">
@@ -662,7 +662,7 @@ export function GlobalAdminDashboardPage() {
                   </span>
                 </div>
                 <p className="text-[10px] text-muted-foreground truncate">
-                  Catálogo de planos para STORE_ADMIN e preços de módulos
+                  Catálogo de planos para Admin Loja e preços de módulos
                 </p>
               </div>
               <Button
@@ -684,7 +684,7 @@ export function GlobalAdminDashboardPage() {
                   </span>
                 </div>
                 <p className="text-[10px] text-muted-foreground truncate">
-                  Faturas, vencimentos e histórico por STORE_ADMIN
+                  Faturas, vencimentos e histórico por Admin Loja
                 </p>
               </div>
               <Button
@@ -918,7 +918,7 @@ export function GlobalAdminDashboardPage() {
                           onSort={toggleSort}
                         />
                         <th className="py-2.5 px-4">Filiação & Código</th>
-                        <th className="py-2.5 px-4">Usuários Admin (STORE_ADMIN)</th>
+                        <th className="py-2.5 px-4">Usuários Admin (Admin Loja)</th>
                         <th className="py-2.5 px-4 text-center">Licenças Equipe</th>
                         <SortableHeader
                           column="is_active"
@@ -1054,7 +1054,7 @@ export function GlobalAdminDashboardPage() {
                                   onClick={() => navigate(`/global-admin/stores/${st.id}/edit`)}
                                   className="text-[11px] text-amber-600 dark:text-amber-400 hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
                                 >
-                                  <UserPlus className="h-3 w-3" /> Vincular STORE_ADMIN
+                                  <UserPlus className="h-3 w-3" /> Vincular Admin Loja
                                 </button>
                               ) : (
                                 <div className="flex flex-wrap gap-1 max-w-xs">
@@ -1153,7 +1153,7 @@ export function GlobalAdminDashboardPage() {
                                   },
                                   {
                                     key: 'transfer',
-                                    label: 'Transferir Propriedade (STORE_ADMIN)',
+                                    label: 'Transferir Propriedade (Admin Loja)',
                                     icon: (
                                       <ArrowRightLeft className="h-3.5 w-3.5 text-amber-500" />
                                     ),
@@ -1196,7 +1196,7 @@ export function GlobalAdminDashboardPage() {
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Shield className="h-3.5 w-3.5 text-primary shrink-0" />
                     <span>
-                      Exibindo apenas <b className="text-foreground">Administradores de Loja (STORE_ADMIN)</b> e{' '}
+                      Exibindo apenas <b className="text-foreground">Administradores de Loja (Admin Loja)</b> e{' '}
                       <b className="text-foreground">Global Admins</b> que possuem plano comercial. Funcionários operacionais da loja não pagam plano individual ({billingRules?.defaultFreeEmployeesPerStore ?? 10} grátis/loja) e são gerenciados dentro de cada loja.
                     </span>
                   </div>
@@ -1243,9 +1243,9 @@ export function GlobalAdminDashboardPage() {
                   <div className="flex-1 flex items-center justify-center p-8">
                     <EmptyState
                       icon={<Users className="h-10 w-10 text-primary" />}
-                      title="Nenhum Administrador de Loja encontrado"
-                      description="Cadastre um novo STORE_ADMIN titular ou ajuste os filtros de busca."
-                      actionLabel="Novo Usuário (STORE_ADMIN)"
+                      title="Nenhum Admin Loja encontrado"
+                      description="Cadastre um novo Admin Loja titular ou ajuste os filtros de busca."
+                      actionLabel="Novo Usuário (Admin Loja)"
                       onAction={() => navigate('/global-admin/users/new')}
                     />
                   </div>
@@ -1256,7 +1256,7 @@ export function GlobalAdminDashboardPage() {
                         <tr>
                           <SortableHeader
                             column="full_name"
-                            label="Titular (STORE_ADMIN / Global)"
+                            label="Titular (Admin Loja / Global)"
                             currentSortBy={sortBy}
                             currentSortOrder={sortOrder}
                             onSort={toggleSort}
@@ -1379,7 +1379,7 @@ export function GlobalAdminDashboardPage() {
                                     variant="outline"
                                     className="text-[10px] px-2 py-0.5 border-primary/30 text-primary bg-primary/5"
                                   >
-                                    STORE_ADMIN
+                                    Admin Loja
                                   </Badge>
                                 )}
                               </td>
@@ -1466,7 +1466,7 @@ export function GlobalAdminDashboardPage() {
                                     </div>
                                     {hasStoreAdminStore && prof.enforceOverStoreAdmin && (
                                       <div className="flex items-center gap-1 text-[10px] text-amber-600 dark:text-amber-400 font-medium">
-                                        <Lock className="h-2.5 w-2.5 shrink-0" /> Limita STORE_ADMIN
+                                        <Lock className="h-2.5 w-2.5 shrink-0" /> Limita Admin Loja
                                       </div>
                                     )}
                                   </div>
@@ -1598,7 +1598,7 @@ export function GlobalAdminDashboardPage() {
           setSelectedNewOwnerId('')
         }}
         title="Transferir Propriedade da Loja"
-        description={`Selecione o usuário da plataforma que se tornará o Administrador Principal (STORE_ADMIN) da loja "${transferModalStore?.name}".`}
+        description={`Selecione o usuário da plataforma que se tornará o Administrador Principal (Admin Loja) da loja "${transferModalStore?.name}".`}
         maxWidth="md"
       >
         <div className="space-y-4 pt-1">
@@ -1609,7 +1609,7 @@ export function GlobalAdminDashboardPage() {
 
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-foreground">
-              Novo Proprietário da Loja (STORE_ADMIN) *
+              Novo Proprietário da Loja (Admin Loja) *
             </label>
             <select
               value={selectedNewOwnerId}

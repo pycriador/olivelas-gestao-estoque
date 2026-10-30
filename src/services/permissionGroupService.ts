@@ -38,7 +38,7 @@ const DEFAULT_BILLING_RULES: PlatformBillingRules = {
   pixKey: 'financeiro@olivelas.com.br',
   billingSupportWhatsapp: '11999999999',
   notes:
-    'Cada loja possui direito a 10 funcionários gratuitos. Licenças adicionais de funcionários ativos são cobradas mensalmente na fatura do Store Admin.',
+    'Cada loja possui direito a 10 funcionários gratuitos. Licenças adicionais de funcionários ativos são cobradas mensalmente na fatura do Admin Loja.',
   storeOverrides: {},
   updatedAt: new Date().toISOString(),
 }

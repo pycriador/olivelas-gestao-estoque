@@ -297,7 +297,7 @@ export const GlobalAdminFinanceRulesPage: React.FC = () => {
                 </span>
               </div>
               <div className="mt-1 text-[11px] text-muted-foreground">
-                Cobrado na fatura do STORE_ADMIN titular
+                Cobrado na fatura do Admin Loja titular
               </div>
             </Card>
 
@@ -435,7 +435,7 @@ export const GlobalAdminFinanceRulesPage: React.FC = () => {
                     }
                     className="h-4 w-4 rounded border-border text-primary"
                   />
-                  Contabilizar também usuários STORE_ADMIN dentro da cota de 10 funcionários
+                  Contabilizar também usuários Admin Loja dentro da cota de 10 funcionários
                 </label>
               </div>
             </form>
@@ -460,7 +460,7 @@ export const GlobalAdminFinanceRulesPage: React.FC = () => {
                 <thead className="border-b border-border text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="py-3 pr-4">Loja (Matriz / Filial)</th>
-                    <th className="px-3 py-3">Titular (STORE_ADMIN)</th>
+                    <th className="px-3 py-3">Titular (Admin Loja)</th>
                     <th className="px-3 py-3">Funcionários Ativos</th>
                     <th className="px-3 py-3">Cota Gratuita</th>
                     <th className="px-3 py-3">Licenças Extras</th>
@@ -529,7 +529,7 @@ export const GlobalAdminFinanceRulesPage: React.FC = () => {
                             </div>
                           ) : (
                             <span className="text-xs text-muted-foreground">
-                              Sem STORE_ADMIN
+                              Sem Admin Loja
                             </span>
                           )}
                         </td>
@@ -653,7 +653,7 @@ export const GlobalAdminFinanceRulesPage: React.FC = () => {
                                   ? [
                                       {
                                         key: 'open-admin-billing',
-                                        label: 'Faturas do STORE_ADMIN Titular',
+                                        label: 'Faturas do Admin Loja Titular',
                                         icon: <CreditCard className="h-4 w-4" />,
                                         onSelect: () =>
                                           navigate(

@@ -98,7 +98,7 @@ export const GlobalAdminUserEditPage: React.FC = () => {
           storeId: initialStoreId || undefined,
           role: 'STORE_ADMIN',
         })
-        toast.success(`Usuário STORE_ADMIN "${created.fullName || created.email}" criado com sucesso!`)
+        toast.success(`Usuário Admin Loja "${created.fullName || created.email}" criado com sucesso!`)
         navigate(`/global-admin/users/${created.id}/edit`)
       } else if (userId) {
         await userService.updateProfile(userId, {
@@ -121,7 +121,7 @@ export const GlobalAdminUserEditPage: React.FC = () => {
     setLinkingStore(true)
     try {
       await userService.transferStoreOwnership(storeToLinkId, userId)
-      toast.success('Usuário vinculado como STORE_ADMIN na loja selecionada!')
+      toast.success('Usuário vinculado como Admin Loja na loja selecionada!')
       setStoreToLinkId('')
       await loadData()
     } catch (err: any) {
@@ -146,12 +146,12 @@ export const GlobalAdminUserEditPage: React.FC = () => {
       <PageHeader
         title={
           isCreateMode
-            ? 'Novo Usuário Admin (STORE_ADMIN)'
+            ? 'Novo Usuário Admin (Admin Loja)'
             : `Conta: ${fullName || email}`
         }
         badge={
           <Badge variant={isGlobalAdmin ? 'default' : 'warning'}>
-            {isGlobalAdmin ? 'GLOBAL_ADMIN' : 'STORE_ADMIN'}
+            {isGlobalAdmin ? 'Global Admin' : 'Admin Loja'}
           </Badge>
         }
       />
@@ -181,7 +181,7 @@ export const GlobalAdminUserEditPage: React.FC = () => {
               )}
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Somente titulares de lojas (STORE_ADMIN) e Global Admins ficam listados em Usuários da Plataforma. Funcionários operacionais são gerenciados dentro de cada loja.
+              Somente titulares de lojas (Admin Loja) e Global Admins ficam listados em Usuários da Plataforma. Funcionários operacionais são gerenciados dentro de cada loja.
             </p>
           </div>
         </div>
@@ -313,7 +313,7 @@ export const GlobalAdminUserEditPage: React.FC = () => {
               {isCreateMode && (
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-foreground">
-                    Vincular Inicialmente como STORE_ADMIN da Loja (Opcional)
+                    Vincular Inicialmente como Admin Loja da Loja (Opcional)
                   </label>
                   <select
                     value={initialStoreId}
@@ -387,7 +387,7 @@ export const GlobalAdminUserEditPage: React.FC = () => {
                             <span className="text-xs font-bold text-foreground">
                               {st.storeName}
                             </span>
-                            <Badge variant="warning">{st.role}</Badge>
+                            <Badge variant="warning">{st.role === 'STORE_ADMIN' ? 'Admin Loja' : st.role}</Badge>
                           </div>
                           <div className="text-[11px] text-muted-foreground">
                             Slug: /{st.storeSlug}
@@ -412,7 +412,7 @@ export const GlobalAdminUserEditPage: React.FC = () => {
 
               <div className="space-y-2 border-t border-border pt-3">
                 <label className="text-xs font-semibold text-foreground">
-                  Adicionar Vínculo de STORE_ADMIN em Loja/Filial
+                  Adicionar Vínculo de Admin Loja em Loja/Filial
                 </label>
                 <div className="flex gap-2">
                   <select

@@ -72,7 +72,7 @@ export function FeaturesPage() {
     {
       icon: CreditCard,
       title: 'Planos SaaS, Grafo de Dependências & Financeiro (/global-admin)',
-      desc: 'Grupos comerciais de permissões com valores mensais, grafo inteligente que alerta o que pode parar de funcionar ao desmarcar uma tela (mesmo para Store Admin), gestão de regras de licenciamento e livro-razão de pagamentos.',
+      desc: 'Grupos comerciais de permissões com valores mensais, grafo inteligente que alerta o que pode parar de funcionar ao desmarcar uma tela (mesmo para Admin Loja), gestão de regras de licenciamento e livro-razão de pagamentos.',
     },
     {
       icon: Webhook,

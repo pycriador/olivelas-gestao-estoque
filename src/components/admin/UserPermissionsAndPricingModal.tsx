@@ -280,7 +280,7 @@ export function UserPermissionsAndPricingModal({
       isOpen={isOpen}
       onClose={onClose}
       title={`Permissões de Tela, Pacote Comercial & Impactos — ${user.fullName || user.email}`}
-      description="Atribua um Grupo de Perfil com valores comerciais ou ligue/desligue funcionalidades específicas (mesmo para usuários STORE_ADMIN)."
+      description="Atribua um Grupo de Perfil com valores comerciais ou ligue/desligue funcionalidades específicas (mesmo para usuários Admin Loja)."
       maxWidth="5xl"
     >
       <div className="space-y-4 pt-1 max-h-[78vh] overflow-y-auto pr-1 custom-scrollbar">
@@ -299,7 +299,7 @@ export function UserPermissionsAndPricingModal({
               </span>
               {user.stores.map((st) => (
                 <Badge key={st.storeId} variant="outline" className="text-[10px] px-2 py-0.5 bg-primary/5">
-                  {st.storeName} • {st.role}
+                  {st.storeName} • {st.role === 'STORE_ADMIN' ? 'Admin Loja' : st.role}
                 </Badge>
               ))}
             </div>
@@ -318,7 +318,7 @@ export function UserPermissionsAndPricingModal({
             <div>
               <div className="text-xs font-bold text-foreground flex items-center gap-1">
                 <Shield className="h-3.5 w-3.5 text-primary" />
-                Restringir mesmo sendo STORE_ADMIN
+                Restringir mesmo sendo Admin Loja
               </div>
               <div className="text-[10px] text-muted-foreground">
                 Garante que o dono da loja só acesse os módulos contratados

@@ -221,7 +221,7 @@ export function TeamPage() {
           >
             <option value="ALL">Todos os Papéis</option>
             <option value="APPROVER_ONLY">★ Somente Aprovadores de Baixa</option>
-            <option value="STORE_ADMIN">Administrador da Loja</option>
+            <option value="STORE_ADMIN">Admin Loja</option>
             <option value="STOCK_APPROVER">Aprovador de Baixa de Estoque</option>
             <option value="INVENTORY">Estoquista / Almoxarifado</option>
             <option value="SELLER">Vendedor / Operador de PDV</option>

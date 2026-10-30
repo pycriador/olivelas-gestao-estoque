@@ -421,7 +421,7 @@ export function StoresPage() {
       case 'GLOBAL_ADMIN':
         return <Badge variant="default" className="text-[10px]">Global Admin</Badge>
       case 'STORE_ADMIN':
-        return <Badge variant="default" className="text-[10px]">Administrador</Badge>
+        return <Badge variant="default" className="text-[10px]">Admin Loja</Badge>
       case 'FINANCE':
         return <Badge variant="success" className="text-[10px]">Gerente / Fin.</Badge>
       case 'SELLER':
