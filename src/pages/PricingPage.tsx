@@ -4,12 +4,15 @@ import { Button } from '@/components/ui/button'
 import { permissionGroupService } from '@/services/permissionGroupService'
 import { InteractivePlanBuilderSection } from '@/components/commercial/InteractivePlanBuilderSection'
 import type { PermissionGroup, PermissionModule } from '@/types/permissionGroup.types'
+import { toast } from 'sonner'
 
 const FREE_EMPLOYEES_PER_STORE = 10
 
 export function PricingPage() {
   const [plans, setPlans] = useState<PermissionGroup[]>([])
   const [modules, setModules] = useState<PermissionModule[]>([])
+  const [preselectedPlanId, setPreselectedPlanId] = useState<string | null>(null)
+  const [selectionTrigger, setSelectionTrigger] = useState(0)
 
   useEffect(() => {
     Promise.all([
@@ -25,6 +28,19 @@ export function PricingPage() {
 
   const getModuleName = (code: string) =>
     modules.find((m) => m.code === code)?.name || code
+
+  const handleSelectPlanToCustomize = (plan: PermissionGroup) => {
+    setPreselectedPlanId(plan.id)
+    setSelectionTrigger((prev) => prev + 1)
+    toast.success(`Plano "${plan.name}" adicionado ao carrinho para personalizar!`)
+    if (window.location.hash !== '#personalizar-plano') {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#personalizar-plano`)
+    }
+    const target = document.getElementById('personalizar-plano')
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12 space-y-20">
@@ -90,22 +106,26 @@ export function PricingPage() {
             </div>
 
             <div className="pt-8">
-              <a href="#personalizar-plano">
-                <Button
-                  variant={plan.isHighlightedOnLanding ? 'default' : 'outline'}
-                  size="lg"
-                  className="w-full text-xs font-bold"
-                >
-                  Personalizar & Solicitar {plan.name}
-                </Button>
-              </a>
+              <Button
+                type="button"
+                variant={plan.isHighlightedOnLanding ? 'default' : 'outline'}
+                size="lg"
+                className="w-full text-xs font-bold"
+                onClick={() => handleSelectPlanToCustomize(plan)}
+              >
+                Personalizar & Solicitar
+              </Button>
             </div>
           </div>
         ))}
       </div>
 
       {/* Configurador Interativo de Planos + Adicionais Avulsos + Pré-Cadastro */}
-      <InteractivePlanBuilderSection id="personalizar-plano" />
+      <InteractivePlanBuilderSection
+        id="personalizar-plano"
+        preselectedPlanId={preselectedPlanId}
+        selectionTrigger={selectionTrigger}
+      />
 
       {/* Regras Comerciais & Licenciamento Transparente */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 max-w-6xl mx-auto">

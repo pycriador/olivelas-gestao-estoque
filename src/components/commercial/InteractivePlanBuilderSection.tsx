@@ -12,10 +12,10 @@ import {
   Phone,
   Mail,
   User,
-  Calculator,
   ShieldCheck,
   ArrowRight,
   RefreshCw,
+  ShoppingCart,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,11 +44,15 @@ const CATEGORY_LABELS: Record<ModuleCategory, string> = {
 interface InteractivePlanBuilderSectionProps {
   id?: string
   showHeader?: boolean
+  preselectedPlanId?: string | null
+  selectionTrigger?: number
 }
 
 export function InteractivePlanBuilderSection({
   id = 'personalizar-plano',
   showHeader = true,
+  preselectedPlanId = null,
+  selectionTrigger = 0,
 }: InteractivePlanBuilderSectionProps) {
   const [plans, setPlans] = useState<PermissionGroup[]>([])
   const [modules, setModules] = useState<PermissionModule[]>([])
@@ -59,6 +63,7 @@ export function InteractivePlanBuilderSection({
   const [selectedPlanId, setSelectedPlanId] = useState<string | 'CUSTOM'>('')
   const [addonModuleCodes, setAddonModuleCodes] = useState<ModuleCode[]>([])
   const [employeeCount, setEmployeeCount] = useState<number>(5)
+  const [cartHighlight, setCartHighlight] = useState(false)
 
   // Pre-registration form state
   const [customerName, setCustomerName] = useState('')
@@ -81,11 +86,20 @@ export function InteractivePlanBuilderSection({
         if (!active) return
         setPlans(loadedPlans)
         setModules(loadedModules)
-        const highlighted = loadedPlans.find((p) => p.isHighlightedOnLanding) || loadedPlans[0]
-        if (highlighted) {
-          setSelectedPlanId(highlighted.id)
+
+        const searchParams = new URLSearchParams(window.location.search)
+        const urlPlanId = searchParams.get('plan')
+        const targetId = preselectedPlanId || urlPlanId
+
+        if (targetId && loadedPlans.some((p) => p.id === targetId)) {
+          setSelectedPlanId(targetId)
         } else {
-          setSelectedPlanId('CUSTOM')
+          const highlighted = loadedPlans.find((p) => p.isHighlightedOnLanding) || loadedPlans[0]
+          if (highlighted) {
+            setSelectedPlanId(highlighted.id)
+          } else {
+            setSelectedPlanId('CUSTOM')
+          }
         }
       } catch {
         // Fallback already handled inside service
@@ -98,6 +112,20 @@ export function InteractivePlanBuilderSection({
       active = false
     }
   }, [])
+
+  // Pre-select plan and highlight cart when triggered from PricingPage cards
+  useEffect(() => {
+    if (!preselectedPlanId) return
+    setSelectedPlanId(preselectedPlanId)
+    const targetPlan = plans.find((p) => p.id === preselectedPlanId)
+    if (targetPlan) {
+      const included = new Set<ModuleCode>(targetPlan.enabledModules || [])
+      setAddonModuleCodes((prev) => prev.filter((code) => !included.has(code)))
+    }
+    setCartHighlight(true)
+    const timer = window.setTimeout(() => setCartHighlight(false), 1800)
+    return () => window.clearTimeout(timer)
+  }, [preselectedPlanId, selectionTrigger, plans])
 
   const selectedPlan = useMemo(
     () => (selectedPlanId === 'CUSTOM' ? null : plans.find((p) => p.id === selectedPlanId) || null),
@@ -582,29 +610,35 @@ export function InteractivePlanBuilderSection({
               </div>
             </div>
 
-            {/* Right Column: Live Proposal Summary & Pre-Registration Form */}
+            {/* Right Column: Live Proposal Cart Summary & Pre-Registration Form */}
             <div className="lg:col-span-5 xl:col-span-4 lg:sticky lg:top-20">
-              <div className="rounded-3xl bg-surface border-2 border-primary/30 shadow-xl p-6 space-y-5">
+              <div
+                className={`rounded-3xl bg-surface border-2 shadow-xl p-6 space-y-5 transition-all duration-300 ${
+                  cartHighlight
+                    ? 'border-primary ring-4 ring-primary/25 scale-[1.01]'
+                    : 'border-primary/30'
+                }`}
+              >
                 <div className="flex items-center justify-between border-b border-border pb-4">
                   <div className="flex items-center gap-2">
-                    <Calculator className="h-5 w-5 text-primary" />
+                    <ShoppingCart className="h-5 w-5 text-primary" />
                     <div>
                       <h3 className="text-base font-extrabold text-foreground">
-                        Resumo & Pré-Cadastro
+                        Carrinho & Pré-Cadastro
                       </h3>
                       <p className="text-[11px] text-muted-foreground">
-                        Sua proposta fica registrada para o Global Admin
+                        Personalize os itens abaixo e envie sua solicitação
                       </p>
                     </div>
                   </div>
                   <Badge>{billingCycle === 'YEARLY' ? 'Anual' : 'Mensal'}</Badge>
                 </div>
 
-                {/* Live Price Breakdown */}
+                {/* Live Price & Cart Items Breakdown */}
                 <div className="space-y-2.5 text-xs bg-muted/40 p-4 rounded-2xl border border-border">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-muted-foreground">Plano Base:</span>
-                    <span className="font-bold text-foreground text-right">
+                    <span className="text-muted-foreground">Plano no Carrinho:</span>
+                    <span className="font-bold text-primary text-right">
                       {selectedPlan ? selectedPlan.name : 'Pacote 100% Avulso'}
                     </span>
                   </div>
@@ -614,6 +648,31 @@ export function InteractivePlanBuilderSection({
                       R$ {basePlanMonthlyPrice.toFixed(2)}/mês
                     </span>
                   </div>
+
+                  {selectedPlan && (selectedPlan.enabledModules || []).length > 0 && (
+                    <div className="pt-2 border-t border-border/60 space-y-1.5">
+                      <div className="font-semibold text-foreground flex items-center justify-between">
+                        <span>Módulos Inclusos no Plano:</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          {(selectedPlan.enabledModules || []).length} inclusos
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 pt-0.5">
+                        {(selectedPlan.enabledModules || []).map((code) => {
+                          const modName = modules.find((m) => m.code === code)?.name || code
+                          return (
+                            <span
+                              key={code}
+                              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] text-foreground"
+                            >
+                              <Check className="h-2.5 w-2.5 text-emerald-500 shrink-0" />
+                              {modName}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
 
                   {selectedAddons.length > 0 && (
                     <div className="pt-2 border-t border-border/60 space-y-1.5">
