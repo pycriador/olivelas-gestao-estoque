@@ -45,6 +45,7 @@ Ordem incremental observada (arquivos datados):
 26. `20261030000026_employee_pin_reset_and_policy.sql`
 27. `20261030000027_landing_leads_and_contracts.sql`
 28. `20261103000028_ai_platform_and_modules.sql`
+29. `20261103000029_global_admin_hard_delete_store.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -133,6 +134,7 @@ Usadas pelo frontend (`supabase.rpc`):
 | `clear_batch_disposition` | `inventoryService.clearBatchDisposition` |
 | `generate_stock_alerts` | `notificationService.generateStockAlerts` |
 | `global_admin_delete` | `globalAdminService.hardDelete` |
+| `global_admin_hard_delete_store` | `storeService.deleteStorePermanently` (exclusão definitiva de Loja Matriz ou Filial pelo Global Admin, limpando dependências `ON DELETE RESTRICT` e registrando auditoria `GLOBAL_HARD_DELETE_STORE`) |
 | `global_admin_delete_platform_user` | `userService.deleteUser` |
 
 Definidas no SQL e **não** listadas acima como chamada direta no `src/services` (podem ser internas, trigger ou legado):

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase/client'
 import { buildAccentRegex } from '@/utils/productUtils'
+import { storeService } from '@/services/storeService'
 
 /**
  * Entidades que o Admin Global pode excluir definitivamente.
@@ -9,6 +10,7 @@ import { buildAccentRegex } from '@/utils/productUtils'
  * Nada de nome de tabela ou coluna vindo da UI.
  */
 export const GLOBAL_DELETE_ENTITIES = [
+  { value: 'stores', label: 'Loja / Filial' },
   { value: 'orders', label: 'Pedido' },
   { value: 'stock_movements', label: 'Movimentação de estoque' },
   { value: 'products', label: 'Produto' },
@@ -41,6 +43,13 @@ interface EntitySpec {
 }
 
 const ENTITY_SPECS: Record<GlobalDeleteEntity, EntitySpec> = {
+  stores: {
+    select: 'id, name, slug, document, is_branch, branch_code, is_active, created_at',
+    searchColumns: ['name', 'slug', 'document'],
+    labelColumn: 'name',
+    detailColumns: ['slug', 'document'],
+    labelFallback: 'Loja / Filial',
+  },
   orders: {
     select: 'id, store_id, order_number, total_amount, status, created_at',
     searchColumns: ['order_number'],
@@ -112,14 +121,17 @@ export const globalAdminService = {
 
     let query = supabase
       .from(entity)
-      .select(`${spec.select}, stores ( id, name )`, { count: 'exact' })
+      .select(
+        entity === 'stores' ? spec.select : `${spec.select}, stores ( id, name )`,
+        { count: 'exact' }
+      )
 
     if (entity === 'orders') {
       query = query.not('order_number', 'like', '%-SUB-%')
     }
 
     if (storeId && storeId !== 'all' && storeId !== 'global') {
-      query = query.eq('store_id', storeId)
+      query = query.eq(entity === 'stores' ? 'id' : 'store_id', storeId)
     }
 
     if (search && search.trim()) {
@@ -140,7 +152,12 @@ export const globalAdminService = {
     if (error) throw error
 
     const rows: GlobalEntityRow[] = (data || []).map((row: any) => {
-      const storeName = row.stores?.name || 'Loja'
+      const storeName =
+        entity === 'stores'
+          ? row.is_branch
+            ? `Filial (${row.branch_code || 'FIL'})`
+            : 'Loja Matriz'
+          : row.stores?.name || 'Loja'
       const rawLabel =
         entity === 'suppliers'
           ? (row.trade_name || row.corporate_name)
@@ -167,7 +184,7 @@ export const globalAdminService = {
 
       return {
         id: row.id,
-        store_id: row.store_id,
+        store_id: entity === 'stores' ? row.id : row.store_id,
         store_name: storeName,
         label,
         detail,
@@ -183,6 +200,11 @@ export const globalAdminService = {
    * em audit_logs na mesma transacao e devolve um resumo do que foi removido.
    */
   async hardDelete(entity: GlobalDeleteEntity, id: string): Promise<string> {
+    if (entity === 'stores') {
+      await storeService.deleteStorePermanently(id)
+      return 'Loja / Filial e seus vínculos operacionais removidos definitivamente.'
+    }
+
     const { data, error } = await supabase.rpc('global_admin_delete', {
       p_entity: entity,
       p_id: id,

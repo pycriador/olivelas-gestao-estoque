@@ -76,7 +76,7 @@ export function GlobalAdminDashboardPage() {
   const queryClient = useQueryClient()
   const navigate = useNavigate()
   const [, setSearchParams] = useSearchParams()
-  const { setActiveStore } = useTenant()
+  const { activeStore, setActiveStore } = useTenant()
 
   const {
     page,
@@ -114,6 +114,11 @@ export function GlobalAdminDashboardPage() {
   // Confirmation & Transfer modals
   const [deletingUser, setDeletingUser] = React.useState<PlatformUser | null>(null)
   const [togglingStore, setTogglingStore] = React.useState<StoreType | null>(null)
+  const [deletingStore, setDeletingStore] = React.useState<{
+    store: StoreType
+    childCount: number
+  } | null>(null)
+  const [deleteChildBranches, setDeleteChildBranches] = React.useState(false)
   const [transferModalStore, setTransferModalStore] = React.useState<StoreType | null>(null)
   const [selectedNewOwnerId, setSelectedNewOwnerId] = React.useState('')
 
@@ -290,6 +295,38 @@ export function GlobalAdminDashboardPage() {
       queryClient.invalidateQueries({ queryKey: ['all-stores-raw-list'] })
       queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
       setSuccessMessage('Status da loja atualizado com sucesso!')
+    },
+    onError: (err) => setErrorMessage(parseApiError(err)),
+  })
+
+  const deleteStoreMutation = useMutation({
+    mutationFn: ({
+      id,
+      deleteChildBranches: delBranches,
+    }: {
+      id: string
+      deleteChildBranches: boolean
+    }) => storeService.deleteStorePermanently(id, { deleteChildBranches: delBranches }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['all-stores-raw-list'] })
+      queryClient.invalidateQueries({ queryKey: ['stores-employee-license-summaries'] })
+      queryClient.invalidateQueries({ queryKey: ['platform-users'] })
+      queryClient.invalidateQueries({ queryKey: ['all-platform-users-list'] })
+      queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
+      if (activeStore && activeStore.storeId === variables.id) {
+        setActiveStore({
+          id: 'global',
+          storeId: 'all',
+          storeName: 'Visão Global (Todas as Lojas)',
+          storeSlug: 'global',
+          role: 'GLOBAL_ADMIN',
+          isActive: true,
+        })
+      }
+      setDeletingStore(null)
+      setDeleteChildBranches(false)
+      setSuccessMessage('Loja / filial excluída definitivamente da plataforma.')
     },
     onError: (err) => setErrorMessage(parseApiError(err)),
   })
@@ -1177,6 +1214,18 @@ export function GlobalAdminDashboardPage() {
                                     variant: st.is_active ? 'danger' : 'default',
                                     onSelect: () => setTogglingStore(st),
                                   },
+                                  {
+                                    key: 'delete-store-permanently',
+                                    label: isBranch
+                                      ? 'Excluir Filial Definitivamente'
+                                      : 'Excluir Loja Definitivamente',
+                                    icon: <Trash2 className="h-3.5 w-3.5" />,
+                                    variant: 'danger',
+                                    onSelect: () => {
+                                      setDeletingStore({ store: st, childCount })
+                                      setDeleteChildBranches(false)
+                                    },
+                                  },
                                 ]}
                               />
                             </td>
@@ -1701,6 +1750,99 @@ export function GlobalAdminDashboardPage() {
         variant={togglingStore?.is_active ? 'danger' : 'primary'}
         isLoading={toggleStoreStatusMutation.isPending}
       />
+
+      {/* Confirm Permanent Delete Store / Branch Modal */}
+      <Modal
+        isOpen={Boolean(deletingStore)}
+        onClose={() => {
+          if (!deleteStoreMutation.isPending) {
+            setDeletingStore(null)
+            setDeleteChildBranches(false)
+          }
+        }}
+        title={
+          deletingStore?.store.is_branch || deletingStore?.store.parent_store_id
+            ? 'Excluir Filial Definitivamente'
+            : 'Excluir Loja Matriz Definitivamente'
+        }
+        description={`Ação irreversível: Você está prestes a excluir por definitivo a unidade "${deletingStore?.store.name}" (/store/${deletingStore?.store.slug}).`}
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-1">
+          <div className="p-3 rounded-lg bg-danger/10 border border-danger/25 text-xs text-danger space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Exclusão Permanente (Hard Delete)
+            </div>
+            <p className="text-foreground/90 leading-relaxed">
+              Todos os produtos, lotes, saldos de estoque, movimentações, pedidos, clientes,
+              fornecedores e vínculos de funcionários desta unidade serão removidos definitivamente
+              do banco de dados.
+            </p>
+          </div>
+
+          {deletingStore && deletingStore.childCount > 0 && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 space-y-2">
+              <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <GitBranch className="h-4 w-4 shrink-0" />
+                Esta Matriz possui {deletingStore.childCount}{' '}
+                {deletingStore.childCount === 1 ? 'filial vinculada' : 'filiais vinculadas'}
+              </div>
+              <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={deleteChildBranches}
+                  onChange={(e) => setDeleteChildBranches(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-danger focus:ring-danger"
+                />
+                <span>
+                  <b>
+                    Excluir também {deletingStore.childCount === 1 ? 'a filial vinculada' : `as ${deletingStore.childCount} filiais vinculadas`} por definitivo.
+                  </b>
+                  <span className="block text-[11px] text-muted-foreground mt-0.5">
+                    Se desmarcado, as filiais subordinadas serão apenas desvinculadas e mantidas
+                    ativas como lojas independentes.
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deleteStoreMutation.isPending}
+              className="w-full sm:w-auto h-8 text-xs"
+              onClick={() => {
+                setDeletingStore(null)
+                setDeleteChildBranches(false)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              isLoading={deleteStoreMutation.isPending}
+              onClick={() => {
+                if (deletingStore) {
+                  deleteStoreMutation.mutate({
+                    id: deletingStore.store.id,
+                    deleteChildBranches,
+                  })
+                }
+              }}
+              className="w-full sm:w-auto h-8 text-xs font-semibold gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Sim, Excluir Definitivamente
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -252,4 +252,98 @@ export const storeService = {
       entityId: id,
     })
   },
+
+  /**
+   * Exclusão definitiva (Hard Delete) de uma Loja Matriz ou Filial pelo Global Admin.
+   * Remove permanentemente a unidade e seus vínculos operacionais.
+   */
+  async deleteStorePermanently(
+    id: string,
+    options?: { deleteChildBranches?: boolean }
+  ): Promise<void> {
+    const deleteChildBranches = Boolean(options?.deleteChildBranches)
+
+    // 1. Tenta via RPC atômica SECURITY DEFINER (Migration 29)
+    const { error: rpcError } = await supabase.rpc('global_admin_hard_delete_store', {
+      p_store_id: id,
+      p_delete_branches: deleteChildBranches,
+    })
+
+    if (!rpcError) {
+      return
+    }
+
+    // 2. Fallback resiliente caso a migration 29 ainda não tenha sido aplicada no banco remoto
+    const { data: targetStore } = await supabase
+      .from('stores')
+      .select('id, name, slug, is_branch')
+      .eq('id', id)
+      .maybeSingle()
+
+    // Tratar filiais subordinadas caso seja uma Matriz
+    const { data: childBranches } = await supabase
+      .from('stores')
+      .select('id')
+      .eq('parent_store_id', id)
+      .neq('id', id)
+
+    if (childBranches && childBranches.length > 0) {
+      if (deleteChildBranches) {
+        for (const child of childBranches) {
+          await this.deleteStorePermanently(child.id, { deleteChildBranches: true })
+        }
+      } else {
+        await supabase
+          .from('stores')
+          .update({
+            parent_store_id: null,
+            is_branch: false,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('parent_store_id', id)
+      }
+    }
+
+    // Limpar dependências com ON DELETE RESTRICT antes de remover a loja:
+    // a) Pedidos (marcar como CANCELLED para permitir DELETE pela policy RLS e cascatear order_items)
+    await supabase
+      .from('orders')
+      .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+      .eq('store_id', id)
+      .neq('status', 'CANCELLED')
+
+    await supabase.from('order_items').delete().eq('store_id', id)
+    await supabase.from('orders').delete().eq('store_id', id)
+
+    // b) Ordens de compra e itens de compra (possuem ON DELETE RESTRICT para suppliers e products)
+    await supabase.from('purchase_order_items').delete().eq('store_id', id)
+    await supabase.from('purchase_orders').delete().eq('store_id', id)
+
+    // c) Transferências entre filiais
+    await supabase
+      .from('stock_transfers')
+      .delete()
+      .or(`source_store_id.eq.${id},destination_store_id.eq.${id}`)
+
+    // d) Movimentações, lotes, saldos, produtos e fornecedores
+    await supabase.from('stock_movements').delete().eq('store_id', id)
+    await supabase.from('stock_batches').delete().eq('store_id', id)
+    await supabase.from('stock_balances').delete().eq('store_id', id)
+    await supabase.from('products').delete().eq('store_id', id)
+    await supabase.from('suppliers').delete().eq('store_id', id)
+
+    // e) Excluir definitivamente a loja em public.stores (demais tabelas possuem ON DELETE CASCADE)
+    const { error: deleteError } = await supabase.from('stores').delete().eq('id', id)
+
+    if (deleteError) {
+      throw deleteError
+    }
+
+    auditService.logAction({
+      action: 'GLOBAL_HARD_DELETE_STORE',
+      entity: 'stores',
+      entityId: id,
+      beforeData: targetStore ? (targetStore as Record<string, unknown>) : { id },
+    })
+  },
 }

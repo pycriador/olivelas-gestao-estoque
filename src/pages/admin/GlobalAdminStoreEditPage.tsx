@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
+  AlertTriangle,
   ArrowLeft,
   Building2,
   CreditCard,
@@ -19,12 +20,15 @@ import {
   UserPlus,
   Users,
 } from 'lucide-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/common/PageHeader'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Modal } from '@/components/ui/modal'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
+import { useTenant } from '@/hooks/useTenant'
 import { storeService } from '@/services/storeService'
 import { userService } from '@/services/userService'
 import { permissionGroupService } from '@/services/permissionGroupService'
@@ -38,12 +42,18 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
   const { storeId } = useParams<{ storeId: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { activeStore, setActiveStore } = useTenant()
 
   const isCreateMode = !storeId || storeId === 'new'
   const preselectedParentId = searchParams.get('parentStoreId') || ''
 
   const [loading, setLoading] = useState(!isCreateMode)
   const [saving, setSaving] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deleteChildBranches, setDeleteChildBranches] = useState(false)
+  const [deletingStore, setDeletingStore] = useState(false)
+  const [branchToDelete, setBranchToDelete] = useState<Store | null>(null)
 
   // Store fields
   const [name, setName] = useState('')
@@ -399,6 +409,66 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
     }
   }
 
+  const handleDeleteStorePermanently = async () => {
+    if (!storeId || isCreateMode) return
+    setDeletingStore(true)
+    try {
+      await storeService.deleteStorePermanently(storeId, { deleteChildBranches })
+      queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['all-stores-raw-list'] })
+      queryClient.invalidateQueries({ queryKey: ['stores-employee-license-summaries'] })
+      queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
+      if (activeStore && activeStore.storeId === storeId) {
+        setActiveStore({
+          id: 'global',
+          storeId: 'all',
+          storeName: 'Visão Global (Todas as Lojas)',
+          storeSlug: 'global',
+          role: 'GLOBAL_ADMIN',
+          isActive: true,
+        })
+      }
+      toast.success(
+        `${isBranch ? 'Filial' : 'Loja Matriz'} "${name}" excluída definitivamente da plataforma.`
+      )
+      setShowDeleteModal(false)
+      navigate('/global-admin?tab=stores')
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao excluir loja definitivamente.')
+    } finally {
+      setDeletingStore(false)
+    }
+  }
+
+  const handleDeleteChildBranchPermanently = async () => {
+    if (!branchToDelete) return
+    setDeletingStore(true)
+    try {
+      await storeService.deleteStorePermanently(branchToDelete.id)
+      queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+      queryClient.invalidateQueries({ queryKey: ['all-stores-raw-list'] })
+      queryClient.invalidateQueries({ queryKey: ['stores-employee-license-summaries'] })
+      queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
+      if (activeStore && activeStore.storeId === branchToDelete.id) {
+        setActiveStore({
+          id: 'global',
+          storeId: 'all',
+          storeName: 'Visão Global (Todas as Lojas)',
+          storeSlug: 'global',
+          role: 'GLOBAL_ADMIN',
+          isActive: true,
+        })
+      }
+      toast.success(`Filial "${branchToDelete.name}" excluída definitivamente.`)
+      setBranchToDelete(null)
+      await loadData()
+    } catch (err: any) {
+      toast.error(err?.message || 'Erro ao excluir filial definitivamente.')
+    } finally {
+      setDeletingStore(false)
+    }
+  }
+
   return (
     <div className="space-y-6 pb-10">
       <PageHeader
@@ -450,6 +520,19 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
             >
               <ExternalLink className="mr-1.5 h-4 w-4" />
               Abrir Catálogo
+            </Button>
+          )}
+          {!isCreateMode && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => {
+                setDeleteChildBranches(false)
+                setShowDeleteModal(true)
+              }}
+            >
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              {isBranch ? 'Excluir Filial Definitivamente' : 'Excluir Loja Definitivamente'}
             </Button>
           )}
           <Button
@@ -960,6 +1043,14 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                         >
                           Desvincular
                         </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setBranchToDelete(branch)}
+                        >
+                          <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                          Excluir
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -1272,6 +1363,140 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Modal: Excluir Loja ou Filial Definitivamente */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          if (!deletingStore) {
+            setShowDeleteModal(false)
+            setDeleteChildBranches(false)
+          }
+        }}
+        title={isBranch ? 'Excluir Filial Definitivamente' : 'Excluir Loja Matriz Definitivamente'}
+        description={`Ação irreversível: Você está prestes a excluir por definitivo a unidade "${name}" (/store/${slug}).`}
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-1">
+          <div className="p-3 rounded-lg bg-danger/10 border border-danger/25 text-xs text-danger space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Exclusão Permanente (Hard Delete)
+            </div>
+            <p className="text-foreground/90 leading-relaxed">
+              Todos os produtos, lotes, saldos de estoque, movimentações, pedidos, clientes,
+              fornecedores e vínculos de funcionários desta unidade serão removidos definitivamente
+              do banco de dados.
+            </p>
+          </div>
+
+          {!isBranch && childBranches.length > 0 && (
+            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 space-y-2">
+              <div className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                <GitBranch className="h-4 w-4 shrink-0" />
+                Esta Matriz possui {childBranches.length}{' '}
+                {childBranches.length === 1 ? 'filial vinculada' : 'filiais vinculadas'}
+              </div>
+              <label className="flex items-start gap-2.5 text-xs text-foreground cursor-pointer select-none pt-1">
+                <input
+                  type="checkbox"
+                  checked={deleteChildBranches}
+                  onChange={(e) => setDeleteChildBranches(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-border text-danger focus:ring-danger"
+                />
+                <span>
+                  <b>
+                    Excluir também{' '}
+                    {childBranches.length === 1
+                      ? 'a filial vinculada'
+                      : `as ${childBranches.length} filiais vinculadas`}{' '}
+                    por definitivo.
+                  </b>
+                  <span className="block text-[11px] text-muted-foreground mt-0.5">
+                    Se desmarcado, as filiais subordinadas serão apenas desvinculadas e mantidas
+                    ativas como lojas independentes.
+                  </span>
+                </span>
+              </label>
+            </div>
+          )}
+
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deletingStore}
+              className="w-full sm:w-auto h-8 text-xs"
+              onClick={() => {
+                setShowDeleteModal(false)
+                setDeleteChildBranches(false)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              isLoading={deletingStore}
+              onClick={handleDeleteStorePermanently}
+              className="w-full sm:w-auto h-8 text-xs font-semibold gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Sim, Excluir Definitivamente
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal: Excluir Filial Subordinada Diretamente da Matriz */}
+      <Modal
+        isOpen={Boolean(branchToDelete)}
+        onClose={() => {
+          if (!deletingStore) setBranchToDelete(null)
+        }}
+        title="Excluir Filial Definitivamente"
+        description={`Tem certeza que deseja excluir por definitivo a filial "${branchToDelete?.name}" (/store/${branchToDelete?.slug})?`}
+        maxWidth="md"
+      >
+        <div className="space-y-4 pt-1">
+          <div className="p-3 rounded-lg bg-danger/10 border border-danger/25 text-xs text-danger space-y-1.5">
+            <div className="font-bold flex items-center gap-1.5">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              Exclusão Permanente da Filial
+            </div>
+            <p className="text-foreground/90 leading-relaxed">
+              Todos os produtos, saldos de estoque, movimentações, pedidos e vínculos de equipe
+              desta filial serão removidos permanentemente.
+            </p>
+          </div>
+
+          <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-3 border-t border-border">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={deletingStore}
+              className="w-full sm:w-auto h-8 text-xs"
+              onClick={() => setBranchToDelete(null)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              isLoading={deletingStore}
+              onClick={handleDeleteChildBranchPermanently}
+              className="w-full sm:w-auto h-8 text-xs font-semibold gap-1.5"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Sim, Excluir Filial
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }

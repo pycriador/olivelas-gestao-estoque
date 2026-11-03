@@ -49,7 +49,7 @@ source:
 | `/dashboard` | `DashboardPage` | Painel analítico multi-loja (`Matriz` & `Filiais`), vendas mensais (12 meses), top produtos mais vendidos, filtros de período/tempo/canal e exportação CSV/JSON/PDF |
 | `/global-admin` | `GlobalAdminDashboardPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
 | `/global-admin/stores/new` | `GlobalAdminStoreEditPage` | segundo `ProtectedRoute` com `requireGlobalAdmin` |
-| `/global-admin/stores/:storeId/edit` | `GlobalAdminStoreEditPage` | Edição completa da loja, filiação (`Matriz` / `Filial`), `STORE_ADMIN`s e equipe |
+| `/global-admin/stores/:storeId/edit` | `GlobalAdminStoreEditPage` | Edição completa da loja, filiação (`Matriz` / `Filial`), `STORE_ADMIN`s, equipe e exclusão definitiva (`deleteStorePermanently`) |
 | `/global-admin/stores/:storeId/employees/new` | `StoreEmployeeEditPage` | Criação de funcionário com Store ID na URL (`requireGlobalAdmin`) |
 | `/global-admin/stores/:storeId/employees/:employeeId` | `StoreEmployeeEditPage` | Edição completa de funcionário, alçada de baixa e permissões granulares (`requireGlobalAdmin`) |
 | `/global-admin/users/:userId/edit` | `GlobalAdminUserEditPage` | Edição de conta, senha e lojas administradas do `STORE_ADMIN` / `GLOBAL_ADMIN` |
