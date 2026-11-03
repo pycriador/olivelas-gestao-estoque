@@ -30,6 +30,25 @@ export type AiTaskType =
   | 'REPORT_DEEP_DIVE'
   | 'WHAT_IF_SIMULATION'
 
+export type AiSiteSectionKey =
+  | 'CHAT_COPILOT'
+  | 'DASHBOARD_SUMMARY'
+  | 'POS_CROSS_SELL'
+  | 'CRM_CUSTOMERS'
+  | 'EXPIRATION_FEFO'
+  | 'INVENTORY_STOCK'
+  | 'PURCHASING_TRENDS'
+  | 'REPORTS_BI'
+
+export interface AiDiscoveredModel {
+  id: string
+  displayName: string
+  description?: string
+  inputTokenLimit?: number
+  outputTokenLimit?: number
+  recommendedTier: 'default' | 'fast' | 'reasoning'
+}
+
 export interface AiProviderConfig {
   id: string
   providerCode: AiProviderCode
@@ -43,6 +62,7 @@ export interface AiProviderConfig {
   fastModel: string
   reasoningModel: string
   availableModels: string[]
+  sectionModels?: Record<AiSiteSectionKey, string>
   baseUrl: string | null
   customHeaders: Record<string, string>
   temperature: number

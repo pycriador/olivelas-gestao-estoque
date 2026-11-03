@@ -6,12 +6,14 @@ import type {
   AiActionSuggestion,
   AiChatMessage,
   AiChatSession,
+  AiDiscoveredModel,
   AiExecutionResult,
   AiInsightHighlight,
   AiPersona,
   AiProtectionLevel,
   AiProviderCode,
   AiProviderConfig,
+  AiSiteSectionKey,
   AiStoreConfig,
   AiTaskType,
   AiUsageLog,
@@ -26,6 +28,222 @@ const LOCAL_AI_STORE_CFG_CACHE_KEY = 'olivelas_ai_store_configs_v1'
 const LOCAL_AI_CHAT_SESSIONS_KEY = 'olivelas_ai_chat_sessions_v1'
 const LOCAL_AI_CHAT_MESSAGES_KEY = 'olivelas_ai_chat_messages_v1'
 const LOCAL_AI_USAGE_LOGS_KEY = 'olivelas_ai_usage_logs_v1'
+
+export interface AiSiteSectionDefinition {
+  key: AiSiteSectionKey
+  label: string
+  route: string
+  moduleCode: ModuleCode
+  description: string
+  recommendedTier: 'default' | 'fast' | 'reasoning'
+  taskTypes: AiTaskType[]
+}
+
+export const AI_SITE_SECTIONS: AiSiteSectionDefinition[] = [
+  {
+    key: 'CHAT_COPILOT',
+    label: 'Chatbot Copiloto da Loja & Gaveta Flutuante',
+    route: '/ai-copilot',
+    moduleCode: 'MOD_AI_COPILOT_CHAT',
+    description:
+      'Conversa em linguagem natural do Administrador com a IA, perguntas sobre a loja e Simulador What-If.',
+    recommendedTier: 'default',
+    taskTypes: ['CHAT_COPILOT', 'WHAT_IF_SIMULATION'],
+  },
+  {
+    key: 'DASHBOARD_SUMMARY',
+    label: 'Dashboard Executivo (Resumo Mensal & Top Produtos)',
+    route: '/dashboard',
+    moduleCode: 'MOD_AI_BI_INSIGHTS',
+    description:
+      'Resumo mensal narrativo de vendas, avaliação dos produtos mais vendidos e diagnóstico executivo.',
+    recommendedTier: 'reasoning',
+    taskTypes: [
+      'MONTHLY_SALES_SUMMARY',
+      'DASHBOARD_EXECUTIVE_SUMMARY',
+      'TOP_PRODUCTS_EVALUATION',
+    ],
+  },
+  {
+    key: 'POS_CROSS_SELL',
+    label: 'PDV Frente de Caixa (Sugestão Rápida & Cross-Sell)',
+    route: '/sales',
+    moduleCode: 'MOD_AI_SALES_CRM',
+    description:
+      'Sugestão instantânea de produtos complementares, combos e aumento de ticket médio no balcão.',
+    recommendedTier: 'fast',
+    taskTypes: ['POS_CROSS_SELL', 'POS_CROSS_SELL_SUGGESTION'],
+  },
+  {
+    key: 'CRM_CUSTOMERS',
+    label: 'CRM de Clientes (Sugestão de Produtos & WhatsApp)',
+    route: '/customers',
+    moduleCode: 'MOD_AI_SALES_CRM',
+    description:
+      'Avaliação do histórico de compras de cada cliente, próxima melhor oferta e script de reativação WhatsApp.',
+    recommendedTier: 'default',
+    taskTypes: [
+      'CUSTOMER_PRODUCT_SUGGESTION',
+      'CUSTOMER_PRODUCT_RECOMMENDATION',
+    ],
+  },
+  {
+    key: 'EXPIRATION_FEFO',
+    label: 'Controle de Validades FEFO (Alertas de Vencimento)',
+    route: '/expiration',
+    moduleCode: 'MOD_AI_INVENTORY_EXPIRATION',
+    description:
+      'Avisos inteligentes ao Administrador quando produtos estão vencendo e plano promocional anti-perdas.',
+    recommendedTier: 'default',
+    taskTypes: ['EXPIRATION_WARNING', 'EXPIRATION_RISK_ANALYSIS'],
+  },
+  {
+    key: 'INVENTORY_STOCK',
+    label: 'Estoque & Lotes (Giro, Cobertura & Remessa Filiais)',
+    route: '/inventory',
+    moduleCode: 'MOD_AI_INVENTORY_EXPIRATION',
+    description:
+      'Auditoria de estoque parado (Curva C), risco de ruptura e recomendação de transferência Matriz → Filial.',
+    recommendedTier: 'default',
+    taskTypes: ['INVENTORY_OPTIMIZATION'],
+  },
+  {
+    key: 'PURCHASING_TRENDS',
+    label: 'Compras & Fornecedores (Tendências de Compras)',
+    route: '/purchases',
+    moduleCode: 'MOD_AI_PURCHASING_TRENDS',
+    description:
+      'Análise de tendências de compras, velocidade de consumo (30d) e sugestão de Ordens de Compra.',
+    recommendedTier: 'reasoning',
+    taskTypes: ['PURCHASING_TRENDS', 'PURCHASING_TRENDS_FORECAST'],
+  },
+  {
+    key: 'REPORTS_BI',
+    label: 'Central de 9 Relatórios Analíticos (Auditoria & BI)',
+    route: '/reports',
+    moduleCode: 'MOD_AI_BI_INSIGHTS',
+    description:
+      'Explicação executiva nas 9 abas de relatórios (Curva ABC, Valuation, GMROI, Ticket Médio, Perdas, etc.).',
+    recommendedTier: 'reasoning',
+    taskTypes: ['REPORT_EXPLANATION', 'REPORT_DEEP_DIVE'],
+  },
+]
+
+const PIN_PREFIX = '__pin__:'
+
+export function buildDefaultSectionModels(
+  defaultModel: string,
+  fastModel: string,
+  reasoningModel: string
+): Record<AiSiteSectionKey, string> {
+  const def = defaultModel || 'gemini-2.5-flash'
+  const fast = fastModel || def
+  const reas = reasoningModel || def
+  return {
+    CHAT_COPILOT: def,
+    DASHBOARD_SUMMARY: reas,
+    POS_CROSS_SELL: fast,
+    CRM_CUSTOMERS: def,
+    EXPIRATION_FEFO: def,
+    INVENTORY_STOCK: def,
+    PURCHASING_TRENDS: reas,
+    REPORTS_BI: reas,
+  }
+}
+
+function decodeAvailableModelsWithPins(
+  rawList: string[] | undefined | null,
+  defaultModel: string,
+  fastModel: string,
+  reasoningModel: string,
+  fallbackModels: string[] = []
+): {
+  availableModels: string[]
+  sectionModels: Record<AiSiteSectionKey, string>
+} {
+  const sectionModels = buildDefaultSectionModels(
+    defaultModel,
+    fastModel,
+    reasoningModel
+  )
+  const cleanModels: string[] = []
+
+  for (const entry of Array.isArray(rawList) ? rawList : []) {
+    if (typeof entry !== 'string') continue
+    const trimmed = entry.trim()
+    if (!trimmed) continue
+    if (trimmed.startsWith(PIN_PREFIX)) {
+      const rest = trimmed.slice(PIN_PREFIX.length)
+      const eqIdx = rest.indexOf('=')
+      if (eqIdx > 0) {
+        const secKey = rest.slice(0, eqIdx).trim() as AiSiteSectionKey
+        const modelVal = rest.slice(eqIdx + 1).trim()
+        if (secKey && modelVal && secKey in sectionModels) {
+          sectionModels[secKey] = modelVal
+        }
+      }
+    } else {
+      cleanModels.push(trimmed)
+    }
+  }
+
+  const allModels = Array.from(
+    new Set(
+      [
+        ...cleanModels,
+        defaultModel,
+        fastModel,
+        reasoningModel,
+        ...Object.values(sectionModels),
+        ...fallbackModels,
+      ].filter(Boolean)
+    )
+  )
+
+  return {
+    availableModels: allModels,
+    sectionModels,
+  }
+}
+
+function encodeAvailableModelsWithPins(
+  availableModels: string[],
+  sectionModels?: Partial<Record<AiSiteSectionKey, string>>
+): string[] {
+  const cleanModels = Array.from(
+    new Set(
+      (availableModels || [])
+        .map((m) => (m || '').trim())
+        .filter((m) => m && !m.startsWith(PIN_PREFIX))
+    )
+  )
+  const pinEntries: string[] = []
+  if (sectionModels) {
+    for (const sec of AI_SITE_SECTIONS) {
+      const val = sectionModels[sec.key]?.trim()
+      if (val) {
+        pinEntries.push(`${PIN_PREFIX}${sec.key}=${val}`)
+      }
+    }
+  }
+  return [...cleanModels, ...pinEntries]
+}
+
+export function resolveSiteSectionFromTask(
+  taskType: AiTaskType,
+  moduleCode?: ModuleCode
+): AiSiteSectionKey {
+  for (const sec of AI_SITE_SECTIONS) {
+    if (sec.taskTypes.includes(taskType)) {
+      return sec.key
+    }
+  }
+  if (moduleCode === 'MOD_AI_SALES_CRM') return 'CRM_CUSTOMERS'
+  if (moduleCode === 'MOD_AI_INVENTORY_EXPIRATION') return 'EXPIRATION_FEFO'
+  if (moduleCode === 'MOD_AI_PURCHASING_TRENDS') return 'PURCHASING_TRENDS'
+  if (moduleCode === 'MOD_AI_BI_INSIGHTS') return 'DASHBOARD_SUMMARY'
+  return 'CHAT_COPILOT'
+}
 
 export const DEFAULT_AI_PROVIDER_CONFIGS: AiProviderConfig[] = [
   {
@@ -371,7 +589,7 @@ export const aiOrchestratorService = {
   },
 
   /**
-   * Lista as configurações dos provedores de IA (com chaves mascaradas)
+   * Lista as configurações dos provedores de IA (com chaves mascaradas e modelos fixados por seção)
    */
   async listProviderConfigs(): Promise<AiProviderConfig[]> {
     const localConfigs = readLocal<AiProviderConfig[]>(LOCAL_AI_PROVIDERS_CACHE_KEY, [])
@@ -384,6 +602,17 @@ export const aiOrchestratorService = {
         const mapped: AiProviderConfig[] = data.map((row: any) => {
           const code = row.providerCode as AiProviderCode
           const vaultKey = decodeVaultValue(localVault[code])
+          const defaultModel = row.defaultModel
+          const fastModel = row.fastModel || row.defaultModel
+          const reasoningModel = row.reasoningModel || row.defaultModel
+          const decoded = decodeAvailableModelsWithPins(
+            row.availableModels,
+            defaultModel,
+            fastModel,
+            reasoningModel
+          )
+          const savedLocal = localMap.get(code)
+          const fallbackDefault = DEFAULT_AI_PROVIDER_CONFIGS.find((d) => d.providerCode === code)
           return {
             id: row.id || `provider-${code.toLowerCase()}`,
             providerCode: code,
@@ -393,10 +622,18 @@ export const aiOrchestratorService = {
             fallbackPriority: Number(row.fallbackPriority ?? 1),
             hasApiKey: Boolean(row.hasApiKey || vaultKey),
             maskedApiKey: row.maskedApiKey || maskApiKey(vaultKey),
-            defaultModel: row.defaultModel,
-            fastModel: row.fastModel || row.defaultModel,
-            reasoningModel: row.reasoningModel || row.defaultModel,
-            availableModels: Array.isArray(row.availableModels) ? row.availableModels : [],
+            defaultModel,
+            fastModel,
+            reasoningModel,
+            availableModels:
+              decoded.availableModels.length > 0
+                ? decoded.availableModels
+                : savedLocal?.availableModels || fallbackDefault?.availableModels || [defaultModel],
+            sectionModels: {
+              ...buildDefaultSectionModels(defaultModel, fastModel, reasoningModel),
+              ...(savedLocal?.sectionModels || {}),
+              ...decoded.sectionModels,
+            },
             baseUrl: row.baseUrl || null,
             customHeaders: row.customHeaders || {},
             temperature: Number(row.temperature ?? 0.3),
@@ -425,15 +662,30 @@ export const aiOrchestratorService = {
       const saved = localMap.get(def.providerCode)
       const vaultKey = decodeVaultValue(localVault[def.providerCode])
       if (saved) {
+        const decoded = decodeAvailableModelsWithPins(
+          saved.availableModels,
+          saved.defaultModel || def.defaultModel,
+          saved.fastModel || def.fastModel,
+          saved.reasoningModel || def.reasoningModel
+        )
         return {
           ...def,
           ...saved,
+          availableModels:
+            decoded.availableModels.length > 0 ? decoded.availableModels : def.availableModels,
+          sectionModels: {
+            ...decoded.sectionModels,
+            ...(saved.sectionModels || {}),
+          },
           hasApiKey: Boolean(saved.hasApiKey || vaultKey),
           maskedApiKey: saved.maskedApiKey || maskApiKey(vaultKey),
         }
       }
       return {
         ...def,
+        sectionModels:
+          def.sectionModels ||
+          buildDefaultSectionModels(def.defaultModel, def.fastModel, def.reasoningModel),
         hasApiKey: Boolean(vaultKey),
         maskedApiKey: maskApiKey(vaultKey),
       }
@@ -446,7 +698,7 @@ export const aiOrchestratorService = {
   },
 
   /**
-   * Salva a configuração de um provedor de IA (Super Admin)
+   * Salva a configuração de um provedor de IA (Super Admin), incluindo os modelos fixados por seção do site
    */
   async saveProviderConfig(input: {
     providerCode: AiProviderCode
@@ -460,6 +712,7 @@ export const aiOrchestratorService = {
     fastModel: string
     reasoningModel: string
     availableModels: string[]
+    sectionModels?: Partial<Record<AiSiteSectionKey, string>>
     baseUrl?: string | null
     customHeaders?: Record<string, string>
     temperature: number
@@ -479,6 +732,30 @@ export const aiOrchestratorService = {
       writeLocal(LOCAL_AI_VAULT_KEYS_CACHE_KEY, localVault)
     }
 
+    const normalizedSectionModels: Record<AiSiteSectionKey, string> = {
+      ...buildDefaultSectionModels(input.defaultModel, input.fastModel, input.reasoningModel),
+      ...(input.sectionModels || {}),
+    }
+
+    const cleanAvailableModels = Array.from(
+      new Set(
+        [
+          ...(input.availableModels || []),
+          input.defaultModel,
+          input.fastModel,
+          input.reasoningModel,
+          ...Object.values(normalizedSectionModels),
+        ]
+          .map((m) => String(m || '').trim())
+          .filter((m) => m && !m.startsWith(PIN_PREFIX))
+      )
+    )
+
+    const encodedAvailableModelsForDb = encodeAvailableModelsWithPins(
+      cleanAvailableModels,
+      normalizedSectionModels
+    )
+
     try {
       await supabase.rpc('upsert_ai_provider_config', {
         p_provider_code: input.providerCode,
@@ -491,7 +768,7 @@ export const aiOrchestratorService = {
         p_default_model: input.defaultModel,
         p_fast_model: input.fastModel,
         p_reasoning_model: input.reasoningModel,
-        p_available_models: input.availableModels,
+        p_available_models: encodedAvailableModelsForDb,
         p_base_url: input.baseUrl || null,
         p_custom_headers: input.customHeaders || {},
         p_temperature: input.temperature,
@@ -521,7 +798,8 @@ export const aiOrchestratorService = {
           defaultModel: input.defaultModel,
           fastModel: input.fastModel,
           reasoningModel: input.reasoningModel,
-          availableModels: input.availableModels,
+          availableModels: cleanAvailableModels,
+          sectionModels: normalizedSectionModels,
           baseUrl: input.baseUrl || item.baseUrl,
           customHeaders: input.customHeaders || {},
           temperature: input.temperature,
@@ -542,6 +820,327 @@ export const aiOrchestratorService = {
 
     writeLocal(LOCAL_AI_PROVIDERS_CACHE_KEY, updated)
     return updated
+  },
+
+  /**
+   * Descobre e carrega dinamicamente a lista real de modelos suportados pela Chave de API informada (ou salva no cofre)
+   */
+  async fetchModelsFromProviderKey(params: {
+    providerCode: AiProviderCode
+    apiKey?: string
+    baseUrl?: string | null
+    customHeaders?: Record<string, string>
+  }): Promise<{
+    ok: boolean
+    models: AiDiscoveredModel[]
+    source: 'LIVE_API' | 'CATALOG_FALLBACK'
+    message: string
+  }> {
+    const localVault = readLocal<Record<string, string>>(LOCAL_AI_VAULT_KEYS_CACHE_KEY, {})
+    let resolvedKey =
+      params.apiKey?.trim() || decodeVaultValue(localVault[params.providerCode]) || ''
+
+    if (!resolvedKey) {
+      try {
+        const { data } = await supabase.rpc('resolve_ai_execution_runtime', {
+          p_store_id: null,
+          p_module_code: 'MOD_AI_COPILOT_CHAT',
+        })
+        const match = (data?.providers || []).find(
+          (p: any) => p.providerCode === params.providerCode
+        )
+        if (match?.apiKey) resolvedKey = match.apiKey
+      } catch {
+        // ignore
+      }
+    }
+
+    const buildCatalogModels = (providerCode: AiProviderCode): AiDiscoveredModel[] => {
+      const def = DEFAULT_AI_PROVIDER_CONFIGS.find((d) => d.providerCode === providerCode)
+      const list = def?.availableModels || []
+      return list.map((id) => ({
+        id,
+        displayName: id,
+        recommendedTier:
+          id.includes('lite') || id.includes('mini') || id.includes('haiku')
+            ? 'fast'
+            : id.includes('pro') ||
+                id.includes('sonnet') ||
+                id.includes('opus') ||
+                id.includes('reasoner') ||
+                id.includes('o3')
+              ? 'reasoning'
+              : 'default',
+      }))
+    }
+
+    if (!resolvedKey) {
+      const fallbackModels = buildCatalogModels(params.providerCode)
+      return {
+        ok: false,
+        models: fallbackModels,
+        source: 'CATALOG_FALLBACK',
+        message:
+          'Informe ou salve uma chave de API para consultar os modelos ao vivo no provedor. Exibindo catálogo base.',
+      }
+    }
+
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 14000)
+
+    try {
+      if (params.providerCode === 'GEMINI') {
+        const base = (
+          params.baseUrl || 'https://generativelanguage.googleapis.com/v1beta'
+        ).replace(/\/$/, '')
+        const url = `${base}/models?pageSize=100&key=${encodeURIComponent(resolvedKey)}`
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: {
+            ...(params.customHeaders || {}),
+          },
+          signal: controller.signal,
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(
+            json?.error?.message || `Falha ao listar modelos Gemini (HTTP ${res.status})`
+          )
+        }
+
+        const rawModels: any[] = Array.isArray(json?.models) ? json.models : []
+        const generativeModels: AiDiscoveredModel[] = rawModels
+          .filter((m) => {
+            const name = String(m?.name || '').replace(/^models\//, '')
+            const methods: string[] = Array.isArray(m?.supportedGenerationMethods)
+              ? m.supportedGenerationMethods
+              : []
+            const supportsGenerate =
+              methods.length === 0 || methods.includes('generateContent')
+            const isTextModel =
+              name.startsWith('gemini-') &&
+              !name.includes('embedding') &&
+              !name.includes('imagen') &&
+              !name.includes('veo') &&
+              !name.includes('aqa') &&
+              !name.includes('tts') &&
+              !name.includes('audio')
+            return supportsGenerate && isTextModel
+          })
+          .map((m) => {
+            const id = String(m.name || '').replace(/^models\//, '')
+            const lower = id.toLowerCase()
+            const recommendedTier: 'default' | 'fast' | 'reasoning' =
+              lower.includes('lite') || lower.includes('8b')
+                ? 'fast'
+                : lower.includes('pro') || lower.includes('thinking')
+                  ? 'reasoning'
+                  : 'default'
+            return {
+              id,
+              displayName: m.displayName ? `${id} (${m.displayName})` : id,
+              description: m.description || undefined,
+              inputTokenLimit: Number(m.inputTokenLimit) || undefined,
+              outputTokenLimit: Number(m.outputTokenLimit) || undefined,
+              recommendedTier,
+            }
+          })
+          .sort((a, b) => {
+            // Prioriza 2.5 -> 2.0 -> 1.5
+            const score = (id: string) =>
+              id.includes('2.5')
+                ? 300
+                : id.includes('2.0')
+                  ? 200
+                  : id.includes('1.5')
+                    ? 100
+                    : 50
+            return score(b.id) - score(a.id) || a.id.localeCompare(b.id)
+          })
+
+        if (generativeModels.length === 0) {
+          throw new Error('Nenhum modelo generativo retornado pela chave Gemini.')
+        }
+
+        return {
+          ok: true,
+          models: generativeModels,
+          source: 'LIVE_API',
+          message: `${generativeModels.length} modelos carregados dinamicamente da sua chave Google Gemini API.`,
+        }
+      }
+
+      if (params.providerCode === 'CLAUDE') {
+        const base = (params.baseUrl || 'https://api.anthropic.com/v1').replace(/\/$/, '')
+        const res = await fetch(`${base}/models?limit=100`, {
+          method: 'GET',
+          headers: {
+            'x-api-key': resolvedKey,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true',
+            ...(params.customHeaders || {}),
+          },
+          signal: controller.signal,
+        })
+        const json = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          throw new Error(
+            json?.error?.message || `Falha ao listar modelos Claude (HTTP ${res.status})`
+          )
+        }
+        const rawModels: any[] = Array.isArray(json?.data) ? json.data : []
+        const models: AiDiscoveredModel[] = rawModels
+          .map((m) => {
+            const id = String(m?.id || '').trim()
+            const lower = id.toLowerCase()
+            const recommendedTier: 'default' | 'fast' | 'reasoning' = lower.includes('haiku')
+              ? 'fast'
+              : lower.includes('opus') || lower.includes('3-7') || lower.includes('sonnet')
+                ? 'reasoning'
+                : 'default'
+            return {
+              id,
+              displayName: m?.display_name ? `${id} (${m.display_name})` : id,
+              recommendedTier,
+            }
+          })
+          .filter((m) => m.id)
+
+        if (models.length === 0) {
+          throw new Error('Nenhum modelo retornado pela API Anthropic.')
+        }
+
+        return {
+          ok: true,
+          models,
+          source: 'LIVE_API',
+          message: `${models.length} modelos carregados dinamicamente da sua chave Anthropic Claude.`,
+        }
+      }
+
+      // OpenAI ou Custom OpenAI-Compatible (/v1/models)
+      const base = (
+        params.baseUrl ||
+        (params.providerCode === 'OPENAI'
+          ? 'https://api.openai.com/v1'
+          : 'https://api.deepseek.com/v1')
+      ).replace(/\/$/, '')
+
+      const res = await fetch(`${base}/models`, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${resolvedKey}`,
+          ...(params.customHeaders || {}),
+        },
+        signal: controller.signal,
+      })
+
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(
+          json?.error?.message || `Falha ao listar modelos em ${base}/models (HTTP ${res.status})`
+        )
+      }
+
+      const rawList: any[] = Array.isArray(json?.data)
+        ? json.data
+        : Array.isArray(json?.models)
+          ? json.models
+          : []
+
+      const models: AiDiscoveredModel[] = rawList
+        .map((m) => {
+          const id = String(m?.id || m?.name || '').trim()
+          const lower = id.toLowerCase()
+          const recommendedTier: 'default' | 'fast' | 'reasoning' =
+            lower.includes('mini') || lower.includes('nano') || lower.includes('flash')
+              ? 'fast'
+              : lower.includes('o1') ||
+                  lower.includes('o3') ||
+                  lower.includes('reasoner') ||
+                  lower.includes('r1')
+                ? 'reasoning'
+                : 'default'
+          return {
+            id,
+            displayName: id,
+            recommendedTier,
+          }
+        })
+        .filter((m) => {
+          if (!m.id) return false
+          if (params.providerCode === 'OPENAI') {
+            const lower = m.id.toLowerCase()
+            return (
+              (lower.startsWith('gpt-') ||
+                lower.startsWith('o1') ||
+                lower.startsWith('o3') ||
+                lower.startsWith('o4') ||
+                lower.startsWith('chatgpt-')) &&
+              !lower.includes('audio') &&
+              !lower.includes('realtime') &&
+              !lower.includes('transcribe') &&
+              !lower.includes('tts') &&
+              !lower.includes('instruct')
+            )
+          }
+          return true
+        })
+        .sort((a, b) => a.id.localeCompare(b.id))
+
+      if (models.length === 0) {
+        throw new Error('A API respondeu, mas não retornou modelos compatíveis.')
+      }
+
+      return {
+        ok: true,
+        models,
+        source: 'LIVE_API',
+        message: `${models.length} modelos carregados dinamicamente da chave API (${params.providerCode}).`,
+      }
+    } catch (err: any) {
+      const fallbackModels = buildCatalogModels(params.providerCode)
+      return {
+        ok: false,
+        models: fallbackModels,
+        source: 'CATALOG_FALLBACK',
+        message: `${err?.message || 'Não foi possível consultar /models ao vivo.'} Exibindo catálogo sugerido (você também pode digitar qualquer ID de modelo).`,
+      }
+    } finally {
+      clearTimeout(timer)
+    }
+  },
+
+  /**
+   * Retorna qual modelo está fixado atualmente para uma determinada tarefa/seção do site
+   */
+  async getPinnedModelForTask(params: {
+    taskType: AiTaskType
+    moduleCode?: ModuleCode
+  }): Promise<{
+    providerCode: AiProviderCode
+    providerName: string
+    model: string
+    sectionKey: AiSiteSectionKey
+    sectionLabel: string
+  }> {
+    const sectionKey = resolveSiteSectionFromTask(params.taskType, params.moduleCode)
+    const sectionMeta =
+      AI_SITE_SECTIONS.find((s) => s.key === sectionKey) || AI_SITE_SECTIONS[0]
+    const providers = await this.listProviderConfigs()
+    const activePrimary =
+      providers.find((p) => p.isPrimary && p.isEnabled) ||
+      providers.find((p) => p.isEnabled) ||
+      DEFAULT_AI_PROVIDER_CONFIGS[0]
+    const pinnedModel =
+      activePrimary.sectionModels?.[sectionKey] || activePrimary.defaultModel
+    return {
+      providerCode: activePrimary.providerCode,
+      providerName: activePrimary.displayName,
+      model: pinnedModel,
+      sectionKey,
+      sectionLabel: sectionMeta.label,
+    }
   },
 
   /**
@@ -1324,7 +1923,8 @@ export const aiOrchestratorService = {
       `</untrusted_user_query>`,
     ].join('\n')
 
-    // 3. Resolver credenciais em ordem de prioridade (Principal -> Fallbacks)
+    // 3. Resolver credenciais em ordem de prioridade (Principal -> Fallbacks) e modelo fixado para a parte do site
+    const sectionKey = resolveSiteSectionFromTask(params.taskType, params.moduleCode)
     const runtimeProviders = await this.resolveOrderedRuntimeProviders(
       params.storeId,
       params.moduleCode,
@@ -1338,13 +1938,18 @@ export const aiOrchestratorService = {
       const candidate = runtimeProviders[i]
       if (!candidate.apiKey) continue
 
-      const primaryModelToUse = params.preferReasoningModel
-        ? candidate.reasoningModel || candidate.defaultModel
-        : candidate.defaultModel
+      const pinnedModelForSection = candidate.sectionModels?.[sectionKey]
+      const primaryModelToUse = pinnedModelForSection
+        ? pinnedModelForSection
+        : params.preferReasoningModel
+          ? candidate.reasoningModel || candidate.defaultModel
+          : candidate.defaultModel
 
-      // Tenta modelo principal do provedor e, se falhar, tenta o fastModel do mesmo provedor
+      // Tenta primeiro o modelo fixado para esta parte do site, depois o defaultModel e o fastModel do mesmo provedor
       const modelsToTry = Array.from(
-        new Set([primaryModelToUse, candidate.fastModel].filter(Boolean))
+        new Set(
+          [primaryModelToUse, candidate.defaultModel, candidate.fastModel].filter(Boolean)
+        )
       )
 
       for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
@@ -1416,6 +2021,8 @@ export const aiOrchestratorService = {
     }
 
     // 4. Fallback Determinístico Analítico Local (quando nenhuma chave API externa está ativa ou todas falharam)
+    const pinnedPrimaryModel =
+      primaryProvider.sectionModels?.[sectionKey] || primaryProvider.defaultModel
     const localReply = this.generateAnalyticalFallbackResponse({
       snapshot,
       taskType: params.taskType,
@@ -1432,7 +2039,7 @@ export const aiOrchestratorService = {
       moduleCode: params.moduleCode,
       featureKey: params.taskType,
       providerCode: primaryProvider.providerCode,
-      modelUsed: `${primaryProvider.defaultModel} (Fallback Analítico)`,
+      modelUsed: `${pinnedPrimaryModel} (Fallback Analítico)`,
       personaCode: activePersona.code,
       fallbackUsed: true,
       promptInjectionBlocked: false,
@@ -1446,7 +2053,7 @@ export const aiOrchestratorService = {
       content: localReply,
       answer: localReply,
       providerUsed: primaryProvider.providerCode,
-      modelUsed: `${primaryProvider.defaultModel} • Motor Resiliente`,
+      modelUsed: `${pinnedPrimaryModel} • Motor Resiliente`,
       personaCode: activePersona.code,
       personaName: activePersona.name,
       personaUsed: {
@@ -1496,6 +2103,7 @@ export const aiOrchestratorService = {
       defaultModel: string
       fastModel: string
       reasoningModel: string
+      sectionModels: Record<AiSiteSectionKey, string>
       baseUrl: string | null
       customHeaders: Record<string, string>
       temperature: number
@@ -1504,6 +2112,7 @@ export const aiOrchestratorService = {
     }>
   > {
     const localVault = readLocal<Record<string, string>>(LOCAL_AI_VAULT_KEYS_CACHE_KEY, {})
+    const configMap = new Map(configs.map((c) => [c.providerCode, c]))
 
     try {
       const { data, error } = await supabase.rpc('resolve_ai_execution_runtime', {
@@ -1512,18 +2121,28 @@ export const aiOrchestratorService = {
       })
 
       if (!error && data && Array.isArray(data.providers) && data.providers.length > 0) {
-        return data.providers.map((p: any) => ({
-          providerCode: p.providerCode as AiProviderCode,
-          apiKey: p.apiKey || decodeVaultValue(localVault[p.providerCode]) || null,
-          defaultModel: p.defaultModel,
-          fastModel: p.fastModel || p.defaultModel,
-          reasoningModel: p.reasoningModel || p.defaultModel,
-          baseUrl: p.baseUrl || null,
-          customHeaders: p.customHeaders || {},
-          temperature: Number(p.temperature ?? 0.3),
-          maxOutputTokens: Number(p.maxOutputTokens ?? 2048),
-          timeoutMs: Number(p.timeoutMs ?? 30000),
-        }))
+        return data.providers.map((p: any) => {
+          const code = p.providerCode as AiProviderCode
+          const cfgMatch = configMap.get(code)
+          const defaultModel = p.defaultModel || cfgMatch?.defaultModel || 'gemini-2.5-flash'
+          const fastModel = p.fastModel || cfgMatch?.fastModel || defaultModel
+          const reasoningModel = p.reasoningModel || cfgMatch?.reasoningModel || defaultModel
+          return {
+            providerCode: code,
+            apiKey: p.apiKey || decodeVaultValue(localVault[code]) || null,
+            defaultModel,
+            fastModel,
+            reasoningModel,
+            sectionModels:
+              cfgMatch?.sectionModels ||
+              buildDefaultSectionModels(defaultModel, fastModel, reasoningModel),
+            baseUrl: p.baseUrl || null,
+            customHeaders: p.customHeaders || {},
+            temperature: Number(p.temperature ?? 0.3),
+            maxOutputTokens: Number(p.maxOutputTokens ?? 2048),
+            timeoutMs: Number(p.timeoutMs ?? 30000),
+          }
+        })
       }
     } catch {
       // Fallback para configs locais + vault local
@@ -1541,6 +2160,13 @@ export const aiOrchestratorService = {
         defaultModel: c.defaultModel,
         fastModel: c.fastModel || c.defaultModel,
         reasoningModel: c.reasoningModel || c.defaultModel,
+        sectionModels:
+          c.sectionModels ||
+          buildDefaultSectionModels(
+            c.defaultModel,
+            c.fastModel || c.defaultModel,
+            c.reasoningModel || c.defaultModel
+          ),
         baseUrl: c.baseUrl,
         customHeaders: c.customHeaders || {},
         temperature: c.temperature,

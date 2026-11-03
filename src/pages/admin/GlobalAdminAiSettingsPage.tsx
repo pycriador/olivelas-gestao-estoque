@@ -36,6 +36,8 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import {
   aiOrchestratorService,
+  AI_SITE_SECTIONS,
+  buildDefaultSectionModels,
   DEFAULT_AI_PERSONAS,
   DEFAULT_AI_PROVIDER_CONFIGS,
 } from '@/services/aiOrchestratorService'
@@ -49,12 +51,14 @@ import { formatCurrency } from '@/utils/currency'
 import { formatDateTime } from '@/utils/dates'
 import { cn } from '@/utils/cn'
 import type {
+  AiDiscoveredModel,
   AiExecutionResult,
   AiPersona,
   AiPersonaTone,
   AiProtectionLevel,
   AiProviderCode,
   AiProviderConfig,
+  AiSiteSectionKey,
   AiUsageLog,
 } from '@/types/ai.types'
 import type { PermissionModule } from '@/types/permissionGroup.types'
@@ -147,6 +151,18 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
   const [defaultModel, setDefaultModel] = useState('gemini-2.5-flash')
   const [fastModel, setFastModel] = useState('gemini-2.5-flash')
   const [reasoningModel, setReasoningModel] = useState('gemini-2.5-pro')
+  const [availableModels, setAvailableModels] = useState<string[]>(
+    PROVIDER_META.GEMINI.suggestedModels
+  )
+  const [discoveredModels, setDiscoveredModels] = useState<AiDiscoveredModel[]>([])
+  const [modelsSource, setModelsSource] = useState<'LIVE_API' | 'CATALOG_FALLBACK'>(
+    'CATALOG_FALLBACK'
+  )
+  const [modelsSourceMessage, setModelsSourceMessage] = useState<string>('')
+  const [loadingModelsFromKey, setLoadingModelsFromKey] = useState(false)
+  const [sectionModels, setSectionModels] = useState<Record<AiSiteSectionKey, string>>(() =>
+    buildDefaultSectionModels('gemini-2.5-flash', 'gemini-2.5-flash', 'gemini-2.5-pro')
+  )
   const [baseUrl, setBaseUrl] = useState(
     'https://generativelanguage.googleapis.com/v1beta'
   )
@@ -198,6 +214,29 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
     setDefaultModel(cfg.defaultModel)
     setFastModel(cfg.fastModel)
     setReasoningModel(cfg.reasoningModel)
+    const initialModels = Array.from(
+      new Set([
+        ...(cfg.availableModels || []),
+        cfg.defaultModel,
+        cfg.fastModel,
+        cfg.reasoningModel,
+        ...(PROVIDER_META[cfg.providerCode]?.suggestedModels || []),
+      ].filter(Boolean))
+    )
+    setAvailableModels(initialModels)
+    setDiscoveredModels(
+      initialModels.map((id) => ({
+        id,
+        displayName: id,
+        recommendedTier: 'default' as const,
+      }))
+    )
+    setModelsSource('CATALOG_FALLBACK')
+    setModelsSourceMessage('')
+    setSectionModels({
+      ...buildDefaultSectionModels(cfg.defaultModel, cfg.fastModel, cfg.reasoningModel),
+      ...(cfg.sectionModels || {}),
+    })
     setBaseUrl(cfg.baseUrl || '')
     setCustomHeadersJson(
       JSON.stringify(cfg.customHeaders || {}, null, 2)
@@ -210,6 +249,122 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
     setProtectionLevel(cfg.promptInjectionProtectionLevel || 'STRICT')
     setEnableLocalFallback(cfg.enableLocalAnalyticalFallback !== false)
   }, [])
+
+  const handleDiscoverModelsFromApiKey = useCallback(
+    async (opts?: {
+      providerCode?: AiProviderCode
+      explicitKey?: string
+      silent?: boolean
+    }) => {
+      const targetCode = opts?.providerCode || selectedProviderCode
+      const keyToUse =
+        opts?.explicitKey !== undefined ? opts.explicitKey : apiKeyInput.trim()
+
+      let parsedHeaders: Record<string, string> = {}
+      try {
+        parsedHeaders = customHeadersJson.trim() ? JSON.parse(customHeadersJson) : {}
+      } catch {
+        parsedHeaders = {}
+      }
+
+      setLoadingModelsFromKey(true)
+      try {
+        const res = await aiOrchestratorService.fetchModelsFromProviderKey({
+          providerCode: targetCode,
+          apiKey: keyToUse || undefined,
+          baseUrl: baseUrl.trim() || null,
+          customHeaders: parsedHeaders,
+        })
+
+        const discoveredIds = res.models.map((m) => m.id)
+        setDiscoveredModels(res.models)
+        setModelsSource(res.source)
+        setModelsSourceMessage(res.message)
+
+        setAvailableModels((prev) =>
+          Array.from(
+            new Set([
+              ...discoveredIds,
+              ...prev,
+              defaultModel,
+              fastModel,
+              reasoningModel,
+            ].filter(Boolean))
+          )
+        )
+
+        if (res.ok && res.models.length > 0) {
+          // Sugerir automaticamente se o modelo atual não estiver na lista descoberta
+          const firstDefault =
+            res.models.find((m) => m.recommendedTier === 'default')?.id ||
+            res.models[0].id
+          const firstFast =
+            res.models.find((m) => m.recommendedTier === 'fast')?.id ||
+            firstDefault
+          const firstReasoning =
+            res.models.find((m) => m.recommendedTier === 'reasoning')?.id ||
+            firstDefault
+
+          if (!discoveredIds.includes(defaultModel)) {
+            setDefaultModel(firstDefault)
+          }
+          if (!discoveredIds.includes(fastModel)) {
+            setFastModel(firstFast)
+          }
+          if (!discoveredIds.includes(reasoningModel)) {
+            setReasoningModel(firstReasoning)
+          }
+
+          if (!opts?.silent) {
+            toast.success(res.message)
+          }
+        } else if (!opts?.silent) {
+          toast.info(res.message)
+        }
+      } catch (err: any) {
+        if (!opts?.silent) {
+          toast.error(err?.message || 'Erro ao consultar modelos da chave de API.')
+        }
+      } finally {
+        setLoadingModelsFromKey(false)
+      }
+    },
+    [
+      selectedProviderCode,
+      apiKeyInput,
+      customHeadersJson,
+      baseUrl,
+      defaultModel,
+      fastModel,
+      reasoningModel,
+    ]
+  )
+
+  // Carrega dinamicamente os modelos assim que o Super Admin digita/cola uma chave de API válida
+  useEffect(() => {
+    const trimmedKey = apiKeyInput.trim()
+    if (trimmedKey.length < 16) return
+    const timer = setTimeout(() => {
+      void handleDiscoverModelsFromApiKey({
+        providerCode: selectedProviderCode,
+        explicitKey: trimmedKey,
+        silent: false,
+      })
+    }, 650)
+    return () => clearTimeout(timer)
+  }, [apiKeyInput, selectedProviderCode, handleDiscoverModelsFromApiKey])
+
+  // Se o provedor selecionado já possui chave salva no cofre, busca os modelos ao vivo silenciosamente ao abrir
+  useEffect(() => {
+    const currentProv = providers.find((p) => p.providerCode === selectedProviderCode)
+    if (currentProv?.hasApiKey && !apiKeyInput.trim()) {
+      void handleDiscoverModelsFromApiKey({
+        providerCode: selectedProviderCode,
+        silent: true,
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProviderCode, providers.length])
 
   const loadAll = useCallback(async () => {
     setLoading(true)
@@ -278,6 +433,32 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
     }
   }
 
+  const handlePinSingleModelEverywhere = (modelToPin: string) => {
+    const clean = modelToPin.trim() || defaultModel.trim()
+    if (!clean) return
+    setDefaultModel(clean)
+    const nextMap = {} as Record<AiSiteSectionKey, string>
+    for (const sec of AI_SITE_SECTIONS) {
+      nextMap[sec.key] = clean
+    }
+    setSectionModels(nextMap)
+    toast.success(
+      `Modelo "${clean}" fixado em todas as 8 partes e módulos do site! Clique em "Salvar Configuração & Chave" para gravar.`
+    )
+  }
+
+  const handleAutoAssignModelsByTier = () => {
+    const nextMap = buildDefaultSectionModels(
+      defaultModel.trim() || 'gemini-2.5-flash',
+      fastModel.trim() || defaultModel.trim() || 'gemini-2.5-flash',
+      reasoningModel.trim() || defaultModel.trim() || 'gemini-2.5-pro'
+    )
+    setSectionModels(nextMap)
+    toast.success(
+      'Modelos distribuídos automaticamente entre as 8 partes do site conforme perfil (Padrão / Rápido / Raciocínio)!'
+    )
+  }
+
   const handleSaveProvider = async (clearKey = false) => {
     let parsedHeaders: Record<string, string> = {}
     try {
@@ -304,12 +485,15 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
         reasoningModel: reasoningModel.trim() || defaultModel.trim(),
         availableModels: Array.from(
           new Set([
+            ...availableModels,
             defaultModel.trim(),
             fastModel.trim(),
             reasoningModel.trim(),
+            ...Object.values(sectionModels),
             ...(PROVIDER_META[selectedProviderCode]?.suggestedModels || []),
-          ])
+          ].filter(Boolean))
         ),
+        sectionModels,
         baseUrl: baseUrl.trim() || null,
         customHeaders: parsedHeaders,
         temperature: Number(temperature || 0.3),
@@ -326,7 +510,7 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
       toast.success(
         clearKey
           ? `Chave de API removida do cofre para ${displayName}.`
-          : `Configuração de ${displayName} salva no Cofre Criptografado com sucesso!`
+          : `Configuração e modelos fixados por seção de ${displayName} salvos com sucesso!`
       )
     } catch (err: any) {
       toast.error(err?.message || 'Erro ao salvar provedor de IA.')
@@ -753,21 +937,44 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
                         <label className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                           <Lock className="h-3.5 w-3.5 text-primary" />
                           Chave de API ({selectedProviderCode})
                         </label>
-                        {selectedProvider.hasApiKey && (
+                        <div className="flex items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => handleSaveProvider(true)}
-                            className="flex items-center gap-1 text-[11px] font-semibold text-danger hover:underline"
+                            onClick={() =>
+                              void handleDiscoverModelsFromApiKey({
+                                providerCode: selectedProviderCode,
+                                silent: false,
+                              })
+                            }
+                            disabled={loadingModelsFromKey}
+                            className="flex items-center gap-1 rounded-lg border border-primary/35 bg-primary/10 px-2 py-0.5 text-[11px] font-bold text-primary hover:bg-primary/20 disabled:opacity-50"
                           >
-                            <Trash2 className="h-3 w-3" />
-                            Limpar chave salva
+                            <RefreshCw
+                              className={cn(
+                                'h-3 w-3',
+                                loadingModelsFromKey && 'animate-spin'
+                              )}
+                            />
+                            {loadingModelsFromKey
+                              ? 'Carregando modelos...'
+                              : 'Carregar Modelos da Chave API'}
                           </button>
-                        )}
+                          {selectedProvider.hasApiKey && (
+                            <button
+                              type="button"
+                              onClick={() => handleSaveProvider(true)}
+                              className="flex items-center gap-1 text-[11px] font-semibold text-danger hover:underline"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Limpar chave salva
+                            </button>
+                          )}
+                        </div>
                       </div>
                       <div className="relative">
                         <Input
@@ -776,7 +983,7 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                           onChange={(e) => setApiKeyInput(e.target.value)}
                           placeholder={
                             selectedProvider.hasApiKey
-                              ? `Chave atual preservada (${selectedProvider.maskedApiKey}) — digite para substituir`
+                              ? `Chave atual preservada (${selectedProvider.maskedApiKey}) — cole nova chave para carregar modelos dinamicamente`
                               : PROVIDER_META[selectedProviderCode]
                                   .keyPlaceholder
                           }
@@ -795,7 +1002,7 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                         </button>
                       </div>
                       <p className="text-[11px] text-muted-foreground">
-                        Deixe em branco para manter a chave atual armazenada no cofre do Supabase.
+                        Ao colar ou digitar sua chave de API, o sistema consulta automaticamente a API oficial do provedor para listar todos os modelos habilitados na sua conta.
                       </p>
                     </div>
 
@@ -874,72 +1081,6 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                         className="font-mono text-xs"
                       />
                     </div>
-                  </div>
-
-                  {/* Coluna Direita: Seleção de Modelos por Tarefa e Instrução Global */}
-                  <div className="space-y-4">
-                    <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                          Modelos Usados em Todos os Módulos das Lojas
-                        </h3>
-                        <div className="flex flex-wrap gap-1">
-                          {PROVIDER_META[
-                            selectedProviderCode
-                          ].suggestedModels.map((m) => (
-                            <button
-                              key={m}
-                              type="button"
-                              onClick={() => {
-                                setDefaultModel(m)
-                                setFastModel(m)
-                              }}
-                              className="rounded-md border border-border bg-background px-2 py-0.5 font-mono text-[10px] text-muted-foreground hover:border-primary hover:text-primary"
-                            >
-                              {m}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2.5">
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-foreground">
-                            1. Modelo Padrão Geral (Chatbot, Vendas, Estoque & Alertas)
-                          </label>
-                          <Input
-                            value={defaultModel}
-                            onChange={(e) => setDefaultModel(e.target.value)}
-                            className="font-mono text-xs"
-                            placeholder="Ex: gemini-2.5-flash"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-foreground">
-                            2. Modelo Rápido / Baixa Latência (Sugestão no PDV & Cross-sell)
-                          </label>
-                          <Input
-                            value={fastModel}
-                            onChange={(e) => setFastModel(e.target.value)}
-                            className="font-mono text-xs"
-                            placeholder="Ex: gemini-2.5-flash"
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          <label className="text-xs font-semibold text-foreground">
-                            3. Modelo de Raciocínio Profundo (Resumo Mensal, Tendências & BI)
-                          </label>
-                          <Input
-                            value={reasoningModel}
-                            onChange={(e) => setReasoningModel(e.target.value)}
-                            className="font-mono text-xs"
-                            placeholder="Ex: gemini-2.5-pro"
-                          />
-                        </div>
-                      </div>
-                    </div>
 
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-foreground">
@@ -970,6 +1111,344 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                         />
                       </div>
                     )}
+                  </div>
+
+                  {/* Coluna Direita: Descoberta Dinâmica de Modelos da Chave API */}
+                  <div className="space-y-4">
+                    <div className="rounded-xl border border-primary/30 bg-muted/20 p-4 space-y-3.5">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                              Modelos Usados em Todos os Módulos das Lojas
+                            </h3>
+                            <Badge
+                              variant={
+                                modelsSource === 'LIVE_API' ? 'success' : 'secondary'
+                              }
+                            >
+                              {modelsSource === 'LIVE_API'
+                                ? `Ao Vivo da Chave API (${availableModels.length})`
+                                : `Catálogo (${availableModels.length})`}
+                            </Badge>
+                          </div>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {modelsSourceMessage ||
+                              'Os modelos abaixo são carregados dinamicamente conforme a chave de API adicionada.'}
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          isLoading={loadingModelsFromKey}
+                          onClick={() =>
+                            void handleDiscoverModelsFromApiKey({
+                              providerCode: selectedProviderCode,
+                              silent: false,
+                            })
+                          }
+                        >
+                          <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                          Atualizar Modelos da Chave
+                        </Button>
+                      </div>
+
+                      {/* Chips de seleção rápida dos modelos descobertos */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Modelos Disponíveis na Chave (clique para definir como Padrão):
+                        </span>
+                        <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-border/70 bg-background/70 p-2">
+                          {availableModels.map((m) => {
+                            const isCurrentDefault = m === defaultModel
+                            return (
+                              <button
+                                key={m}
+                                type="button"
+                                onClick={() => {
+                                  setDefaultModel(m)
+                                  toast.info(
+                                    `Modelo padrão alterado para "${m}". Use a tabela abaixo para fixar por parte do site.`
+                                  )
+                                }}
+                                className={cn(
+                                  'rounded-md border px-2 py-0.5 font-mono text-[10px] transition',
+                                  isCurrentDefault
+                                    ? 'border-primary bg-primary text-primary-foreground font-bold'
+                                    : 'border-border bg-surface text-muted-foreground hover:border-primary hover:text-primary'
+                                )}
+                              >
+                                {m}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+
+                      {/* 3 Perfis Base de Modelo */}
+                      <div className="space-y-2.5 pt-1">
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-foreground">
+                            1. Modelo Padrão Geral (Default)
+                          </label>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <select
+                              value={
+                                availableModels.includes(defaultModel)
+                                  ? defaultModel
+                                  : '__custom__'
+                              }
+                              onChange={(e) => {
+                                if (e.target.value !== '__custom__') {
+                                  setDefaultModel(e.target.value)
+                                }
+                              }}
+                              className="h-9 rounded-xl border border-input bg-background px-2.5 font-mono text-xs text-foreground"
+                            >
+                              {availableModels.map((m) => {
+                                const meta = discoveredModels.find((d) => d.id === m)
+                                return (
+                                  <option key={m} value={m}>
+                                    {meta?.displayName || m}
+                                  </option>
+                                )
+                              })}
+                              {!availableModels.includes(defaultModel) && (
+                                <option value="__custom__">
+                                  Personalizado: {defaultModel}
+                                </option>
+                              )}
+                            </select>
+                            <Input
+                              value={defaultModel}
+                              onChange={(e) => setDefaultModel(e.target.value)}
+                              className="font-mono text-xs"
+                              placeholder="Ou digite o ID do modelo..."
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-foreground">
+                            2. Modelo Rápido / Baixa Latência (Fast / Flash)
+                          </label>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <select
+                              value={
+                                availableModels.includes(fastModel)
+                                  ? fastModel
+                                  : '__custom__'
+                              }
+                              onChange={(e) => {
+                                if (e.target.value !== '__custom__') {
+                                  setFastModel(e.target.value)
+                                }
+                              }}
+                              className="h-9 rounded-xl border border-input bg-background px-2.5 font-mono text-xs text-foreground"
+                            >
+                              {availableModels.map((m) => {
+                                const meta = discoveredModels.find((d) => d.id === m)
+                                return (
+                                  <option key={m} value={m}>
+                                    {meta?.displayName || m}
+                                  </option>
+                                )
+                              })}
+                              {!availableModels.includes(fastModel) && (
+                                <option value="__custom__">
+                                  Personalizado: {fastModel}
+                                </option>
+                              )}
+                            </select>
+                            <Input
+                              value={fastModel}
+                              onChange={(e) => setFastModel(e.target.value)}
+                              className="font-mono text-xs"
+                              placeholder="Ex: gemini-2.5-flash"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1">
+                          <label className="text-xs font-semibold text-foreground">
+                            3. Modelo de Raciocínio Profundo (Reasoning / Pro)
+                          </label>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <select
+                              value={
+                                availableModels.includes(reasoningModel)
+                                  ? reasoningModel
+                                  : '__custom__'
+                              }
+                              onChange={(e) => {
+                                if (e.target.value !== '__custom__') {
+                                  setReasoningModel(e.target.value)
+                                }
+                              }}
+                              className="h-9 rounded-xl border border-input bg-background px-2.5 font-mono text-xs text-foreground"
+                            >
+                              {availableModels.map((m) => {
+                                const meta = discoveredModels.find((d) => d.id === m)
+                                return (
+                                  <option key={m} value={m}>
+                                    {meta?.displayName || m}
+                                  </option>
+                                )
+                              })}
+                              {!availableModels.includes(reasoningModel) && (
+                                <option value="__custom__">
+                                  Personalizado: {reasoningModel}
+                                </option>
+                              )}
+                            </select>
+                            <Input
+                              value={reasoningModel}
+                              onChange={(e) => setReasoningModel(e.target.value)}
+                              className="font-mono text-xs"
+                              placeholder="Ex: gemini-2.5-pro"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* MATRIZ DE FIXAÇÃO DE MODELO POR PARTE DO SITE (8 ÁREAS / MÓDULOS) */}
+                <div className="rounded-xl border border-primary/35 bg-primary/5 p-5 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/70 pb-3">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Layers className="h-4 w-4 text-primary" />
+                        <h3 className="text-sm font-bold text-foreground">
+                          Fixar Modelo Específico para Cada Parte do Site ({selectedProvider.displayName})
+                        </h3>
+                        <Badge variant="default">8 Módulos / Telas do ERP</Badge>
+                      </div>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Escolha e fixe exatamente qual modelo carregado da sua chave API será executado em cada tela e módulo das lojas.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePinSingleModelEverywhere(defaultModel)}
+                      >
+                        <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                        Fixar "{defaultModel}" em Todo o Site
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAutoAssignModelsByTier}
+                      >
+                        <Sliders className="mr-1.5 h-3.5 w-3.5 text-amber-500" />
+                        Auto-Distribuir por Perfil (Flash / Pro)
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {AI_SITE_SECTIONS.map((sec) => {
+                      const pinned =
+                        sectionModels[sec.key] ||
+                        (sec.recommendedTier === 'fast'
+                          ? fastModel
+                          : sec.recommendedTier === 'reasoning'
+                            ? reasoningModel
+                            : defaultModel)
+
+                      const modelOptions = Array.from(
+                        new Set([
+                          ...availableModels,
+                          defaultModel,
+                          fastModel,
+                          reasoningModel,
+                          pinned,
+                        ].filter(Boolean))
+                      )
+
+                      return (
+                        <div
+                          key={sec.key}
+                          className="flex flex-col justify-between rounded-xl border border-border bg-background p-3.5 shadow-2xs space-y-2.5"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-foreground">
+                                {sec.label}
+                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] font-semibold text-primary">
+                                  {sec.route}
+                                </span>
+                                <Badge variant="secondary">
+                                  {sec.recommendedTier === 'fast'
+                                    ? 'Baixa Latência'
+                                    : sec.recommendedTier === 'reasoning'
+                                      ? 'Raciocínio / BI'
+                                      : 'Balanceado'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground">
+                              {sec.description}
+                            </p>
+                          </div>
+
+                          <div className="space-y-1.5 pt-1">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-semibold text-muted-foreground">
+                                Modelo Fixado nesta Parte:
+                              </span>
+                              <span className="font-mono font-bold text-primary">
+                                {pinned}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-5">
+                              <select
+                                value={pinned}
+                                onChange={(e) =>
+                                  setSectionModels((prev) => ({
+                                    ...prev,
+                                    [sec.key]: e.target.value,
+                                  }))
+                                }
+                                className="sm:col-span-3 h-8 rounded-lg border border-input bg-surface px-2 font-mono text-xs font-semibold text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                              >
+                                {modelOptions.map((m) => {
+                                  const discovered = discoveredModels.find(
+                                    (d) => d.id === m
+                                  )
+                                  return (
+                                    <option key={m} value={m}>
+                                      {discovered?.displayName || m}
+                                    </option>
+                                  )
+                                })}
+                              </select>
+                              <Input
+                                value={pinned}
+                                onChange={(e) =>
+                                  setSectionModels((prev) => ({
+                                    ...prev,
+                                    [sec.key]: e.target.value,
+                                  }))
+                                }
+                                className="sm:col-span-2 h-8 font-mono text-xs"
+                                placeholder="ID do modelo..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               </Card>

@@ -81,6 +81,11 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
     useState<string>('PRACTICAL_COPILOT')
   const [customQuestion, setCustomQuestion] = useState('')
   const [result, setResult] = useState<AiExecutionResult | null>(null)
+  const [pinnedModelInfo, setPinnedModelInfo] = useState<{
+    providerCode: string
+    model: string
+    sectionLabel: string
+  } | null>(null)
 
   const runAnalysis = useCallback(
     async (promptOverride?: string, personaOverride?: string) => {
@@ -126,7 +131,17 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
         if (list.length > 0) setPersonas(list)
       })
       .catch(() => {})
-  }, [storeId])
+    aiOrchestratorService
+      .getPinnedModelForTask({ taskType, moduleCode })
+      .then((info) => {
+        setPinnedModelInfo({
+          providerCode: info.providerCode,
+          model: info.model,
+          sectionLabel: info.sectionLabel,
+        })
+      })
+      .catch(() => {})
+  }, [storeId, taskType, moduleCode])
 
   useEffect(() => {
     if (isModuleEnabled && expanded && !result && !loading) {
@@ -210,10 +225,12 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
               <h3 className="text-xs font-bold text-foreground sm:text-sm">
                 {title}
               </h3>
-              <Badge variant="default" className="text-[10px]">
+              <Badge variant="default" className="font-mono text-[10px]">
                 {result
                   ? `${result.providerUsed} • ${result.modelUsed}`
-                  : 'Gemini AI Ready'}
+                  : pinnedModelInfo
+                    ? `${pinnedModelInfo.providerCode} • ${pinnedModelInfo.model}`
+                    : 'Gemini AI Ready'}
               </Badge>
               {result?.fallbackTriggered && (
                 <Badge variant="warning" className="text-[10px]">

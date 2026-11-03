@@ -91,6 +91,7 @@ export const AiCopilotPage: React.FC = () => {
   const [inputPrompt, setInputPrompt] = useState('')
   const [sending, setSending] = useState(false)
   const [loadingContext, setLoadingContext] = useState(true)
+  const [pinnedModelBadge, setPinnedModelBadge] = useState<string>('GEMINI • gemini-2.5-flash')
 
   const sessionId = `copilot-page-${storeId || 'global'}`
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -98,7 +99,7 @@ export const AiCopilotPage: React.FC = () => {
   const loadCopilotEnvironment = useCallback(async () => {
     setLoadingContext(true)
     try {
-      const [snap, loadedPersonas, cfg, history] = await Promise.all([
+      const [snap, loadedPersonas, cfg, history, pinnedInfo] = await Promise.all([
         aiOrchestratorService.buildStoreContextSnapshot(
           storeId || 'all',
           storeName || 'Loja Olivelas'
@@ -106,8 +107,13 @@ export const AiCopilotPage: React.FC = () => {
         aiOrchestratorService.listPersonas(storeId),
         aiOrchestratorService.getStoreAiConfig(storeId || 'all'),
         aiOrchestratorService.listChatMessages(sessionId),
+        aiOrchestratorService.getPinnedModelForTask({
+          taskType: 'CHAT_COPILOT',
+          moduleCode: 'MOD_AI_COPILOT_CHAT',
+        }),
       ])
 
+      setPinnedModelBadge(`${pinnedInfo.providerCode} • ${pinnedInfo.model}`)
       setSnapshot(snap)
       if (loadedPersonas.length > 0) {
         setPersonas(loadedPersonas)
@@ -124,8 +130,8 @@ export const AiCopilotPage: React.FC = () => {
             storeId: storeId || 'all',
             role: 'assistant',
             content: `Bem-vindo à **Central Copiloto de IA da loja ${storeName || 'Olivelas'}**!\n\nJá carreguei o contexto operacional em tempo real:\n• **Faturamento (30d):** ${formatCurrency(snap.monthlyRevenue)} (${snap.monthlyOrdersCount} vendas)\n• **Lotes Vencendo / Vencidos (FEFO):** ${snap.expiringWithin30DaysCount} vencendo + ${snap.expiredBatchesCount} vencidos\n• **Itens Abaixo do Estoque Mínimo:** ${snap.lowStockCount}\n• **Base de Clientes Ativos:** ${snap.totalCustomersCount} (${snap.inactiveCustomersCount} inativos para reativação)\n\nEscolha uma análise estratégica ao lado ou digite sua pergunta abaixo!`,
-            providerUsed: 'GEMINI',
-            modelUsed: 'gemini-2.5-flash',
+            providerUsed: pinnedInfo.providerCode,
+            modelUsed: pinnedInfo.model,
             personaCode: 'PRACTICAL_COPILOT',
             createdAt: new Date().toISOString(),
           },
@@ -226,9 +232,9 @@ export const AiCopilotPage: React.FC = () => {
       <PageHeader
         title={`Copiloto IA da Loja: ${storeName || 'Olivelas'}`}
         badge={
-          <Badge variant="default">
+          <Badge variant="default" className="font-mono">
             <Sparkles className="mr-1 h-3 w-3" />
-            Context Grounding Ativo
+            Modelo Fixado: {pinnedModelBadge}
           </Badge>
         }
       />
