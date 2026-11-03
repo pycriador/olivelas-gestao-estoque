@@ -421,6 +421,20 @@ export function InventoryPage() {
         title="IA de Auditoria de Estoque, Giro & Prevenção de Ruptura"
         subtitle="Avalia capital alocado em estoque, equilíbrio de lotes FEFO e prioridades de reposição/transferência"
         compact
+        quickPrompts={[
+          {
+            label: 'Risco de ruptura (Curva A)',
+            prompt: 'Quais produtos de maior giro correm risco de ruptura nos próximos dias e precisam de reposição?',
+          },
+          {
+            label: 'Excesso de estoque parado',
+            prompt: 'Quais itens estão com capital excessivo imobilizado e baixa saída para fazermos promoção ou remessa para filial?',
+          },
+          {
+            label: 'Auditoria de baixas e perdas',
+            prompt: 'Analise o saldo de estoque e aponte recomendações práticas para reduzir perdas operacionais e avarias.',
+          },
+        ]}
       />
 
       {/* Page Toolbar (Tabs, Filters & Actions) */}

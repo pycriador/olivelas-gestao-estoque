@@ -260,6 +260,20 @@ export function PurchasingPage() {
         title="IA de Compras, Tendências & Reposição Inteligente"
         subtitle="Detecta produtos de alto giro em ruptura, tendências de demanda e recomenda ordens de compra ideais"
         compact
+        quickPrompts={[
+          {
+            label: 'Lista de compra prioritária hoje',
+            prompt: 'Quais produtos devemos comprar com urgência esta semana considerando o giro de vendas e estoque atual?',
+          },
+          {
+            label: 'Otimizar custo e margem de compra',
+            prompt: 'Quais itens da Curva A merecem negociação de volume com fornecedores para ampliar nossa margem bruta?',
+          },
+          {
+            label: 'Evitar compra de itens parados',
+            prompt: 'Quais produtos já possuem cobertura suficiente em estoque e não devem ser recomprados agora?',
+          },
+        ]}
       />
 
       {/* Table Card - Viewport fitting with internal scroll */}

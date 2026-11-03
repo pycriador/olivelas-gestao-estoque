@@ -9,11 +9,14 @@ import {
   Copy,
   History,
   Lock,
+  Maximize2,
   MessageSquare,
+  Minimize2,
   RefreshCw,
   Send,
   Sparkles,
   Trash2,
+  X,
   Zap,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
@@ -61,7 +64,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
   defaultPrompt = 'Analise os indicadores atuais desta tela e aponte as 3 melhores oportunidades de negócio, alertas críticos e ações recomendadas.',
   quickPrompts = [],
   extraContextData,
-  defaultExpanded = true,
+  defaultExpanded = false,
   compact = false,
   className,
 }) => {
@@ -76,7 +79,9 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
     (m) => m.code === moduleCode
   )
 
+  // Por padrão vem minimizado em todas as telas
   const [expanded, setExpanded] = useState(defaultExpanded)
+  const [isFullScreen, setIsFullScreen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [personas, setPersonas] = useState<AiPersona[]>(DEFAULT_AI_PERSONAS)
   const [selectedPersonaCode, setSelectedPersonaCode] =
@@ -91,6 +96,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
   } | null>(null)
 
   const historyScrollRef = useRef<HTMLDivElement>(null)
+  const fullScreenScrollRef = useRef<HTMLDivElement>(null)
 
   const sessionId = React.useMemo(
     () =>
@@ -141,7 +147,23 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
     if (historyScrollRef.current) {
       historyScrollRef.current.scrollTop = historyScrollRef.current.scrollHeight
     }
-  }, [historyMessages, loading])
+    if (fullScreenScrollRef.current) {
+      fullScreenScrollRef.current.scrollTop =
+        fullScreenScrollRef.current.scrollHeight
+    }
+  }, [historyMessages, loading, isFullScreen, expanded])
+
+  // Fechar tela cheia com tecla ESC
+  useEffect(() => {
+    if (!isFullScreen) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullScreen(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isFullScreen])
 
   const runAnalysis = useCallback(
     async (promptOverride?: string, personaOverride?: string) => {
@@ -149,7 +171,9 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
       const promptText = (promptOverride || defaultPrompt).trim()
       const activePersona = personaOverride || selectedPersonaCode
 
-      setExpanded(true)
+      if (!isFullScreen) {
+        setExpanded(true)
+      }
       setLoading(true)
 
       const userMsg: AiChatMessage = {
@@ -209,6 +233,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
       defaultPrompt,
       extraContextData,
       historyMessages,
+      isFullScreen,
       isModuleEnabled,
       loading,
       moduleCode,
@@ -304,257 +329,525 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
     .reverse()
     .find((m) => m.role === 'assistant')
 
-  return (
-    <Card
-      className={cn(
-        'flex-shrink-0 overflow-hidden border-violet-500/35 bg-gradient-to-br from-violet-500/[0.06] via-surface to-emerald-500/[0.03] shadow-2xs',
-        className
-      )}
-    >
-      {/* Compact Header Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-3 py-2">
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-2xs">
-            <Sparkles className="h-3.5 w-3.5" />
-          </div>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <h3 className="text-xs font-bold text-foreground truncate">
-                {title}
-              </h3>
-              <Badge variant="default" className="font-mono text-[10px] h-4.5 px-1.5">
-                {result
-                  ? `${result.providerUsed} • ${result.modelUsed}`
-                  : latestAssistantMsg?.modelUsed
-                    ? `${latestAssistantMsg.providerUsed || 'GEMINI'} • ${latestAssistantMsg.modelUsed}`
-                    : pinnedModelInfo
-                      ? `${pinnedModelInfo.providerCode} • ${pinnedModelInfo.model}`
-                      : 'Gemini AI'}
-              </Badge>
-              {historyMessages.length > 0 && (
-                <Badge variant="outline" className="text-[10px] h-4.5 px-1.5 gap-1">
-                  <History className="h-2.5 w-2.5 text-violet-500" />
-                  {historyMessages.filter((m) => m.role === 'assistant').length}{' '}
-                  {historyMessages.filter((m) => m.role === 'assistant').length === 1
-                    ? 'análise'
-                    : 'análises'}
-                </Badge>
-              )}
-            </div>
-            {!compact && (
-              <p className="text-[11px] text-muted-foreground truncate">
-                {subtitle}
-              </p>
-            )}
-          </div>
-        </div>
+  const activeModelLabel = result
+    ? `${result.providerUsed} • ${result.modelUsed}`
+    : latestAssistantMsg?.modelUsed
+      ? `${latestAssistantMsg.providerUsed || 'GEMINI'} • ${latestAssistantMsg.modelUsed}`
+      : pinnedModelInfo
+        ? `${pinnedModelInfo.providerCode} • ${pinnedModelInfo.model}`
+        : 'Gemini AI'
 
-        <div className="flex flex-wrap items-center gap-1.5">
-          {/* Seletor de Persona (não dispara chamada sozinho; apenas seleciona para a próxima solicitação) */}
-          <select
-            value={selectedPersonaCode}
-            onChange={(e) => setSelectedPersonaCode(e.target.value)}
-            aria-label="Selecionar Persona de IA"
-            className="h-7 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground"
-          >
-            {personas.map((p) => (
-              <option key={p.code} value={p.code}>
-                Persona: {p.name}
-              </option>
-            ))}
-          </select>
+  const analysisCount = historyMessages.filter(
+    (m) => m.role === 'assistant'
+  ).length
 
+  const renderMessagesList = (isFullScreenView: boolean) => {
+    if (historyMessages.length === 0 && !loading) {
+      return (
+        <div
+          className={cn(
+            'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-dashed border-border/80 bg-background/70',
+            isFullScreenView ? 'p-6 text-sm' : 'px-3.5 py-2.5 text-xs'
+          )}
+        >
+          <div className="space-y-1">
+            <p className="font-semibold text-foreground">
+              Agente de IA pronto para analisar os dados desta tela sob demanda
+            </p>
+            <p className="text-muted-foreground text-[11px] sm:text-xs">
+              Clique em <strong className="text-foreground">Analisar com IA</strong>, escolha uma sugestão rápida ou envie sua pergunta abaixo.
+            </p>
+          </div>
           <Button
             type="button"
             size="sm"
             variant="default"
             isLoading={loading}
-            onClick={() => runAnalysis(customQuestion.trim() || defaultPrompt)}
-            className="h-7 px-2.5 text-[11px] bg-violet-600 hover:bg-violet-700 text-white"
+            onClick={() => runAnalysis(defaultPrompt)}
+            className="bg-violet-600 hover:bg-violet-700 text-white shrink-0"
           >
-            <Sparkles className="mr-1 h-3 w-3" />
-            {historyMessages.length > 0 ? 'Nova Análise IA' : 'Analisar com IA'}
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+            Gerar Análise Completa Agora
           </Button>
+        </div>
+      )
+    }
 
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => navigate('/ai-copilot')}
-            className="h-7 px-2 text-[11px] text-primary"
-          >
-            <Bot className="mr-1 h-3 w-3" />
-            Copiloto
-          </Button>
-
-          {historyMessages.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearLocalHistory}
-              title="Limpar histórico de conversa deste módulo"
-              className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+    return (
+      <div
+        ref={isFullScreenView ? fullScreenScrollRef : historyScrollRef}
+        className={cn(
+          'overflow-y-auto custom-scrollbar rounded-xl border border-border/80 bg-background/95 text-foreground',
+          isFullScreenView
+            ? 'flex-1 min-h-0 p-4 sm:p-6 space-y-4 text-sm leading-relaxed'
+            : 'max-h-80 sm:max-h-96 p-3 space-y-3 text-xs leading-relaxed'
+        )}
+      >
+        {historyMessages.map((msg) => {
+          const isUser = msg.role === 'user'
+          return (
+            <div
+              key={msg.id}
+              className={cn(
+                'rounded-xl transition-all',
+                isFullScreenView ? 'p-4' : 'p-3',
+                isUser
+                  ? 'bg-violet-500/10 border border-violet-500/25 text-foreground ml-4 sm:ml-10'
+                  : 'bg-card border border-border/80 text-foreground shadow-2xs'
+              )}
             >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          )}
+              <div className="mb-1.5 flex items-center justify-between gap-2 border-b border-border/50 pb-1.5 text-[11px] text-muted-foreground">
+                <span className="font-bold text-violet-600 dark:text-violet-400">
+                  {isUser
+                    ? 'Você solicitou:'
+                    : `${msg.providerUsed || 'GEMINI'} • ${msg.modelUsed || pinnedModelInfo?.model || 'gemini-2.5-flash'}`}
+                </span>
+                <div className="flex items-center gap-2">
+                  {!isUser && !isFullScreenView && (
+                    <button
+                      type="button"
+                      onClick={() => setIsFullScreen(true)}
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold text-violet-600 dark:text-violet-400 hover:underline cursor-pointer"
+                      title="Ler esta análise em tela cheia"
+                    >
+                      <Maximize2 className="h-2.5 w-2.5" />
+                      Tela Cheia
+                    </button>
+                  )}
+                  {!isUser && (
+                    <button
+                      type="button"
+                      onClick={() => handleCopyText(msg.content)}
+                      className="inline-flex items-center gap-1 text-[10px] hover:text-foreground cursor-pointer"
+                    >
+                      <Copy className="h-2.5 w-2.5" />
+                      Copiar
+                    </button>
+                  )}
+                </div>
+              </div>
 
+              {isUser ? (
+                <div
+                  className={cn(
+                    'font-medium',
+                    isFullScreenView ? 'text-sm' : 'text-xs'
+                  )}
+                >
+                  {msg.content}
+                </div>
+              ) : (
+                <AiMarkdownContent
+                  content={msg.content}
+                  className={isFullScreenView ? 'text-sm leading-relaxed' : undefined}
+                />
+              )}
+
+              {!isUser &&
+                msg.actionSuggestions &&
+                msg.actionSuggestions.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
+                    {msg.actionSuggestions.map((act) => (
+                      <Button
+                        key={act.id}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (act.whatsappText) {
+                            handleCopyText(act.whatsappText)
+                          } else if (act.route) {
+                            setIsFullScreen(false)
+                            navigate(act.route)
+                          }
+                        }}
+                        className="h-7 px-2.5 text-[11px]"
+                      >
+                        {act.whatsappText ? (
+                          <Copy className="mr-1 h-3 w-3 text-emerald-500" />
+                        ) : (
+                          <ArrowRight className="mr-1 h-3 w-3 text-primary" />
+                        )}
+                        {act.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+            </div>
+          )
+        })}
+
+        {loading && (
+          <div className="flex items-center gap-2.5 py-3 px-2 text-xs sm:text-sm text-muted-foreground">
+            <RefreshCw className="h-4 w-4 animate-spin text-violet-500 shrink-0" />
+            <span>
+              Consultando IA em tempo real para a loja{' '}
+              <strong>{storeName || 'Olivelas'}</strong>...
+            </span>
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <Card
+        className={cn(
+          'flex-shrink-0 overflow-hidden border-violet-500/35 bg-gradient-to-br from-violet-500/[0.06] via-surface to-emerald-500/[0.03] shadow-2xs',
+          className
+        )}
+      >
+        {/* Barra Superior (Por padrão minimizada; clicável para expandir ou abrir em Tela Cheia) */}
+        <div
+          className={cn(
+            'flex flex-wrap items-center justify-between gap-2 px-3 py-2',
+            expanded && 'border-b border-border/60'
+          )}
+        >
           <button
             type="button"
-            onClick={() => setExpanded(!expanded)}
-            className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label={
-              expanded ? 'Recolher painel de IA' : 'Expandir painel de IA'
+            onClick={() => setExpanded((prev) => !prev)}
+            className="flex items-center gap-2 min-w-0 text-left cursor-pointer group"
+            title={
+              expanded
+                ? 'Clique para minimizar o painel de IA'
+                : 'Clique para expandir o painel de IA'
             }
           >
-            {expanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="p-2.5 sm:p-3 space-y-2">
-          {/* Quick Prompts */}
-          {quickPrompts.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
-                Sugestões:
-              </span>
-              {quickPrompts.map((qp, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  disabled={loading}
-                  onClick={() => runAnalysis(qp.prompt)}
-                  className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-violet-500/20 transition shrink-0 disabled:opacity-50 cursor-pointer"
-                >
-                  <Zap className="h-2.5 w-2.5 text-violet-500" />
-                  {qp.label}
-                </button>
-              ))}
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-2xs group-hover:scale-105 transition-transform">
+              <Sparkles className="h-3.5 w-3.5" />
             </div>
-          )}
-
-          {/* Caixa Compacta de Histórico de Conversa & Resposta Sob Demanda */}
-          {(historyMessages.length > 0 || loading) ? (
-            <div
-              ref={historyScrollRef}
-              className="max-h-44 overflow-y-auto custom-scrollbar rounded-xl border border-border/80 bg-background/95 p-2.5 space-y-2.5 text-xs leading-relaxed text-foreground"
-            >
-              {historyMessages.map((msg) => {
-                const isUser = msg.role === 'user'
-                return (
-                  <div
-                    key={msg.id}
-                    className={cn(
-                      'rounded-lg p-2.5',
-                      isUser
-                        ? 'bg-violet-500/10 border border-violet-500/20 text-foreground ml-4'
-                        : 'bg-card border border-border/70 text-foreground'
-                    )}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <h3 className="text-xs font-bold text-foreground truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                  {title}
+                </h3>
+                <Badge
+                  variant="default"
+                  className="font-mono text-[10px] h-4.5 px-1.5"
+                >
+                  {activeModelLabel}
+                </Badge>
+                {analysisCount > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] h-4.5 px-1.5 gap-1"
                   >
-                    <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
-                      <span className="font-bold text-violet-600 dark:text-violet-400">
-                        {isUser
-                          ? 'Você solicitou:'
-                          : `${msg.providerUsed || 'GEMINI'} • ${msg.modelUsed || pinnedModelInfo?.model || 'gemini-2.5-flash'}`}
-                      </span>
-                      {!isUser && (
-                        <button
-                          type="button"
-                          onClick={() => handleCopyText(msg.content)}
-                          className="inline-flex items-center gap-1 text-[10px] hover:text-foreground"
-                        >
-                          <Copy className="h-2.5 w-2.5" />
-                          Copiar
-                        </button>
-                      )}
-                    </div>
-
-                    {isUser ? (
-                      <div className="text-[11px] font-medium">{msg.content}</div>
-                    ) : (
-                      <AiMarkdownContent content={msg.content} />
-                    )}
-
-                    {!isUser &&
-                      msg.actionSuggestions &&
-                      msg.actionSuggestions.length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1.5 border-t border-border/50 pt-1.5">
-                          {msg.actionSuggestions.map((act) => (
-                            <Button
-                              key={act.id}
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                if (act.whatsappText) {
-                                  handleCopyText(act.whatsappText)
-                                } else if (act.route) {
-                                  navigate(act.route)
-                                }
-                              }}
-                              className="h-6 px-2 text-[10px]"
-                            >
-                              {act.whatsappText ? (
-                                <Copy className="mr-1 h-2.5 w-2.5 text-emerald-500" />
-                              ) : (
-                                <ArrowRight className="mr-1 h-2.5 w-2.5 text-primary" />
-                              )}
-                              {act.label}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                  </div>
-                )
-              })}
-
-              {loading && (
-                <div className="flex items-center gap-2 py-2 px-1 text-xs text-muted-foreground">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin text-violet-500 shrink-0" />
-                  <span>
-                    Consultando IA em tempo real para a loja{' '}
-                    <strong>{storeName}</strong>...
+                    <History className="h-2.5 w-2.5 text-violet-500" />
+                    {analysisCount}{' '}
+                    {analysisCount === 1 ? 'análise' : 'análises'}
+                  </Badge>
+                )}
+                {!expanded && (
+                  <span className="text-[10px] font-medium text-muted-foreground hidden md:inline">
+                    • Clique para expandir ou abra em Tela Cheia
                   </span>
-                </div>
+                )}
+              </div>
+              {!compact && (
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {subtitle}
+                </p>
               )}
             </div>
-          ) : (
-            <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border/70 bg-background/60 px-3 py-1.5 text-[11px] text-muted-foreground">
-              <span>
-                A IA carrega apenas quando solicitada. Clique em{' '}
-                <strong className="text-foreground">Analisar com IA</strong> ou faça uma pergunta abaixo.
-              </span>
-            </div>
-          )}
+          </button>
 
-          {/* Barra Compacta de Pergunta Direta ao Módulo */}
-          <form onSubmit={handleAskCustom} className="flex items-center gap-1.5">
-            <Input
-              value={customQuestion}
-              onChange={(e) => setCustomQuestion(e.target.value)}
-              placeholder="Pergunte à IA sobre os dados desta tela e pressione Enter..."
-              className="h-8 text-xs"
-              icon={<MessageSquare className="h-3.5 w-3.5" />}
-            />
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Seletor de Persona */}
+            <select
+              value={selectedPersonaCode}
+              onChange={(e) => setSelectedPersonaCode(e.target.value)}
+              aria-label="Selecionar Persona de IA"
+              className="h-7 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground cursor-pointer"
+            >
+              {personas.map((p) => (
+                <option key={p.code} value={p.code}>
+                  Persona: {p.name}
+                </option>
+              ))}
+            </select>
+
             <Button
-              type="submit"
+              type="button"
               size="sm"
               variant="default"
               isLoading={loading}
-              disabled={!customQuestion.trim()}
-              className="h-8 px-3 text-xs shrink-0"
+              onClick={() => runAnalysis(customQuestion.trim() || defaultPrompt)}
+              className="h-7 px-2.5 text-[11px] bg-violet-600 hover:bg-violet-700 text-white cursor-pointer"
             >
-              <Send className="mr-1 h-3 w-3" />
-              Perguntar
+              <Sparkles className="mr-1 h-3 w-3" />
+              {historyMessages.length > 0 ? 'Nova Análise IA' : 'Analisar com IA'}
             </Button>
-          </form>
+
+            {/* Botão Abrir em Tela Cheia */}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsFullScreen(true)}
+              title="Abrir o agente de IA desta tela em modo Tela Cheia para leitura detalhada"
+              className="h-7 px-2.5 text-[11px] border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/15 cursor-pointer"
+            >
+              <Maximize2 className="mr-1 h-3 w-3" />
+              Tela Cheia
+            </Button>
+
+            {historyMessages.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearLocalHistory}
+                title="Limpar histórico de conversa deste módulo"
+                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+              aria-label={
+                expanded ? 'Minimizar painel de IA' : 'Expandir painel de IA'
+              }
+              title={
+                expanded ? 'Minimizar painel de IA' : 'Expandir painel de IA'
+              }
+            >
+              {expanded ? (
+                <>
+                  <span className="hidden sm:inline">Minimizar</span>
+                  <ChevronUp className="h-4 w-4" />
+                </>
+              ) : (
+                <>
+                  <span className="hidden sm:inline">Expandir</span>
+                  <ChevronDown className="h-4 w-4" />
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Corpo Expandido Inline */}
+        {expanded && (
+          <div className="p-2.5 sm:p-3 space-y-2.5">
+            {quickPrompts.length > 0 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 custom-scrollbar">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                  Sugestões:
+                </span>
+                {quickPrompts.map((qp, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => runAnalysis(qp.prompt)}
+                    className="inline-flex items-center gap-1 rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-0.5 text-[11px] font-medium text-foreground hover:bg-violet-500/20 transition shrink-0 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Zap className="h-2.5 w-2.5 text-violet-500" />
+                    {qp.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {renderMessagesList(false)}
+
+            <form onSubmit={handleAskCustom} className="flex items-center gap-1.5">
+              <Input
+                value={customQuestion}
+                onChange={(e) => setCustomQuestion(e.target.value)}
+                placeholder="Pergunte à IA sobre os dados desta tela e pressione Enter..."
+                className="h-8 text-xs"
+                icon={<MessageSquare className="h-3.5 w-3.5" />}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                variant="default"
+                isLoading={loading}
+                disabled={!customQuestion.trim()}
+                className="h-8 px-3 text-xs shrink-0"
+              >
+                <Send className="mr-1 h-3 w-3" />
+                Perguntar
+              </Button>
+            </form>
+          </div>
+        )}
+      </Card>
+
+      {/* MODAL EM TELA CHEIA PARA LEITURA E CONVERSA DETALHADA */}
+      {isFullScreen && (
+        <div
+          className="fixed inset-0 z-50 flex flex-col bg-background/98 backdrop-blur-xs animate-in fade-in duration-150"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Tela Cheia: ${title}`}
+        >
+          {/* Header Tela Cheia */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-violet-600/12 via-surface to-emerald-500/5 px-4 sm:px-6 py-3 shrink-0">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
+                <Sparkles className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-sm sm:text-base font-bold text-foreground">
+                    {title}
+                  </h2>
+                  <Badge variant="default" className="font-mono text-xs">
+                    {activeModelLabel}
+                  </Badge>
+                  {analysisCount > 0 && (
+                    <Badge variant="outline" className="text-xs gap-1">
+                      <History className="h-3 w-3 text-violet-500" />
+                      {analysisCount}{' '}
+                      {analysisCount === 1 ? 'análise salva' : 'análises salvas'}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground truncate">
+                  {subtitle} • Unidade: <strong>{storeName || 'Consolidado'}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={selectedPersonaCode}
+                onChange={(e) => setSelectedPersonaCode(e.target.value)}
+                aria-label="Selecionar Persona de IA"
+                className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground cursor-pointer"
+              >
+                {personas.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    Persona: {p.name} ({p.tone})
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="default"
+                isLoading={loading}
+                onClick={() => runAnalysis(customQuestion.trim() || defaultPrompt)}
+                className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-700 text-white cursor-pointer"
+              >
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                {historyMessages.length > 0 ? 'Nova Análise IA' : 'Analisar com IA'}
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  setIsFullScreen(false)
+                  navigate('/ai-copilot')
+                }}
+                className="h-8 px-2.5 text-xs text-primary cursor-pointer"
+              >
+                <Bot className="mr-1 h-3.5 w-3.5" />
+                Central Copiloto
+              </Button>
+
+              {historyMessages.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearLocalHistory}
+                  className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                  title="Limpar histórico de conversa deste módulo"
+                >
+                  <Trash2 className="mr-1 h-3.5 w-3.5" />
+                  Limpar
+                </Button>
+              )}
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setIsFullScreen(false)}
+                className="h-8 px-3 text-xs font-semibold border-border cursor-pointer"
+                title="Voltar para a tela (Esc)"
+              >
+                <Minimize2 className="mr-1.5 h-3.5 w-3.5" />
+                Sair da Tela Cheia
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => setIsFullScreen(false)}
+                aria-label="Fechar tela cheia"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Barra de Atalhos Rápidos na Tela Cheia */}
+          {quickPrompts.length > 0 && (
+            <div className="border-b border-border/70 bg-muted/20 px-4 sm:px-6 py-2.5 shrink-0">
+              <div className="mx-auto flex max-w-6xl items-center gap-2 overflow-x-auto pb-0.5 custom-scrollbar">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                  Perguntas Rápidas:
+                </span>
+                {quickPrompts.map((qp, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    disabled={loading}
+                    onClick={() => runAnalysis(qp.prompt)}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-foreground hover:bg-violet-500/20 transition shrink-0 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Zap className="h-3 w-3 text-violet-500" />
+                    {qp.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Corpo Principal Rolável em Tela Cheia */}
+          <div className="flex-1 min-h-0 flex flex-col mx-auto w-full max-w-6xl p-4 sm:p-6 overflow-hidden">
+            {renderMessagesList(true)}
+          </div>
+
+          {/* Barra de Pergunta Fixa no Rodapé da Tela Cheia */}
+          <div className="border-t border-border bg-surface/95 px-4 sm:px-6 py-3 shrink-0">
+            <form
+              onSubmit={handleAskCustom}
+              className="mx-auto flex max-w-6xl items-center gap-2"
+            >
+              <Input
+                value={customQuestion}
+                onChange={(e) => setCustomQuestion(e.target.value)}
+                placeholder="Faça uma pergunta detalhada sobre os indicadores desta tela e pressione Enter..."
+                className="h-10 text-sm"
+                icon={<MessageSquare className="h-4 w-4" />}
+              />
+              <Button
+                type="submit"
+                size="sm"
+                variant="default"
+                isLoading={loading}
+                disabled={!customQuestion.trim()}
+                className="h-10 px-5 text-xs sm:text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white shrink-0 cursor-pointer"
+              >
+                <Send className="mr-1.5 h-4 w-4" />
+                Enviar Pergunta
+              </Button>
+            </form>
+          </div>
         </div>
       )}
-    </Card>
+    </>
   )
 }

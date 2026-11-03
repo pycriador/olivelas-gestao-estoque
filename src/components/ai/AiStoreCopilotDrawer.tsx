@@ -5,8 +5,9 @@ import {
   ArrowRight,
   Bot,
   Copy,
+  ExternalLink,
   Maximize2,
-  MessageSquare,
+  Minimize2,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -68,6 +69,7 @@ export const AiStoreCopilotDrawer: React.FC = () => {
     isGlobalAdmin || hasModule('MOD_AI_COPILOT_CHAT')
 
   const [isOpen, setIsOpen] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
   const [personas, setPersonas] = useState<AiPersona[]>(DEFAULT_AI_PERSONAS)
   const [selectedPersonaCode, setSelectedPersonaCode] =
     useState<string>('PRACTICAL_COPILOT')
@@ -214,12 +216,17 @@ export const AiStoreCopilotDrawer: React.FC = () => {
         </button>
       </div>
 
-      {/* Drawer Lateral do Chatbot */}
+      {/* Drawer / Modal Tela Cheia do Chatbot */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs">
-          <div className="flex h-full w-full max-w-lg flex-col border-l border-border bg-surface shadow-2xl">
+          <div
+            className={cn(
+              'flex h-full w-full flex-col border-l border-border bg-surface shadow-2xl transition-all duration-150',
+              isFullScreen ? 'max-w-none' : 'max-w-lg'
+            )}
+          >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-border bg-gradient-to-r from-violet-600/15 via-primary/10 to-transparent px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-r from-violet-600/15 via-primary/10 to-transparent px-4 py-3">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-xs">
                   <Bot className="h-5 w-5" />
@@ -240,31 +247,59 @@ export const AiStoreCopilotDrawer: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsFullScreen((prev) => !prev)}
+                  title={
+                    isFullScreen
+                      ? 'Voltar ao painel lateral'
+                      : 'Expandir em Tela Cheia para leitura detalhada'
+                  }
+                  className="h-7 px-2.5 text-[11px] border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/15 cursor-pointer"
+                >
+                  {isFullScreen ? (
+                    <>
+                      <Minimize2 className="mr-1 h-3.5 w-3.5" />
+                      Restaurar
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 className="mr-1 h-3.5 w-3.5" />
+                      Tela Cheia
+                    </>
+                  )}
+                </Button>
                 <button
                   type="button"
                   onClick={() => {
                     setIsOpen(false)
+                    setIsFullScreen(false)
                     navigate('/ai-copilot')
                   }}
-                  title="Expandir em Tela Cheia (/ai-copilot)"
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  title="Ir para a Central Copiloto (/ai-copilot)"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                 >
-                  <Maximize2 className="h-4 w-4" />
+                  <ExternalLink className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
                   onClick={handleClearChat}
                   title="Limpar conversa"
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
                 <button
                   type="button"
-                  onClick={() => setIsOpen(false)}
+                  onClick={() => {
+                    setIsOpen(false)
+                    setIsFullScreen(false)
+                  }}
                   aria-label="Fechar Copiloto de IA"
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
