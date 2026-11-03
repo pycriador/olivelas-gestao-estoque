@@ -16,6 +16,7 @@ import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
 import { CustomerCombobox } from '@/components/sales/CustomerCombobox'
 import { CustomerQuickCreateModal } from '@/components/sales/CustomerQuickCreateModal'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 import {
   ShoppingBag,
   Plus,
@@ -520,6 +521,34 @@ export function SalesPage() {
           {errorMsg}
         </div>
       )}
+
+      {/* IA POS Cross-Sell & Product Suggestions for Customers */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_SALES_CRM"
+        taskType="POS_CROSS_SELL_SUGGESTION"
+        title="Sugestão Inteligente de Produtos no PDV (Cross-Sell & Giro Rápido)"
+        subtitle="Sugere ao operador e ao administrador quais produtos ofertar ao cliente no caixa (campeões de venda + lotes em promoção FEFO)."
+        defaultPrompt="Sugira os melhores produtos para ofertar aos clientes no PDV agora, combinando os itens mais vendidos com produtos de giro prioritário."
+        defaultExpanded={false}
+        compact
+        extraContextData={{
+          cartItemsCount: cart.length,
+          cartProductNames: cart.map((c) => c.product.name),
+          selectedCustomerId: selectedCustomerId || null,
+        }}
+        quickPrompts={[
+          {
+            label: 'Sugerir combo para o carrinho atual',
+            prompt:
+              'Com base nos itens no carrinho e nos mais vendidos da loja, qual produto complementar sugerir ao cliente agora?',
+          },
+          {
+            label: 'Produtos com prioridade de venda hoje',
+            prompt:
+              'Quais produtos têm lotes próximos do vencimento ou maior margem para destacarmos no balcão hoje?',
+          },
+        ]}
+      />
 
       {/* Main POS Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-2.5">

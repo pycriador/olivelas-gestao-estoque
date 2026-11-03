@@ -19,6 +19,7 @@ import { ConfirmModal } from '@/components/ui/confirm-modal'
 import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 
 function Label({
   children,
@@ -1079,6 +1080,29 @@ export function CustomersPage() {
           </button>
         </div>
       )}
+
+      {/* IA Customer Product Recommendation & CRM Insights */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_SALES_CRM"
+        taskType="CUSTOMER_PRODUCT_RECOMMENDATION"
+        title="Inteligência Comercial CRM: Avaliar e Sugerir Produtos para os Clientes"
+        subtitle="Cruza histórico de compras da carteira VIP e clientes inativos com o estoque atual para sugerir produtos personalizados."
+        defaultPrompt="Avalie o perfil de compras dos nossos clientes e sugira quais produtos da loja devemos recomendar hoje para elevar o ticket médio e reativar clientes inativos."
+        defaultExpanded={false}
+        compact
+        quickPrompts={[
+          {
+            label: 'Sugerir produtos para Clientes VIP',
+            prompt:
+              'Quais produtos da Curva A devemos sugerir aos nossos melhores clientes VIP hoje?',
+          },
+          {
+            label: 'Campanha de reativação de inativos',
+            prompt:
+              'Sugira uma oferta irresistível de produtos para recuperar clientes sem compras há mais de 45 dias.',
+          },
+        ]}
+      />
 
       {/* SAVED VIEWS BAR (Individual per Store / Branch in Database) */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg border border-border bg-card shadow-2xs flex-shrink-0">

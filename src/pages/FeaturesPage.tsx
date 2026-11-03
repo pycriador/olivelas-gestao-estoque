@@ -14,11 +14,24 @@ import {
   Webhook,
   CreditCard,
   UserCheck,
+  Bot,
+  BrainCircuit,
+  FileSignature,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export function FeaturesPage() {
   const modules = [
+    {
+      icon: Bot,
+      title: 'Copiloto IA & Chatbot Executivo da Loja (/ai-copilot)',
+      desc: 'Chatbot inteligente integrado aos dados reais da loja com Google Gemini como motor principal padrão (além de OpenAI, Claude e IA Personalizada). Suporta Personas configuráveis (CFO, Comercial, Auditor FEFO, Prático), Context Prompt Injection, Escudo Anti-Injection e Fallback automático.',
+    },
+    {
+      icon: BrainCircuit,
+      title: 'IA Embarcada em Todos os Módulos & Cofre de Chaves (/global-admin/ai)',
+      desc: '5 módulos comerciais de IA (add-ons) que avaliam e sugerem produtos para clientes (CRM/PDV), identificam tendências de compras, resumem mensalmente as vendas, destacam produtos mais vendidos e avisam o Administrador quando lotes estão vencendo.',
+    },
     {
       icon: TrendingUp,
       title: 'Dashboard Executivo Multi-Loja & BI (/dashboard)',
@@ -31,8 +44,8 @@ export function FeaturesPage() {
     },
     {
       icon: Clock,
-      title: 'Gestão de Lotes & Validades (/expiration)',
-      desc: 'Monitoramento automático de lotes vencidos, críticos (≤ 7 dias), em atenção (≤ 30 dias) e no prazo, com registro de justificativas e destinação de lotes (batch_dispositions).',
+      title: 'Gestão de Lotes, FEFO & Alertas de Validade IA (/expiration)',
+      desc: 'Monitoramento automático de lotes vencidos, críticos (≤ 7 dias), em atenção (≤ 30 dias) e no prazo, avisos proativos da IA para escoamento promocional e registro de destinação de lotes (batch_dispositions).',
     },
     {
       icon: Store,
@@ -41,23 +54,23 @@ export function FeaturesPage() {
     },
     {
       icon: ShoppingBag,
-      title: 'Frente de Caixa (PDV) & Produtos Pesáveis (/sales)',
-      desc: 'Venda ágil com código de barras, suporte a itens vendidos por peso (gramas, quilos ou valor em R$), cadastro rápido de clientes, associação automática de Cliente Genérico e reabertura de pedidos para edição no PDV.',
+      title: 'Frente de Caixa (PDV), Cross-Sell IA & Pesáveis (/sales)',
+      desc: 'Venda ágil com código de barras, suporte a itens vendidos por peso (gramas, quilos ou valor em R$), sugestões de produtos por IA, cadastro rápido de clientes, associação automática de Cliente Genérico e reabertura de pedidos para edição no PDV.',
     },
     {
       icon: Users,
-      title: 'Clientes, Pedidos por URL & Visões Salvas no Banco (/customers)',
-      desc: 'Listagem de todos os pedidos realizados por cada cliente com link direto e filtragem por URL (?customerId=...&orderId=...), seleção múltipla de status (Abertos, Fechados, Cancelados), visões salvas no banco individualmente por loja/filial e exportação detalhada somente dos itens visíveis.',
+      title: 'Clientes, Recomendações IA & Visões Salvas no Banco (/customers)',
+      desc: 'Listagem de todos os pedidos realizados por cada cliente com link direto na URL (?customerId=...&orderId=...), sugestão personalizada de produtos por IA, seleção múltipla de status, visões salvas por loja/filial e exportação detalhada dos itens visíveis.',
     },
     {
       icon: BarChart3,
-      title: '9 Relatórios Analíticos com Data, Hora & Período (/reports)',
-      desc: 'Valorização de Estoque, Curva ABC (80/15/5), Giro & Sugestão de Compra, Ticket Médio & Pedidos por Cliente, Investimento & GMROI, Registro de Compras com Data e Hora, Perdas, Rupturas e Vendas com filtros personalizados de data e exportação dos registros visíveis.',
+      title: '9 Relatórios Analíticos com Data, Hora & Insights IA (/reports)',
+      desc: 'Valorização de Estoque, Curva ABC (80/15/5), Giro & Sugestão de Compra, Ticket Médio & Pedidos por Cliente, Investimento & GMROI, Registro de Compras com Data e Hora, Perdas, Rupturas e Vendas com diagnóstico executivo por IA.',
     },
     {
       icon: Truck,
-      title: 'Gestão de Compras, Fornecedores & Markup (/purchases)',
-      desc: 'Emissão de ordens de compra vinculadas a fornecedores, cálculo em tempo real de custo unitário, markup, preço de venda sugerido e lucro previsto, com recebimento conferido que alimenta lotes e saldos automaticamente.',
+      title: 'Gestão de Compras, Tendências IA & Markup (/purchases)',
+      desc: 'Emissão de ordens de compra vinculadas a fornecedores, análise de tendências de consumo por IA, cálculo em tempo real de custo unitário, markup, preço de venda sugerido e recebimento que alimenta lotes automaticamente.',
     },
     {
       icon: MessageCircle,
@@ -66,13 +79,18 @@ export function FeaturesPage() {
     },
     {
       icon: UserCheck,
-      title: 'Funcionários, Papéis & 10 Licenças Grátis por Loja (/team)',
-      desc: 'Cadastro de colaboradores com matrícula, cargo, papéis customizados por loja, 47 permissões granulares, telas de edição com URL própria (/team/stores/:storeId/employees/:employeeId) e franquia padrão de 10 funcionários grátis por loja.',
+      title: 'Funcionários, Política de PIN & 10 Licenças Grátis (/team)',
+      desc: 'Cadastro de colaboradores com matrícula, cargo, papéis customizados por loja, 47 permissões granulares, reset obrigatório e regras de complexidade de PIN e franquia padrão de 10 funcionários grátis por loja.',
+    },
+    {
+      icon: FileSignature,
+      title: 'Novos Contratos, DOCX/PDF & Google Drive (/global-admin/contracts)',
+      desc: 'Configurador interativo de planos na Landing Page com pré-cadastro comercial, fila "Novos Contratos" e Gerenciador de Contratos com exportação em HTML, DOCX e PDF, salvo no Supabase e sincronizado com o Google Drive.',
     },
     {
       icon: CreditCard,
-      title: 'Planos SaaS, Grafo de Dependências & Financeiro (/global-admin)',
-      desc: 'Grupos comerciais de permissões com valores mensais, grafo inteligente que alerta o que pode parar de funcionar ao desmarcar uma tela (mesmo para Admin Loja), gestão de regras de licenciamento e livro-razão de pagamentos.',
+      title: 'Planos SaaS, Add-ons de IA, Grafo de Telas & Financeiro (/global-admin)',
+      desc: 'Grupos comerciais de permissões com valores mensais, 5 módulos de IA como acréscimo nos planos das lojas, grafo inteligente de dependências entre telas, regras de licenciamento e livro-razão de pagamentos.',
     },
     {
       icon: Webhook,
@@ -85,13 +103,13 @@ export function FeaturesPage() {
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 space-y-16">
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-          <ShieldCheck className="h-3.5 w-3.5" /> Arquitetura Multi-Loja Completa
+          <ShieldCheck className="h-3.5 w-3.5" /> Arquitetura Multi-Loja Completa com IA Nativa
         </div>
         <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight">
           Todos os Recursos da Plataforma Olivelas
         </h1>
         <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-          Conheça em detalhes os 12 módulos projetados para garantir precisão absoluta no estoque, governança entre matriz e filiais, agilidade nas vendas e inteligência analítica.
+          Conheça em detalhes os 15 pilares projetados para garantir precisão absoluta no estoque, governança entre matriz e filiais, Inteligência Artificial em todos os módulos e agilidade nas vendas.
         </p>
       </div>
 

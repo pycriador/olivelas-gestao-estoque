@@ -9,6 +9,11 @@ export type ModuleCode =
   | 'MOD_REPORTS'
   | 'MOD_TEAM_AUDIT'
   | 'MOD_API_INTEGRATIONS'
+  | 'MOD_AI_COPILOT_CHAT'
+  | 'MOD_AI_SALES_CRM'
+  | 'MOD_AI_INVENTORY_EXPIRATION'
+  | 'MOD_AI_PURCHASING_TRENDS'
+  | 'MOD_AI_BI_INSIGHTS'
 
 export type ModuleCategory =
   | 'VENDAS'
@@ -16,6 +21,7 @@ export type ModuleCategory =
   | 'COMPRAS_SUPRIMENTOS'
   | 'GESTAO_BI'
   | 'TECNOLOGIA'
+  | 'INTELIGENCIA_ARTIFICIAL'
 
 export type BillingCycle = 'MONTHLY' | 'ANNUAL' | 'LIFETIME' | 'FREE_TRIAL' | 'CUSTOM'
 

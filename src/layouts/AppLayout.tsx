@@ -51,6 +51,7 @@ import { useRealtimeSubscriptions } from '@/hooks/useRealtime'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { GlobalCommandK } from '@/components/common/GlobalCommandK'
 import { EmployeePinResetModal } from '@/components/auth/EmployeePinResetModal'
+import { AiStoreCopilotDrawer } from '@/components/ai/AiStoreCopilotDrawer'
 import { Badge } from '@/components/ui/badge'
 import { applyStoreTheme, getStoreThemeId } from '@/lib/storeThemes'
 
@@ -136,6 +137,7 @@ export function AppLayout() {
 
   const topNavItems: NavItem[] = [
     { label: t.nav.dashboard, path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Copiloto IA da Loja', path: '/ai-copilot', icon: Sparkles },
   ]
 
   // "Compras" fica so em Controle para nao duplicar o mesmo link.
@@ -147,6 +149,7 @@ export function AppLayout() {
             label: t.nav.groupGlobalAdmin,
             icon: Shield,
             items: [
+              { label: 'Central de IA & Chaves API', path: '/global-admin/ai', icon: Sparkles },
               { label: t.nav.globalStores, path: '/global-admin?tab=stores', icon: Building2 },
               { label: t.nav.globalNewStore, path: '/global-admin/stores/new', icon: GitBranch },
               { label: t.nav.globalUsers, path: '/global-admin?tab=users', icon: Users },
@@ -235,6 +238,7 @@ export function AppLayout() {
     <div className="h-dvh max-h-dvh bg-background flex flex-col md:flex-row overflow-hidden">
       <GlobalCommandK />
       <EmployeePinResetModal />
+      <AiStoreCopilotDrawer />
 
       {/* Mobile Backdrop */}
       {sidebarOpen && (

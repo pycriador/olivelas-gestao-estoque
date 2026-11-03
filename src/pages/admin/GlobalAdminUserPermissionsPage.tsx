@@ -27,6 +27,7 @@ import { Badge } from '@/components/ui/badge'
 import { userService } from '@/services/userService'
 import { permissionGroupService } from '@/services/permissionGroupService'
 import {
+  AI_MODULE_CODES,
   ALL_MODULE_CODES,
   DEFAULT_PERMISSION_GROUPS,
   DEFAULT_PERMISSION_MODULES,
@@ -50,6 +51,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   COMPRAS_SUPRIMENTOS: '3. Compras & Fornecedores',
   GESTAO_BI: '4. Gestão de Relatórios (BI), Equipe & Auditoria',
   TECNOLOGIA: '5. Integrações API Externas & Conectores',
+  INTELIGENCIA_ARTIFICIAL: '6. Inteligência Artificial & Copiloto da Loja (Add-ons)',
 }
 
 export const GlobalAdminUserPermissionsPage: React.FC = () => {
@@ -161,17 +163,55 @@ export const GlobalAdminUserPermissionsPage: React.FC = () => {
       .reduce((acc, m) => acc + Number(m.monthlyPrice || 0), 0)
   }, [enabledModules, modules])
 
+  const aiAddonsSummary = useMemo(() => {
+    const enabledAiMods = modules.filter(
+      (m) =>
+        AI_MODULE_CODES.includes(m.code) && enabledModules.includes(m.code)
+    )
+    const totalAiPrice = enabledAiMods.reduce(
+      (acc, m) => acc + Number(m.monthlyPrice || 0),
+      0
+    )
+    return {
+      count: enabledAiMods.length,
+      totalCount: AI_MODULE_CODES.length,
+      totalPrice: totalAiPrice,
+      allEnabled: AI_MODULE_CODES.every((code) =>
+        enabledModules.includes(code)
+      ),
+    }
+  }, [enabledModules, modules])
+
   const selectedGroup = useMemo(
     () => groups.find((g) => g.id === selectedGroupId) || null,
     [groups, selectedGroupId]
   )
 
   const calculatedGrossMonthly = useMemo(() => {
-    const basePlanOrModules = selectedGroup
-      ? Number(selectedGroup.baseMonthlyPrice || calculatedModulesSum)
-      : calculatedModulesSum
-    return basePlanOrModules + extraEmployeeLicensesTotalCost
-  }, [calculatedModulesSum, extraEmployeeLicensesTotalCost, selectedGroup])
+    if (selectedGroup) {
+      const extraModules = modules.filter(
+        (m) =>
+          enabledModules.includes(m.code) &&
+          !selectedGroup.enabledModules.includes(m.code)
+      )
+      const extraModulesSum = extraModules.reduce(
+        (acc, m) => acc + Number(m.monthlyPrice || 0),
+        0
+      )
+      return (
+        Number(selectedGroup.baseMonthlyPrice || 0) +
+        extraModulesSum +
+        extraEmployeeLicensesTotalCost
+      )
+    }
+    return calculatedModulesSum + extraEmployeeLicensesTotalCost
+  }, [
+    calculatedModulesSum,
+    enabledModules,
+    extraEmployeeLicensesTotalCost,
+    modules,
+    selectedGroup,
+  ])
 
   useEffect(() => {
     if (!manualValueOverride) {
@@ -201,10 +241,23 @@ export const GlobalAdminUserPermissionsPage: React.FC = () => {
 
   const handleToggleModule = (code: ModuleCode) => {
     setManualValueOverride(false)
-    setSelectedGroupId('')
+    if (!AI_MODULE_CODES.includes(code)) {
+      setSelectedGroupId('')
+    }
     setEnabledModules((prev) =>
       prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]
     )
+  }
+
+  const handleToggleAllAiModules = () => {
+    setManualValueOverride(false)
+    setEnabledModules((prev) => {
+      const allEnabled = AI_MODULE_CODES.every((c) => prev.includes(c))
+      if (allEnabled) {
+        return prev.filter((c) => !AI_MODULE_CODES.includes(c))
+      }
+      return Array.from(new Set([...prev, ...AI_MODULE_CODES]))
+    })
   }
 
   const handleQuickFixImpact = (
@@ -508,6 +561,42 @@ export const GlobalAdminUserPermissionsPage: React.FC = () => {
                 </div>
               )}
 
+              {/* Atalho de Acréscimo de Módulos de Inteligência Artificial (Add-ons) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-violet-500/35 bg-violet-500/10 p-4">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2 text-xs font-bold text-violet-700 dark:text-violet-300">
+                    <Sparkles className="h-4 w-4 text-violet-500" />
+                    Add-on Comercial de Inteligência Artificial (Gemini Primary + Multi-Provider)
+                    <Badge variant={aiAddonsSummary.count > 0 ? 'default' : 'outline'}>
+                      {aiAddonsSummary.count}/{aiAddonsSummary.totalCount} Módulos IA Ativos (+{formatCurrency(aiAddonsSummary.totalPrice)}/mês)
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Os módulos de IA entram automaticamente como acréscimo mensal sobre o pacote base da loja e utilizam a chave configurada pelo Super Admin em{' '}
+                    <button
+                      type="button"
+                      onClick={() => navigate('/global-admin/ai')}
+                      className="font-semibold text-primary underline"
+                    >
+                      /global-admin/ai
+                    </button>
+                    .
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={aiAddonsSummary.allEnabled ? 'outline' : 'default'}
+                  onClick={handleToggleAllAiModules}
+                >
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  {aiAddonsSummary.allEnabled
+                    ? 'Remover Pacote Completo de IA'
+                    : 'Habilitar Pacote Completo de IA (+5 Módulos)'}
+                </Button>
+              </div>
+
               {/* Lista de Módulos por Categoria */}
               <div className="space-y-5">
                 {Object.entries(groupedModules).map(([cat, catModules]) => (
@@ -635,8 +724,21 @@ export const GlobalAdminUserPermissionsPage: React.FC = () => {
                       </span>
                       <span className="font-semibold text-foreground">
                         {formatCurrency(
-                          calculatedGrossMonthly - extraEmployeeLicensesTotalCost
+                          Math.max(
+                            0,
+                            calculatedGrossMonthly -
+                              extraEmployeeLicensesTotalCost -
+                              aiAddonsSummary.totalPrice
+                          )
                         )}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">
+                        Acréscimo Módulos de IA ({aiAddonsSummary.count}/{aiAddonsSummary.totalCount}):
+                      </span>
+                      <span className="font-semibold text-violet-600 dark:text-violet-400">
+                        + {formatCurrency(aiAddonsSummary.totalPrice)}
                       </span>
                     </div>
                     <div className="flex justify-between">

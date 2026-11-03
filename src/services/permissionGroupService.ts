@@ -220,6 +220,9 @@ export const permissionGroupService = {
    * Lista todos os módulos de tela com seus preços comerciais
    */
   async listModules(): Promise<PermissionModule[]> {
+    const localSaved = readLocalCache<PermissionModule[]>(LOCAL_MODULES_CACHE_KEY, [])
+    const localMap = new Map(localSaved.map((m) => [m.code, m]))
+
     try {
       const { data, error } = await supabase
         .from('permission_modules')
@@ -227,14 +230,18 @@ export const permissionGroupService = {
         .order('sort_order', { ascending: true })
 
       if (!error && data && data.length > 0) {
-        const mapped = data.map(mapModuleRow)
-        writeLocalCache(LOCAL_MODULES_CACHE_KEY, mapped)
-        return mapped
+        const dbMapped = data.map(mapModuleRow)
+        const dbMap = new Map(dbMapped.map((m) => [m.code, m]))
+        const merged = DEFAULT_PERMISSION_MODULES.map(
+          (def) => dbMap.get(def.code) || localMap.get(def.code) || def
+        )
+        writeLocalCache(LOCAL_MODULES_CACHE_KEY, merged)
+        return merged
       }
     } catch {
       // Fallback to local cache
     }
-    return readLocalCache<PermissionModule[]>(LOCAL_MODULES_CACHE_KEY, DEFAULT_PERMISSION_MODULES)
+    return DEFAULT_PERMISSION_MODULES.map((def) => localMap.get(def.code) || def)
   },
 
   /**

@@ -20,6 +20,7 @@ import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { EmptyState } from '@/components/common/EmptyState'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 import {
   FileText,
   Plus,
@@ -251,6 +252,15 @@ export function PurchasingPage() {
           Não foi possível carregar os fornecedores: {suppliersErrorMsg}
         </div>
       )}
+
+      {/* AI Purchasing & Demand Trends Insight Card */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_PURCHASING_TRENDS"
+        taskType="PURCHASING_TRENDS_FORECAST"
+        title="IA de Compras, Tendências & Reposição Inteligente"
+        subtitle="Detecta produtos de alto giro em ruptura, tendências de demanda e recomenda ordens de compra ideais"
+        compact
+      />
 
       {/* Table Card - Viewport fitting with internal scroll */}
       <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">

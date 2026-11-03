@@ -39,6 +39,7 @@ const CATEGORY_LABELS: Record<ModuleCategory, string> = {
   COMPRAS_SUPRIMENTOS: 'Compras, Fornecedores & Suprimentos',
   GESTAO_BI: 'Clientes, BI, Relatórios & Equipe',
   TECNOLOGIA: 'Integrações REST & API Studio',
+  INTELIGENCIA_ARTIFICIAL: 'Módulos de Inteligência Artificial (Add-ons IA)',
 }
 
 interface InteractivePlanBuilderSectionProps {
@@ -273,6 +274,7 @@ export function InteractivePlanBuilderSection({
       COMPRAS_SUPRIMENTOS: [],
       GESTAO_BI: [],
       TECNOLOGIA: [],
+      INTELIGENCIA_ARTIFICIAL: [],
     }
     modules.forEach((m) => {
       if (groups[m.category]) {

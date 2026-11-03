@@ -23,6 +23,7 @@ import { SortableHeader } from '@/components/ui/SortableHeader'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 import { StockWriteoffModal } from '@/components/inventory/StockWriteoffModal'
 import { BulkStockWriteoffModal } from '@/components/inventory/BulkStockWriteoffModal'
 import { StockBranchTransferModal } from '@/components/inventory/StockBranchTransferModal'
@@ -412,6 +413,15 @@ export function InventoryPage() {
           icon={<Search className="h-3.5 w-3.5" />}
         />
       </PageHeader>
+
+      {/* AI Inventory Optimization & FEFO Insight Card */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_INVENTORY_EXPIRATION"
+        taskType="INVENTORY_OPTIMIZATION"
+        title="IA de Auditoria de Estoque, Giro & Prevenção de Ruptura"
+        subtitle="Avalia capital alocado em estoque, equilíbrio de lotes FEFO e prioridades de reposição/transferência"
+        compact
+      />
 
       {/* Page Toolbar (Tabs, Filters & Actions) */}
       <div className="flex items-center justify-between gap-2 flex-shrink-0 flex-wrap">

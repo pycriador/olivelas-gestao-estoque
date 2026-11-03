@@ -16,6 +16,7 @@ import { Pagination } from '@/components/ui/pagination'
 import { PageHeader } from '@/components/common/PageHeader'
 import { EmptyState } from '@/components/common/EmptyState'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 import {
   TrendingUp,
   Download,
@@ -969,6 +970,15 @@ export function ReportsPage() {
           />
         </div>
       </PageHeader>
+
+      {/* AI Deep-Dive BI & Financial Report Analyst */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_BI_INSIGHTS"
+        taskType="REPORT_DEEP_DIVE"
+        title="IA Analista de BI, Curva ABC & Rentabilidade Financeira"
+        subtitle="Interpreta margens líquidas, concentração ABC, retorno sobre estoque (GMROI) e sugere alavancas de lucro"
+        compact
+      />
 
       {/* Retail Performance KPI Summary Bar (Compact 1-line pills matching /expiration) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 flex-shrink-0">

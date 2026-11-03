@@ -5,12 +5,31 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-03
 language: pt-BR
 classification: Confirmed
 ---
 
 # Changelog da documentação
+
+## 2026-11-03
+
+- **Arquitetura e Implementação Completa de Inteligência Artificial Multi-Provedor (`Gemini` Principal, `OpenAI`, `Claude`, `Personalizada`), Cofre de Chaves no Supabase (`pgcrypto`), 5 Módulos Comerciais de IA (Add-ons nas Lojas), Context Prompt Injection + Escudo Anti-Injection, Fallback em Cascata, Personas Configuráveis, Copiloto Chatbot (`/ai-copilot` + Gaveta Global) e IA Incorporada em Todos os Módulos** (`supabase/migrations/20261103000028_ai_platform_and_modules.sql`, `src/types/ai.types.ts`, `src/services/aiOrchestratorService.ts`, `src/pages/admin/GlobalAdminAiSettingsPage.tsx`, `src/pages/AiCopilotPage.tsx`, `src/components/ai/AiModuleInsightCard.tsx`, `src/components/ai/AiStoreCopilotDrawer.tsx`, `src/types/permissionGroup.types.ts`, `src/constants/screenDependencies.ts`, `src/services/permissionGroupService.ts`, `src/pages/admin/GlobalAdminUserPermissionsPage.tsx`, `src/components/admin/UserPermissionsAndPricingModal.tsx`, `src/components/commercial/InteractivePlanBuilderSection.tsx`, `src/pages/DashboardPage.tsx`, `src/pages/ExpirationPage.tsx`, `src/pages/CustomersPage.tsx`, `src/pages/SalesPage.tsx`, `src/pages/PurchasingPage.tsx`, `src/pages/InventoryPage.tsx`, `src/pages/ReportsPage.tsx`, `src/layouts/AppLayout.tsx`, `src/routes/AppRoutes.tsx`, `docs/pt-BR/ai-context.md`, `docs/pt-BR/frontend-inventory.md`, `docs/pt-BR/backend-inventory.md`, `docs/pt-BR/security.md`, `docs/pt-BR/changelog.md`):
+  - **Cofre de Chaves API Criptografado no Supabase e Configuração pelo Super Admin (`/global-admin/ai`, `GlobalAdminAiSettingsPage.tsx`, migration 28)**:
+    - Suporte completo a **Google Gemini (IA Principal padrão)** (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`), **OpenAI** (`gpt-4o-mini`, `gpt-4o`, `o3-mini`), **Anthropic Claude** (`claude-3-7-sonnet-latest`, `claude-3-5-haiku-latest`) e **IA Personalizada (OpenAI-Compatible)** (Groq, DeepSeek, Ollama, OpenRouter, vLLM).
+    - Chaves de API criptografadas via `pgcrypto` (`pgp_sym_encrypt` / `pgp_sym_decrypt`) em `public.ai_provider_configs`, gerenciadas via RPC `upsert_ai_provider_config`, listadas de forma mascarada (`list_ai_provider_configs_safe`) e resolvidas em tempo de execução por `resolve_ai_execution_runtime`.
+    - Teste de conexão e latência em tempo real para qualquer provedor/modelo configurado pelo Super Admin.
+  - **5 Módulos Comerciais de IA como Acréscimo (Add-ons) nos Planos das Lojas (`INTELIGENCIA_ARTIFICIAL`)**:
+    - `MOD_AI_COPILOT_CHAT` (*Copiloto IA & Chatbot da Loja* — R$ 49,90/mês), `MOD_AI_SALES_CRM` (*IA Comercial: Sugestão de Produtos & CRM* — R$ 39,90/mês), `MOD_AI_INVENTORY_EXPIRATION` (*IA de Validades, Alertas FEFO & Estoque* — R$ 34,90/mês), `MOD_AI_PURCHASING_TRENDS` (*IA de Compras & Tendências de Demanda* — R$ 34,90/mês) e `MOD_AI_BI_INSIGHTS` (*IA Executiva: Resumo Mensal & BI* — R$ 44,90/mês).
+    - Botão de 1 clique **"Habilitar / Desabilitar Pacote Completo de IA (+5 Módulos)"** e discriminação financeira explícita do acréscimo mensal de IA em `/global-admin/users/:userId/permissions` (`GlobalAdminUserPermissionsPage.tsx`), `UserPermissionsAndPricingModal.tsx` e no configurador da Landing Page (`InteractivePlanBuilderSection.tsx`).
+  - **Context Prompt Injection, Escudo Anti-Prompt Injection, Fallback Multicamada e Personas Configuráveis (`aiOrchestratorService.ts`)**:
+    - **Context Prompt Injection**: injeta automaticamente dados reais verificados da loja ativa (`StoreAiContextSnapshot` com faturamento mensal, margem, top produtos da Curva A, lotes vencendo/vencidos FEFO, alertas de compra/ruptura e clientes VIP/inativos).
+    - **Escudo Anti-Prompt Injection**: inspeciona e bloqueia ataques de *jailbreak* ou extração de credenciais/dados de outras lojas antes da chamada ao LLM, com simulador interativo de segurança em `/global-admin/ai`.
+    - **Fallback Automático em Cascata**: tenta `Modelo Principal Gemini -> Modelo Fast Gemini -> Provedor Backup (OpenAI/Claude/Custom) -> Motor Analítico Determinístico Local`, garantindo disponibilidade de 100% mesmo sem chave externa.
+    - **Personas Configuráveis (`public.ai_personas`)**: 4 personas nativas (*CFO & Estrategista de Margem*, *Diretor Comercial & Growth*, *Auditor Implacável de Estoque & FEFO*, *Copiloto Prático do Dia a Dia*) + criação de novas personas com tom de voz, template de injeção e guardrails próprios.
+  - **Chatbot Copiloto da Loja (`/ai-copilot` + `AiStoreCopilotDrawer`) e IA em Todos os Módulos (`AiModuleInsightCard`)**:
+    - Central Copiloto (`/ai-copilot`) e gaveta flutuante global (`AiStoreCopilotDrawer`) para o Administrador da Loja conversar com a IA sobre vendas, estoque, validades, clientes e compras.
+    - Card `<AiModuleInsightCard />` integrado em **Dashboard** (`/dashboard`), **Validades** (`/expiration`), **Clientes** (`/customers`), **PDV / Vendas** (`/sales`), **Compras** (`/purchases`), **Estoque** (`/inventory`) e **Relatórios** (`/reports`).
 
 ## 2026-10-29
 

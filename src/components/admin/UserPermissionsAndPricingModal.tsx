@@ -50,6 +50,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   COMPRAS_SUPRIMENTOS: '3. Compras & Fornecedores',
   GESTAO_BI: '4. Gestão de Relatórios (BI), Equipe & Auditoria',
   TECNOLOGIA: '5. Integrações API Externas & Conectores',
+  INTELIGENCIA_ARTIFICIAL: '6. Inteligência Artificial & Copiloto da Loja (Add-ons)',
 }
 
 export function UserPermissionsAndPricingModal({

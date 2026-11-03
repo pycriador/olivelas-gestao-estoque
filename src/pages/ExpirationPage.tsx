@@ -20,6 +20,7 @@ import type { DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 import {
   Clock,
   AlertTriangle,
@@ -245,6 +246,29 @@ export function ExpirationPage() {
           </Button>
         </div>
       </div>
+
+      {/* IA Proactive Expiration Alert & FEFO Action Plan */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_INVENTORY_EXPIRATION"
+        taskType="EXPIRATION_RISK_ANALYSIS"
+        title="Guardião IA de Validades (FEFO): Aviso ao Administrador & Plano Anti-Perdas"
+        subtitle="Monitora proativamente lotes vencidos e a vencer (7, 15 e 30 dias), calcula risco financeiro e sugere promoções de escoamento."
+        defaultPrompt="Avise o Administrador da loja sobre os lotes que estão vencendo ou vencidos, calcule o capital em risco e sugira uma promoção relâmpago FEFO."
+        defaultExpanded={false}
+        compact
+        quickPrompts={[
+          {
+            label: 'Lotes críticos (próximos 15 dias)',
+            prompt:
+              'Quais lotes vencem nos próximos 15 dias e qual desconto ideal aplicar para escoar sem prejuízo?',
+          },
+          {
+            label: 'Gerar campanha WhatsApp Queima FEFO',
+            prompt:
+              'Crie um texto persuasivo de campanha de WhatsApp para liquidar os produtos com validade próxima.',
+          },
+        ]}
+      />
 
       {/* Ultra-compact Interactive KPI Filter Pills */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">

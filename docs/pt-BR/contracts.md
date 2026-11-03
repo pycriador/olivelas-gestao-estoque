@@ -5,7 +5,7 @@ type: Contract
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-03
 language: pt-BR
 classification: Confirmed
 source:
@@ -85,6 +85,9 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 | `can_user_approve_writeoff` | `inventoryService.ts` / validação interna em `apply_stock_movement` e `review_stock_writeoff_request` |
 | `review_stock_writeoff_request` | `inventoryService.ts` |
 | `execute_stock_transfer_to_branch` | `inventoryService.ts` |
+| `upsert_ai_provider_config` | `aiOrchestratorService.ts` (`GlobalAiSettingsPanel.tsx`) |
+| `list_ai_provider_configs_safe` | `aiOrchestratorService.ts` (`GlobalAiSettingsPanel.tsx`) |
+| `resolve_ai_execution_runtime` | `aiOrchestratorService.ts` |
 
 `create_order_with_stock`: pedido + itens + pagamento + baixa com `FOR UPDATE` (comentário e corpo em `20260926000009_atomic_order_creation.sql`).
 

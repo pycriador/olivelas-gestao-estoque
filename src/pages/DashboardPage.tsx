@@ -50,6 +50,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { LoadingSkeleton } from '@/components/common/LoadingSkeleton'
 import { PageHeader } from '@/components/common/PageHeader'
+import { AiModuleInsightCard } from '@/components/ai/AiModuleInsightCard'
 import type {
   DashboardPeriodPreset,
   DashboardGranularity,
@@ -692,6 +693,32 @@ export function DashboardPage() {
             <Sparkles className="h-3 w-3" /> Tempo Real
           </Badge>
         }
+      />
+
+      {/* IA Executive Summary & Best-Selling Products / Expiration Alert */}
+      <AiModuleInsightCard
+        moduleCode="MOD_AI_BI_INSIGHTS"
+        taskType="DASHBOARD_EXECUTIVE_SUMMARY"
+        title="Consultor IA do Dashboard: Resumo Mensal de Vendas, Produtos Mais Vendidos & Alertas"
+        subtitle="Avalia automaticamente o faturamento mensal, Curva A de produtos, lotes prestes a vencer e oportunidades de negócio."
+        defaultPrompt="Faça um resumo mensal executivo das vendas da loja, avalie os produtos mais vendidos, avise sobre produtos vencendo e aponte as melhores oportunidades de lucro hoje."
+        quickPrompts={[
+          {
+            label: 'Resumo mensal das vendas',
+            prompt:
+              'Resuma mensalmente as vendas da loja, evolução de ticket médio, margem bruta e canais mais fortes.',
+          },
+          {
+            label: 'Avaliar produtos mais vendidos',
+            prompt:
+              'Avalie os produtos mais vendidos (Curva A) e indique quais têm maior margem e potencial de combo.',
+          },
+          {
+            label: 'Avisar produtos vencendo',
+            prompt:
+              'Avise o administrador sobre todos os lotes e produtos que estão vencendo nos próximos dias e o capital em risco.',
+          },
+        ]}
       />
 
       {/* Executive Filter & Export Control Bar */}

@@ -31,6 +31,8 @@ import { GlobalAdminFinanceRulesPage } from '@/pages/admin/GlobalAdminFinanceRul
 import { GlobalAdminFinancePlansPage } from '@/pages/admin/GlobalAdminFinancePlansPage'
 import { GlobalAdminFinancePaymentsPage } from '@/pages/admin/GlobalAdminFinancePaymentsPage'
 import { GlobalAdminContractsPage } from '@/pages/admin/GlobalAdminContractsPage'
+import { GlobalAdminAiSettingsPage } from '@/pages/admin/GlobalAdminAiSettingsPage'
+import { AiCopilotPage } from '@/pages/AiCopilotPage'
 import { StoresPage } from '@/pages/StoresPage'
 import { ProductsPage } from '@/pages/ProductsPage'
 import { CategoriesPage } from '@/pages/CategoriesPage'
@@ -184,6 +186,22 @@ export function AppRoutes() {
             <ProtectedRoute requireGlobalAdmin>
               <GlobalAdminContractsPage />
             </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/global-admin/ai"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminAiSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-copilot"
+          element={
+            <PermissionGate moduleCode="MOD_AI_COPILOT_CHAT" showUpgradeScreen>
+              <AiCopilotPage />
+            </PermissionGate>
           }
         />
         <Route

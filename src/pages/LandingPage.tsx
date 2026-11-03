@@ -26,12 +26,30 @@ import {
   FileSpreadsheet,
   GitBranch,
   UserCheck,
+  Bot,
+  BrainCircuit,
+  FileSignature,
+  RefreshCw,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { InteractivePlanBuilderSection } from '@/components/commercial/InteractivePlanBuilderSection'
 
 export function LandingPage() {
   const mainFeatures = [
+    {
+      icon: Bot,
+      title: 'Copiloto IA & Chatbot Executivo da Loja',
+      description:
+        'Converse com a IA da sua loja (/ai-copilot e assistente flutuante) com Context Prompt Injection em tempo real, Personas configuráveis (CFO, Comercial, Auditor FEFO) e simulador "E Se?".',
+      badge: 'IA Gemini Principal',
+    },
+    {
+      icon: BrainCircuit,
+      title: 'IA em Todos os Módulos & Add-ons SaaS',
+      description:
+        'Sugestão de produtos para clientes (CRM/PDV), tendências de compras, resumo mensal de vendas, alertas inteligentes de vencimento e cofre de chaves API (Gemini, OpenAI, Claude, Custom).',
+      badge: '5 Módulos de IA',
+    },
     {
       icon: TrendingUp,
       title: 'Dashboard Executivo Multi-Loja & BI',
@@ -50,7 +68,7 @@ export function LandingPage() {
       icon: Clock,
       title: 'Gestão Inteligente de Lotes & Validades',
       description:
-        'Evite desperdícios com classificação automática de lotes vencidos, críticos (≤ 7 dias) e em atenção (≤ 30 dias), com histórico de destinação e alertas.',
+        'Evite desperdícios com classificação automática de lotes vencidos, críticos (≤ 7 dias) e em atenção (≤ 30 dias), alertas da IA ao Administrador e histórico de destinação.',
       badge: 'Zero Desperdício',
     },
     {
@@ -64,28 +82,28 @@ export function LandingPage() {
       icon: ShoppingBag,
       title: 'PDV Frente de Caixa & Pesagem (KG/g)',
       description:
-        'Venda rápida com código de barras, itens pesáveis fracionados (gramas, quilos ou valor em R$), cadastro rápido de cliente e reabertura/edição de pedidos no PDV.',
+        'Venda rápida com código de barras, itens pesáveis fracionados (gramas, quilos ou valor em R$), cross-sell assistido por IA e reabertura/edição de pedidos no PDV.',
       badge: 'Alta Performance',
     },
     {
       icon: Users,
       title: 'Clientes, Pedidos por URL & Visões Salvas',
       description:
-        'Histórico de todos os pedidos do cliente com link direto na URL, seleção múltipla de status, visões salvas no banco por loja/filial e exportação detalhada dos visíveis.',
+        'Histórico de todos os pedidos do cliente com link direto na URL, seleção múltipla de status, recomendação de produtos por IA, visões salvas por loja/filial e exportação detalhada.',
       badge: 'CRM & Rastreabilidade',
     },
     {
       icon: BarChart3,
       title: '9 Relatórios Analíticos com Data e Hora',
       description:
-        'Curva ABC (80/15/5), Giro & Sugestão de Compra, Ticket Médio & Pedidos por Cliente, Registro de Compras e Vendas com data/hora exatas e filtros de período personalizado.',
+        'Curva ABC (80/15/5), Giro & Sugestão de Compra, Ticket Médio & Pedidos por Cliente, Registro de Compras e Vendas com data/hora exatas e explicação executiva por IA.',
       badge: 'Decisões Precisas',
     },
     {
       icon: Truck,
-      title: 'Compras, Fornecedores & Markup',
+      title: 'Compras, Tendências IA & Markup',
       description:
-        'Emissão e recebimento de ordens de compra com cálculo automático de custo unitário, markup, margem de lucro e sincronização direta de lotes no estoque.',
+        'Emissão e recebimento de ordens de compra com cálculo automático de custo unitário, markup, margem de lucro, previsão de ruptura por IA e sincronização de lotes.',
       badge: 'Compras Inteligentes',
     },
     {
@@ -97,16 +115,23 @@ export function LandingPage() {
     },
     {
       icon: UserCheck,
-      title: 'Equipe, Papéis & 10 Funcionários Grátis',
+      title: 'Equipe, Política de PIN & 10 Grátis',
       description:
-        'Cada loja conta com 10 funcionários grátis, papéis customizados, 47 permissões granulares e páginas exclusivas por URL para gestão de cada colaborador.',
+        'Cada loja conta com 10 funcionários grátis, papéis customizados, 47 permissões granulares, reset obrigatório e política de complexidade de PIN.',
       badge: 'Gestão de Equipe',
+    },
+    {
+      icon: FileSignature,
+      title: 'Novos Contratos, DOCX/PDF & Google Drive',
+      description:
+        'Configurador interativo de planos na Landing Page, fila "Novos Contratos" e Gerenciador de Contratos com exportação em HTML, DOCX e PDF sincronizado no Supabase e Google Drive.',
+      badge: 'Contratos Digitais',
     },
     {
       icon: CreditCard,
       title: 'Planos SaaS, Grafo de Telas & Financeiro',
       description:
-        'Grupos de permissões com valores comerciais, grafo que avisa impactos ao desmarcar telas (mesmo para Admin Loja), regras de licenças e livro-razão de faturas.',
+        'Grupos de permissões com valores comerciais, módulos de IA como acréscimo (add-ons), grafo de dependências entre telas, regras de licenças e livro-razão de faturas.',
       badge: 'Monetização SaaS',
     },
     {
@@ -115,6 +140,46 @@ export function LandingPage() {
       description:
         'Conector HTTP externo com importação cURL, mapeamento visual De → Para, simulação Dry-Run e tokens HBAC por loja para agentes de IA e ERPs.',
       badge: 'Integração Aberta',
+    },
+    {
+      icon: Database,
+      title: 'Backups Multi-Loja & DB Explorer',
+      description:
+        'Exporte dumps SQL relacionais com INSERT INTO, pacotes ZIP de imagens com manifesto e JSON completo, além de explorador CRUD dinâmico para o Super Admin.',
+      badge: 'Segurança de Dados',
+    },
+  ]
+
+  const aiSuiteHighlights = [
+    {
+      code: 'MOD_AI_COPILOT_CHAT',
+      title: 'IA Copiloto & Chatbot Executivo da Loja',
+      price: '+ R$ 49,90/mês',
+      desc: 'Converse com a IA sobre vendas do mês, produtos mais vendidos, margem, rupturas e simulações "E Se?" com dados reais da sua loja.',
+    },
+    {
+      code: 'MOD_AI_SALES_CRM',
+      title: 'IA Comercial: Sugestão de Produtos & Cross-Sell',
+      price: '+ R$ 39,90/mês',
+      desc: 'Avalia o perfil de compra de cada cliente para recomendar produtos ideais, combos no PDV e mensagens prontas para WhatsApp.',
+    },
+    {
+      code: 'MOD_AI_INVENTORY_EXPIRATION',
+      title: 'IA de Estoque, Alertas FEFO & Anti-Vencimento',
+      price: '+ R$ 39,90/mês',
+      desc: 'Avisa proativamente o Administrador da loja quando lotes estão vencendo e sugere campanhas de queima ou remessa para filiais.',
+    },
+    {
+      code: 'MOD_AI_PURCHASING_TRENDS',
+      title: 'IA de Tendências de Compras & Reposição',
+      price: '+ R$ 39,90/mês',
+      desc: 'Identifica tendências de consumo, velocidade de giro (runout em dias) e sugere ordens de compra antes que os campeões de venda acabem.',
+    },
+    {
+      code: 'MOD_AI_BI_INSIGHTS',
+      title: 'IA Executiva: Resumos Mensais & Oportunidades BI',
+      price: '+ R$ 44,90/mês',
+      desc: 'Gera resumos executivos mensais das vendas, avalia os produtos mais lucrativos e traduz os 9 relatórios analíticos em planos de ação.',
     },
   ]
 
@@ -144,11 +209,11 @@ export function LandingPage() {
     {
       icon: ShieldCheck,
       tag: 'Governança & SaaS Enterprise',
-      title: 'Controle de Alçadas, Filiais, Licenças e Permissões em Tela',
+      title: 'Controle de Alçadas, Filiais, Contratos e Permissões em Tela',
       points: [
         'Baixas de estoque protegidas: somente Aprovadores de Baixa (STOCK_APPROVER) autorizam perdas/avarias dentro do seu limite de alçada financeira.',
         'Árvore hierárquica Matriz → Filiais no Global Admin e em Lojas, com remessa de estoque sem necessidade de venda.',
-        'Páginas dedicadas com URL própria para edição de loja, funcionário, permissões de usuário, faturamento, regras de licenças (10 funcionários grátis) e planos.',
+        'Gerenciador de Contratos completo (HTML, DOCX e PDF) com armazenamento no Supabase e sincronização com o Google Drive do Global Admin.',
         'Central de Backup Multi-Loja (Dump SQL relacional, pacote ZIP de imagens com manifesto e JSON) e Explorador CRUD de Banco de Dados.',
       ],
     },
@@ -172,8 +237,8 @@ export function LandingPage() {
     },
     {
       step: '04',
-      title: 'Visões Salvas, BI & Exportação',
-      desc: 'Acompanhe pedidos por cliente com visões salvas por filial, analise os 9 relatórios com data e hora e exporte somente o que está visível em detalhes.',
+      title: 'Copiloto IA, Visões Salvas & BI',
+      desc: 'Converse com o Copiloto IA da loja, avalie oportunidades de vendas e vencimentos, analise os 9 relatórios e exporte tudo em detalhes.',
     },
   ]
 
@@ -202,6 +267,14 @@ export function LandingPage() {
 
   const faqs = [
     {
+      q: 'Como funciona a Inteligência Artificial (Google Gemini, OpenAI, Claude e Personalizada) na plataforma?',
+      a: 'O Super Admin configura as chaves de API criptografadas com pgcrypto no Supabase (/global-admin/ai), tendo o Google Gemini como motor principal padrão e cadeia automática de Fallback (Gemini Principal -> Modelo Fast -> Provedor Secundário -> Motor Analítico Local). Os 5 módulos de IA entram como opcionais/add-ons nos planos das lojas, habilitando o Chatbot Copiloto (/ai-copilot) e análises em tempo real em Vendas, Clientes, Estoque, Validades, Compras e Relatórios.',
+    },
+    {
+      q: 'O que o Copiloto de IA e os cards inteligentes fazem pelo Administrador da loja?',
+      a: 'A IA avalia e sugere produtos para clientes com base no histórico de compras, aponta tendências de reposição, resume mensalmente as vendas, destaca os produtos mais vendidos, avisa quando lotes estão próximos do vencimento e responde perguntas estratégicas no Chatbot com Personas configuráveis (CFO Estrategista, Diretor Comercial, Auditor FEFO ou Copiloto Prático) e proteção Anti-Prompt Injection.',
+    },
+    {
       q: 'Como funciona o acompanhamento de pedidos por cliente e as visões salvas?',
       a: 'Na tela de Clientes (/customers) e nos Relatórios (/reports), você visualiza todos os pedidos feitos por cada cliente com data e hora exatas e links diretos (/customers?customerId=...&orderId=...). É possível selecionar múltiplos status ao mesmo tempo (ex.: Pedidos Abertos, Fechados ou Cancelados) e salvar essas combinações como Visões no banco de dados, isoladas individualmente para cada loja ou filial.',
     },
@@ -214,16 +287,12 @@ export function LandingPage() {
       a: 'Sim! As filiais ficam organizadas de forma hierárquica abaixo da Matriz. Você pode enviar lotes do estoque da Matriz diretamente para qualquer Filial sem necessidade de venda — o sistema sincroniza produto, categoria, fotos, lote e saldo automaticamente para venda imediata no PDV da filial.',
     },
     {
-      q: 'Como funcionam as licenças de funcionários e o papel de Aprovador de Baixa?',
-      a: 'Cada loja possui 10 funcionários grátis no plano do Admin Loja (os funcionários operacionais não pagam plano individual). Caso a loja ultrapasse a franquia, o valor por licença adicional é gerenciado na área Financeiro do Global Admin. Além disso, somente usuários com credencial de Aprovador de Baixa de Estoque podem autorizar baixas por perda ou avaria.',
+      q: 'Como funcionam as licenças de funcionários, a política de PIN e o papel de Aprovador de Baixa?',
+      a: 'Cada loja possui 10 funcionários grátis no plano do Admin Loja. Você pode exigir que o colaborador redefina seu PIN no próximo login com regras de complexidade configuráveis. Além disso, somente usuários com credencial de Aprovador de Baixa de Estoque podem autorizar baixas por perda ou avaria.',
     },
     {
-      q: 'O que acontece quando o Global Admin desmarca uma tela no grupo de permissões?',
-      a: 'A plataforma possui um motor de grafo de dependências entre telas. Ao desmarcar um módulo (por exemplo, Vendas PDV, Estoque ou Compras) para um usuário — mesmo que ele seja Admin Loja —, o sistema informa imediatamente quais funcionalidades dependentes em outras telas serão impactadas.',
-    },
-    {
-      q: 'Posso integrar o sistema com ERPs externos ou Agentes de IA?',
-      a: 'Sim! O módulo API Studio (/integrations) funciona como um conector estilo Postman com suporte a importação cURL, mapeamento visual De → Para e simulação Dry-Run. Além disso, o Global Admin pode gerar chaves HBAC (olv_live_...) com escopos granulares por loja para leitura e escrita segura via REST.',
+      q: 'Como funciona a personalização de planos na Landing Page e o Gerenciador de Contratos?',
+      a: 'Você pode escolher um plano base, adicionar módulos extras (incluindo os módulos de Inteligência Artificial) e enviar seu pré-cadastro. O Global Admin recebe a solicitação em "Novos Contratos" (/global-admin/contracts) e gera o contrato personalizado pronto para assinatura em HTML, DOCX e PDF, salvo no Supabase e sincronizado com o Google Drive.',
     },
   ]
 
@@ -233,21 +302,21 @@ export function LandingPage() {
       <section className="max-w-5xl mx-auto px-4 text-center space-y-8">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold tracking-wide shadow-xs">
           <Sparkles className="h-3.5 w-3.5" />
-          <span>Plataforma SaaS Multi-Loja, Matriz & Filiais, PDV, BI e Catálogo WhatsApp</span>
+          <span>Plataforma SaaS Multi-Loja com Inteligência Artificial (Google Gemini), Matriz & Filiais, PDV e BI</span>
         </div>
 
         <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-foreground leading-[1.12]">
-          Controle seu estoque, <span className="text-primary">domine suas filiais</span> e acelere suas vendas em um só lugar.
+          Controle seu estoque, <span className="text-primary">domine suas filiais</span> e multiplique vendas com IA.
         </h1>
 
         <p className="text-base sm:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          Gestão completa de produtos, lotes e validades, aprovadores de baixa, remessa para filiais sem venda, PDV com pesagem em KG, pedidos por cliente com visões salvas no banco, 9 relatórios analíticos com data/hora e catálogo online no WhatsApp.
+          Gestão completa de produtos, lotes e validades, Copiloto IA & Chatbot da Loja com Google Gemini, sugestão inteligente de produtos para clientes, aprovadores de baixa, remessa para filiais sem venda, PDV com pesagem em KG, 9 relatórios analíticos e catálogo online no WhatsApp.
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
           <a href="#personalizar-plano">
             <Button size="lg" className="h-12 px-8 text-sm sm:text-base font-semibold shadow-lg shadow-primary/25">
-              Personalizar Plano & Pré-Cadastro <ArrowRight className="ml-2 h-4 w-4" />
+              Personalizar Plano & Módulos de IA <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           </a>
           <Link to="/register">
@@ -265,7 +334,10 @@ export function LandingPage() {
         {/* Highlight Pills */}
         <div className="pt-6 flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-full border border-border">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Dashboard BI por Loja & Vendas Mensais
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Copiloto IA (Gemini, OpenAI, Claude & Custom)
+          </span>
+          <span className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-full border border-border">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Dashboard BI por Loja & Resumo Mensal IA
           </span>
           <span className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-full border border-border">
             <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Matriz → Filiais & Remessa Sem Venda
@@ -274,11 +346,75 @@ export function LandingPage() {
             <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Aprovador de Baixa & 10 Funcionários Grátis
           </span>
           <span className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-full border border-border">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Visões Salvas no Banco & Exportação Detalhada
+            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> Contratos Digitais (DOCX/PDF + Google Drive)
           </span>
-          <span className="flex items-center gap-1.5 bg-surface px-3 py-1.5 rounded-full border border-border">
-            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" /> PDV Pesável (KG) + Catálogo WhatsApp
-          </span>
+        </div>
+      </section>
+
+      {/* AI Native Suite Banner */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6">
+        <div className="rounded-3xl bg-gradient-to-br from-violet-600/15 via-primary/10 to-surface border border-violet-500/30 p-8 sm:p-12 space-y-8 shadow-lg">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3 max-w-3xl">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-violet-500/20 text-violet-600 dark:text-violet-300 text-xs font-bold">
+                <Bot className="h-4 w-4" /> Suíte de Inteligência Artificial Multi-Provedor (Add-ons por Loja)
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
+                IA em Todos os Módulos + Chatbot Copiloto para o Administrador da Loja
+              </h2>
+              <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                O Super Admin configura as chaves de API criptografadas no Supabase (tendo o <b>Google Gemini</b> como IA principal padrão, além de suporte a <b>OpenAI</b>, <b>Claude</b> e <b>IA Personalizada</b>). A IA analisa dados reais da loja para sugerir produtos aos clientes, prever tendências de compras, resumir vendas mensais, avisar sobre produtos vencendo e conversar em tempo real com o Administrador.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2.5 shrink-0">
+              <a href="#personalizar-plano">
+                <Button size="lg" className="font-semibold shadow-md">
+                  Adicionar Módulos de IA ao Plano <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </a>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {aiSuiteHighlights.map((mod) => (
+              <div
+                key={mod.code}
+                className="p-5 rounded-2xl bg-surface/90 border border-border hover:border-violet-500/50 transition-all flex flex-col justify-between gap-3"
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-500/15 text-violet-600 dark:text-violet-300">
+                      ADD-ON IA
+                    </span>
+                    <span className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400">
+                      {mod.price}
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground leading-snug">{mod.title}</h3>
+                  <p className="text-[11px] text-muted-foreground leading-relaxed">{mod.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 text-xs">
+            <div className="p-3.5 rounded-xl bg-surface/70 border border-border flex items-center gap-2.5">
+              <Sparkles className="h-4 w-4 text-violet-500 shrink-0" />
+              <span><b>Context Prompt Injection:</b> métricas reais da loja injetadas em tempo real</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-surface/70 border border-border flex items-center gap-2.5">
+              <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0" />
+              <span><b>Escudo Anti-Injection:</b> bloqueio contra jailbreak e extração de segredos</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-surface/70 border border-border flex items-center gap-2.5">
+              <RefreshCw className="h-4 w-4 text-amber-500 shrink-0" />
+              <span><b>Fallback em Cascata:</b> Gemini → Fast → Secundário → Motor Local</span>
+            </div>
+            <div className="p-3.5 rounded-xl bg-surface/70 border border-border flex items-center gap-2.5">
+              <Users className="h-4 w-4 text-primary shrink-0" />
+              <span><b>Personas Configuráveis:</b> CFO, Comercial, Auditor FEFO e Personalizada</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -312,14 +448,14 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Main Features Grid (12 Complete Pillars) */}
+      {/* Main Features Grid (16 Complete Pillars) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="text-center max-w-3xl mx-auto mb-14 space-y-3">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            12 Módulos Integrados para Gestão Ponta a Ponta
+            16 Pilares Integrados para Gestão Ponta a Ponta
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-            Todos os recursos operacionais, analíticos, financeiros e de governança reunidos em uma única plataforma rápida e responsiva.
+            Todos os recursos operacionais, Inteligência Artificial nativa, relatórios analíticos, contratos digitais e governança reunidos em uma única plataforma.
           </p>
         </div>
 

@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-03
 language: pt-BR
 classification: Confirmed
 source:
@@ -59,6 +59,8 @@ source:
 | `/global-admin/finance/plans` | `GlobalAdminFinancePlansPage` | Catálogo comercial de grupos de permissões, flag de vinculação na Landing Page (`showOnLandingPage` / `isHighlightedOnLanding`) e tabela de valores por módulo |
 | `/global-admin/finance/payments` | `GlobalAdminFinancePaymentsPage` | Livro-razão consolidado de faturas e histórico de pagamentos de todas as contas |
 | `/global-admin/contracts` | `GlobalAdminContractsPage` | Seção **Novos Contratos** (solicitações e pré-cadastros da Landing Page) + **Gerenciador de Contratos** (termos personalizados, exportação HTML/DOCX/PDF, armazenamento no Supabase e vínculo com Google Drive do Global Admin) |
+| `/global-admin/ai` | `GlobalAdminAiSettingsPage` | Central de Governança de IA do Super Admin: Cofre de Chaves API (`Gemini` Principal, `OpenAI`, `Claude`, `Personalizada`), seleção de modelos, Personas, Context Prompt Injection, Escudo Anti-Injection, Fallback em cascata, Módulos Comerciais de IA (Add-ons) e Telemetria (`requireGlobalAdmin`) |
+| `/ai-copilot` | `AiCopilotPage` | Central Copiloto de IA & Chatbot Executivo da Loja com radar operacional em tempo real, seletor de Persona, análises estratégicas em 1 clique e histórico de sessões; `PermissionGate` (`moduleCode="MOD_AI_COPILOT_CHAT"`) |
 | `/stores` | `StoresPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/products` | `ProductsPage` | Catálogo mestre com entrada em lote e galeria; `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
 | `/categories` | `CategoriesPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
@@ -88,10 +90,10 @@ Grupos (ids no código):
 
 | Grupo `id` | Paths |
 | --- | --- |
-| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin/contracts`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
+| `global-admin` *(apenas `isGlobalAdmin`)* | `/global-admin?tab=stores`, `/global-admin/stores/new`, `/global-admin?tab=users`, `/global-admin/users/new`, `/global-admin?tab=finance`, `/global-admin/finance/rules`, `/global-admin/finance/plans`, `/global-admin/finance/payments`, `/global-admin/contracts`, `/global-admin/ai`, `/global-admin?tab=backups`, `/global-admin?tab=db-explorer`, `/global-admin?tab=api-hbac`, `/global-admin?tab=delete` |
 | `registry` | `/products`, `/categories`, `/customers`, `/suppliers` |
 | `control` | `/inventory`, `/expiration`, `/purchases` |
-| `management` | `/orders`, `/reports`, `/stores`, `/team`, `/team/new` |
+| `management` | `/ai-copilot`, `/orders`, `/reports`, `/stores`, `/team`, `/team/new` |
 
 Links soltos (inferiores): `/sales`, `/integrations`, `/notifications`, `/audit`, `/settings`.
 
@@ -134,6 +136,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 
 | Pasta | Arquivos |
 | --- | --- |
+| `ai/` | `AiModuleInsightCard.tsx` (card de inteligência contextual incorporado em `/dashboard`, `/expiration`, `/customers`, `/sales`, `/purchases`, `/inventory` e `/reports`), `AiStoreCopilotDrawer.tsx` (chatbot flutuante global para o Administrador da Loja) |
 | `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx`, `UserPermissionsAndPricingModal.tsx`, `UserBillingHistoryModal.tsx`, `PermissionGroupsManagerModal.tsx` |
 | `commercial/` | `InteractivePlanBuilderSection.tsx` (configurador interativo de planos + módulos adicionais avulsos + pré-cadastro com Nome, E-mail e Celular na Landing Page `/` e `/pricing`) |
 | `inventory/` | `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`, `StockBranchTransferModal.tsx`, `StockImportModal.tsx` |
@@ -189,6 +192,7 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `apiIntegrationService` | `listIntegrations`, `saveIntegration`, `deleteIntegration`, `listLogs`, `executeHttpRequest`, `extractRecordsArray`, `simulateSync`, `executeSync`, `parseCurlCommand`, `generateCurlCommand`, `detectJsonArrays`, `autoMapFields` |
 | `permissionGroupService` | `listModules`, `updateModulePrice`, `listGroups`, `listLandingPageGroups`, `toggleLandingPageVisibility`, `saveGroup`, `deleteGroup`, `listAllUserProfiles`, `getUserProfile`, `saveUserProfile`, `listUserPayments`, `createPayment`, `markPaymentAsPaid`, `updatePaymentStatus`, `listUserAuditLogs` |
 | `contractService` | `generateContractNumber`, `submitProposal`, `listProposals`, `updateProposalStatus`, `deleteProposal`, `interpolateContractTerms`, `buildStandaloneContractHtml`, `listContracts`, `saveContract`, `deleteContract`, `exportContractAsHTML`, `exportContractAsDOCX`, `exportContractAsPDF`, `getGoogleDriveConfig`, `saveGoogleDriveConfig`, `syncContractToGoogleDrive` |
+| `aiOrchestratorService` | `inspectPromptSecurity`, `listProviderConfigs`, `saveProviderConfig`, `testProviderConnection`, `listPersonas`, `savePersona`, `deletePersona`, `getStoreAiConfig`, `saveStoreAiConfig`, `buildStoreContextSnapshot`, `executeAiTask`, `executeModulePrompt`, `resolveOrderedRuntimeProviders`, `generateAnalyticalFallbackResponse`, `listChatSessions`, `listChatMessages`, `appendChatMessage`, `recordUsageLog`, `listUsageLogs` |
 | `notificationService` | list, mark read, `generateStockAlerts` (RPC) |
 | `auditService` | `listAuditLogs`, `logAction` |
 | `reportService` | `getRetailSummaryKPIs`, `getValuationReport`, `getAbcCurveReport`, `getConsumptionDemandReport`, `getCustomerTicketReport`, `getCapitalInvestmentReport`, `getPurchasingReport`, `getLossesReport`, `getStockoutsReport`, `getSalesPerformanceReport`, `getAvailableReportsList`, `getGlobalAdminMetrics` |

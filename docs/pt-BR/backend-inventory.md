@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-03
 language: pt-BR
 classification: Confirmed
 source:
@@ -44,6 +44,7 @@ Ordem incremental observada (arquivos datados):
 25. `20261030000025_store_saved_views.sql`
 26. `20261030000026_employee_pin_reset_and_policy.sql`
 27. `20261030000027_landing_leads_and_contracts.sql`
+28. `20261103000028_ai_platform_and_modules.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -73,6 +74,12 @@ Depois: `expiration_action_enum` (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCA
 | `global_billing_rules` | regras globais de licenciamento comercial SaaS (franquia padrão `default_free_employees_per_store = 10`, preço por funcionário excedente `extra_employee_price = 19.90`, carência e cobrança de filiais) |
 | `permission_billing_audit_logs` | trilha de auditoria imutável de alterações de grupo, módulos, preços e baixas de pagamento |
 | `store_saved_views` | visões de filtros salvas no banco de dados individualmente por loja ou filial (`store_id` + `page_key`, ex.: `customers`), armazenando `filters` (`jsonb`) como múltipla seleção de status de pedidos, status de cliente, período/datas e flag `is_default` |
+| `ai_provider_configs` | cofre e configuração global de provedores de IA (`GEMINI` principal padrão, `OPENAI`, `CLAUDE`, `CUSTOM`) com `encrypted_api_key` (`pgcrypto`), `masked_api_key`, modelos (`default_model`, `fast_model`, `reasoning_model`), prioridades de fallback e nível de proteção Anti-Prompt Injection |
+| `ai_personas` | catálogo de personas de IA (globais e customizadas por loja) com `system_prompt`, `context_injection_template`, `guardrails_rules`, `suggested_questions` e `tone` |
+| `ai_store_configs` | parâmetros de IA por loja (`store_id`, `active_persona_id`, `business_niche`, `target_margin_percent`, `expiration_warning_days`, `custom_store_instructions`, `prompt_injection_custom_context`, `enable_anti_prompt_injection`) |
+| `ai_chat_sessions` | sessões de conversa do Copiloto de IA por loja e usuário (`store_id`, `user_id`, `persona_code`, `title`, `is_pinned`) |
+| `ai_chat_messages` | histórico de mensagens das sessões do Copiloto de IA com rastreio de `provider_used`, `model_used`, `persona_code`, `fallback_triggered`, `prompt_injection_flagged` e `action_suggestions` |
+| `ai_usage_logs` | telemetria e auditoria de consumo de IA por loja/módulo (`module_code`, `feature_key`, `provider_code`, `model_used`, `fallback_used`, `prompt_injection_blocked`, `estimated_tokens`, `latency_ms`, `status`) |
 
 ### Cadastro
 
@@ -119,6 +126,9 @@ Usadas pelo frontend (`supabase.rpc`):
 | `upsert_store_employee` | `userService.upsertStoreEmployee` (cria/atualiza funcionário na loja com papel, matrícula, credencial de aprovador de baixa, política de pré-requisitos do PIN, flag de reset no próximo login e permissões granulares sem deslogar o admin atual) |
 | `complete_employee_pin_reset` | `userService.completeEmployeePinReset` (conclui o reset obrigatório de PIN pelo próprio funcionário no login, validando contra `pin_requirements` e limpando `require_pin_reset`) |
 | `submit_commercial_proposal` | `contractService.submitProposal` (registra proposta comercial personalizada e pré-cadastro a partir da Landing Page `/` ou `/pricing` para `anon` e `authenticated`, gerando protocolo `PROP-YYYYMMDD-XXXXXX`) |
+| `upsert_ai_provider_config` | `aiOrchestratorService.saveProviderConfig` (restrita a `is_global_admin()`; criptografa a chave de API via `pgp_sym_encrypt`, gera versão mascarada e atualiza modelos e prioridades de fallback) |
+| `list_ai_provider_configs_safe` | `aiOrchestratorService.listProviderConfigs` (retorna as configurações de provedores de IA sem jamais expor `encrypted_api_key`) |
+| `resolve_ai_execution_runtime` | `aiOrchestratorService.resolveOrderedRuntimeProviders` (`SECURITY DEFINER`; valida se o usuário possui acesso à loja e se o módulo `MOD_AI_*` está habilitado antes de descriptografar a credencial em ordem de prioridade de fallback) |
 | `set_batch_disposition` | `inventoryService.setBatchDisposition` |
 | `clear_batch_disposition` | `inventoryService.clearBatchDisposition` |
 | `generate_stock_alerts` | `notificationService.generateStockAlerts` |

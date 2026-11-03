@@ -5,6 +5,14 @@ import type {
   ScreenDependencyImpact,
 } from '@/types/permissionGroup.types'
 
+export const AI_MODULE_CODES: ModuleCode[] = [
+  'MOD_AI_COPILOT_CHAT',
+  'MOD_AI_SALES_CRM',
+  'MOD_AI_INVENTORY_EXPIRATION',
+  'MOD_AI_PURCHASING_TRENDS',
+  'MOD_AI_BI_INSIGHTS',
+]
+
 export const ALL_MODULE_CODES: ModuleCode[] = [
   'MOD_CATALOG_WA',
   'MOD_POS_SALES',
@@ -16,6 +24,7 @@ export const ALL_MODULE_CODES: ModuleCode[] = [
   'MOD_REPORTS',
   'MOD_TEAM_AUDIT',
   'MOD_API_INTEGRATIONS',
+  ...AI_MODULE_CODES,
 ]
 
 export const DEFAULT_PERMISSION_MODULES: PermissionModule[] = [
@@ -159,6 +168,66 @@ export const DEFAULT_PERMISSION_MODULES: PermissionModule[] = [
     permissions: ['integrations.manage'],
     monthlyPrice: 79.9,
     sortOrder: 10,
+    isActive: true,
+  },
+  {
+    code: 'MOD_AI_COPILOT_CHAT',
+    name: 'IA Copiloto & Chatbot Executivo da Loja',
+    description:
+      'Chatbot inteligente conectado aos dados da loja em tempo real (/ai-copilot e assistente flutuante global), simulador "E Se?", personas configuráveis e respostas estratégicas.',
+    category: 'INTELIGENCIA_ARTIFICIAL',
+    routes: ['/ai-copilot'],
+    permissions: ['reports.view', 'products.read', 'inventory.read'],
+    monthlyPrice: 49.9,
+    sortOrder: 11,
+    isActive: true,
+  },
+  {
+    code: 'MOD_AI_SALES_CRM',
+    name: 'IA Comercial: Sugestão de Produtos p/ Clientes & Cross-Sell PDV',
+    description:
+      'Avaliação automática do histórico de cada cliente (/customers e /sales) para sugerir a próxima melhor oferta, cross-sell no caixa e scripts de vendas WhatsApp.',
+    category: 'INTELIGENCIA_ARTIFICIAL',
+    routes: [],
+    permissions: ['customers.read', 'sales.read', 'products.read'],
+    monthlyPrice: 39.9,
+    sortOrder: 12,
+    isActive: true,
+  },
+  {
+    code: 'MOD_AI_INVENTORY_EXPIRATION',
+    name: 'IA de Estoque, Alertas de Validade FEFO & Anti-Perdas',
+    description:
+      'Avisos inteligentes ao Administrador quando produtos estão vencendo (/expiration e /inventory), plano de escoamento promocional e sugestão de remessa entre filiais.',
+    category: 'INTELIGENCIA_ARTIFICIAL',
+    routes: [],
+    permissions: ['inventory.read', 'inventory.expiration', 'inventory.batches'],
+    monthlyPrice: 39.9,
+    sortOrder: 13,
+    isActive: true,
+  },
+  {
+    code: 'MOD_AI_PURCHASING_TRENDS',
+    name: 'IA de Tendências de Compras, Giro & Reposição Automática',
+    description:
+      'Análise preditiva de tendências de compras (/purchases e /suppliers), velocidade de giro, previsão de ruptura e geração assistida de Ordens de Compra.',
+    category: 'INTELIGENCIA_ARTIFICIAL',
+    routes: [],
+    permissions: ['purchasing.read', 'purchase_orders.read', 'suppliers.read'],
+    monthlyPrice: 39.9,
+    sortOrder: 14,
+    isActive: true,
+  },
+  {
+    code: 'MOD_AI_BI_INSIGHTS',
+    name: 'IA Executiva: Resumos Mensais de Vendas & Oportunidades BI',
+    description:
+      'Resumo mensal narrativo de vendas (/dashboard), avaliação de produtos mais vendidos, radar de oportunidades de margem e explicação executiva nas 9 abas de /reports.',
+    category: 'INTELIGENCIA_ARTIFICIAL',
+    routes: [],
+    permissions: ['reports.view', 'reports.sales', 'reports.inventory'],
+    monthlyPrice: 44.9,
+    sortOrder: 15,
     isActive: true,
   },
 ]
@@ -363,6 +432,7 @@ export const ROUTE_TO_MODULE_MAP: Record<string, ModuleCode> = {
   '/settings': 'MOD_TEAM_AUDIT',
   '/stores': 'MOD_TEAM_AUDIT',
   '/integrations': 'MOD_API_INTEGRATIONS',
+  '/ai-copilot': 'MOD_AI_COPILOT_CHAT',
 }
 
 /**

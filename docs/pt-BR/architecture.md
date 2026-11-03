@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-03
 language: pt-BR
 classification: Confirmed
 source:
@@ -25,17 +25,20 @@ Níveis usados: **Contexto → Sistema → Unidades deployáveis → Componentes
 flowchart LR
   Browser[Browser SPA]
   GH[GitHub Pages]
-  SB[Supabase PostgreSQL + Auth + Storage + Realtime + RPCs]
+  SB[Supabase PostgreSQL + Auth + Storage + Realtime + RPCs + pgcrypto AI Vault]
+  LLM[Provedores LLM: Google Gemini / OpenAI / Anthropic Claude / Custom Endpoint]
   WA[WhatsApp externo]
   AI[Agentes IA / ERPs Externos via HBAC & API Studio]
   Browser --> GH
   Browser --> SB
+  Browser --> LLM
   Browser -.-> WA
   AI --> SB
 ```
 
 - **GitHub Pages** serve o `dist/` gerado pelo Vite (workflow `deploy.yml`).
-- **Supabase** autentica, guarda dados isolados por RLS, armazena arquivos e publica mudanças Realtime.
+- **Supabase** autentica, guarda dados isolados por RLS, armazena chaves de IA criptografadas com `pgcrypto`, arquivos e publica mudanças Realtime.
+- **Provedores LLM (Gemini, OpenAI, Claude, Custom)** são acionados pelo orquestrador `aiOrchestratorService.ts` com Context Prompt Injection, Anti-Prompt Injection e Fallback Multi-Nível (`Primário → Secundário → Contingência Analítica Local`).
 - **WhatsApp** é aberto via URL a partir do catálogo público; não há SDK WhatsApp no `package.json`.
 - **Agentes Externos / IA** consomem o PostgREST e a RPC `get_ai_report` autenticados via cabeçalho `X-HBAC-Token`.
 
@@ -52,7 +55,7 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 | SPA estática | `dist/` após `npm run build` | UI |
 | Projeto Supabase | migrations em `supabase/migrations/` | Auth, DB, Storage, RPCs, Realtime, HBAC |
 
-`FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261030000027`.
+`FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261103000028`.
 
 ## Componentes de responsabilidade (não cada arquivo)
 
@@ -60,8 +63,8 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 | --- | --- | --- |
 | Rotas, `ProtectedRoute` e `PermissionGate` | Shell marketing / auth / app / catálogo e guarda de módulos SaaS + permissões granulares | Transações SQL |
 | Stores Zustand | Sessão (`authStore`), tema (`themeStore`), carrinho público (`cartStore`), i18n | RLS |
-| Services | Chamadas `supabase.from` / `rpc` (`orderService`, `inventoryService`, `reportService`, `customerService`, `savedViewService`, `saasBillingService`, `contractService`, etc.) | Render |
-| PostgreSQL + RLS + RPCs | Isolamento multi-tenant, vendas atômicas, alçada de baixa (`can_user_approve_writeoff`), remessa entre filiais (`execute_stock_transfer_to_branch`) | Layout |
+| Services | Chamadas `supabase.from` / `rpc` (`orderService`, `inventoryService`, `reportService`, `customerService`, `savedViewService`, `saasBillingService`, `contractService`, `aiOrchestratorService`, etc.) | Render |
+| PostgreSQL + RLS + RPCs | Isolamento multi-tenant, vendas atômicas, alçada de baixa (`can_user_approve_writeoff`), remessa entre filiais (`execute_stock_transfer_to_branch`), cofre `pgcrypto` de IA (`upsert_ai_provider_config`, `resolve_ai_execution_runtime`) | Layout |
 | Storage | Imagens produtos/loja/avatar | Metadados de produto (tabelas SQL) |
 
 ## Fluxo de sessão (implementação)
@@ -76,15 +79,15 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 
 ```text
 src/
-  components/admin|commercial|common|inventory|products|sales|settings|team|ui
+  components/admin|ai|commercial|common|inventory|products|sales|settings|team|ui
   constants/      featureDependencies.ts, granularPermissions.ts
   hooks/          useAuth, useTenant, usePermissions, useRealtime, useI18n, useTheme, useTablePagination
   i18n/           pt-BR, en-US, es-ES
   layouts/        AppLayout, AuthLayout, PublicLayout
   lib/            supabase/client.ts, storeThemes.ts
-  pages/          35 páginas (incluindo Novos Contratos & Gerenciador de Contratos e rotas dedicadas de edição do Global Admin e Equipe)
+  pages/          36 páginas (incluindo Copilot IA da Loja, Central de IA no Global Admin, Novos Contratos & Gerenciador de Contratos e rotas dedicadas de edição do Global Admin e Equipe)
   routes/         AppRoutes, ProtectedRoute, PermissionGate
-  services/       24 services de domínio
+  services/       25 services de domínio (incluindo aiOrchestratorService.ts)
   stores/         authStore, cartStore, themeStore
   types/          database.types.ts e tipos de domínio
   utils/          formatters, currency, barcode, dates, export, importParser, productUtils, errorHandler

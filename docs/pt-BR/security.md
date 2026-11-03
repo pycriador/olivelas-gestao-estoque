@@ -5,7 +5,7 @@ type: Security
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-03
 language: pt-BR
 classification: Confirmed
 source:
@@ -22,9 +22,11 @@ source:
   - supabase/migrations/20261030000025_store_saved_views.sql
   - supabase/migrations/20261030000026_employee_pin_reset_and_policy.sql
   - supabase/migrations/20261030000027_landing_leads_and_contracts.sql
+  - supabase/migrations/20261103000028_ai_platform_and_modules.sql
   - src/routes/ProtectedRoute.tsx
   - src/routes/PermissionGate.tsx
   - src/hooks/usePermissions.ts
+  - src/services/aiOrchestratorService.ts
 ---
 
 # Segurança
@@ -81,6 +83,10 @@ Qualquer “esconder botão” ou bloqueio de rota no cliente é camada de UX/go
 - **Reset Obrigatório de PIN e Requisitos de Complexidade (`store_users`, migration 26):** RPC `public.complete_employee_pin_reset` (`SECURITY DEFINER`) permite que o próprio membro autenticado (`user_id = auth.uid()`), `STORE_ADMIN` ou `is_global_admin()` atualize o `access_pin` e limpe a flag `require_pin_reset = false`.
 - **Propostas Comerciais da Landing Page (`commercial_plan_proposals`, migration 27):** `INSERT` público (`anon` e `authenticated`) e RPC `public.submit_commercial_proposal` permitem o envio de pré-cadastros comerciais a partir da Landing Page (`/` e `/pricing`); `SELECT`, `UPDATE` e `DELETE` são restritos a `is_global_admin()` (com `SELECT` adicional para o próprio `user_id` quando autenticado).
 - **Contratos da Plataforma (`platform_contracts`, migration 27):** `SELECT`, `INSERT`, `UPDATE` e `DELETE` restritos a `is_global_admin()`, garantindo que apenas o Administrador Global gerencie minutas, termos personalizados e arquivos de contrato exportados.
+- **Cofre de Chaves de IA, Personas, Anti-Prompt Injection e Governança Multi-Loja (`ai_provider_configs`, `ai_personas`, `ai_store_configs`, `ai_chat_sessions`, `ai_chat_messages`, `ai_usage_logs`, migration 28):**
+  - As chaves de API (`Gemini`, `OpenAI`, `Claude`, `Personalizada`) são criptografadas com `pgcrypto` (`pgp_sym_encrypt`) na tabela `public.ai_provider_configs`, cuja política RLS restringe `SELECT`/`INSERT`/`UPDATE`/`DELETE` a `is_global_admin()`.
+  - A RPC `public.list_ai_provider_configs_safe` retorna apenas a versão mascarada (`masked_api_key`), e a RPC `public.resolve_ai_execution_runtime` (`SECURITY DEFINER`) valida se o usuário autenticado pertence à loja e possui o módulo comercial `MOD_AI_*` habilitado antes de resolver o runtime.
+  - O orquestrador `aiOrchestratorService.inspectPromptSecurity` bloqueia tentativas de *Prompt Injection* / *Jailbreak* (ex.: `"ignore previous instructions"`, `"reveal API key"`, `"SELECT * FROM"`, acesso a dados de outro `store_id`) e registra a tentativa com `status = 'BLOCKED_INJECTION'` em `public.ai_usage_logs`.
 - **Produtos SELECT:** membro **ou** produto publicado no catálogo (`is_published_catalog` e loja ativa — ver SQL exato).
 - **Imagens de produto SELECT:** policy `"Product images select: all"` (leitura ampla no SQL).
 - **Pedidos INSERT:** staff **ou** checkout público (condição na policy; o catálogo atual usa WhatsApp).
