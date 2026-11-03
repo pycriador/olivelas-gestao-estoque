@@ -69,11 +69,11 @@ export function PageHeader({ title, badge, children }: PageHeaderProps) {
           {/* Search Input Container (Inline in top navbar) */}
           <div
             ref={searchInputContainerRef}
-            className={`items-center gap-1.5 flex-1 w-full max-w-full sm:max-w-xs md:max-w-sm lg:max-w-md ${
+            className={`items-center gap-1.5 flex-1 w-full max-w-full sm:max-w-md md:max-w-xl lg:max-w-2xl ${
               isMobileOpen ? 'flex' : 'hidden sm:flex'
             }`}
           >
-            <div className="flex-1 min-w-0 relative">
+            <div className="flex-1 min-w-0 relative flex items-center justify-end sm:justify-start">
               {children}
             </div>
 

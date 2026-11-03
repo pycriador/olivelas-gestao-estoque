@@ -933,51 +933,39 @@ export function ReportsPage() {
   const currentTabMeta = reportTabs.find((t) => t.id === activeTab) || reportTabs[0]
 
   return (
-    <div className="h-full flex-1 min-h-0 flex flex-col space-y-2 animate-in fade-in duration-150">
-      {/* Top Navbar Title & Global Actions */}
+    <div className="flex flex-col space-y-2.5 pb-6 animate-in fade-in duration-150">
+      {/* Top Navbar Title & Global Search */}
       <PageHeader title={t.nav.reports}>
-        <div className="flex items-center gap-2 flex-wrap">
-          {userStores.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-background/90 border border-input rounded-lg px-2.5 h-8 shadow-2xs">
-              <Building2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
-              <select
-                value={effectiveStoreId}
-                onChange={(e) => {
-                  setSelectedStoreId(e.target.value)
-                  setPage(1)
-                }}
-                aria-label="Selecionar loja do relatório"
-                className="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
-              >
-                <option value="all">Todas as Lojas (Consolidado)</option>
-                {userStores
-                  .filter((s) => s.storeId !== 'all')
-                  .map((s) => (
-                    <option key={s.storeId} value={s.storeId}>
-                      {s.storeName}
-                    </option>
-                  ))}
-              </select>
-            </div>
-          )}
-
-          <Input
-            placeholder="Buscar no relatório ativo..."
-            value={search}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            className="h-8 text-xs bg-background/90 w-48 sm:w-64"
-            icon={<Search className="h-3.5 w-3.5" />}
-          />
-        </div>
+        <Input
+          placeholder="Buscar no relatório ativo..."
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="h-8 text-xs bg-background/90"
+          icon={<Search className="h-3.5 w-3.5" />}
+        />
       </PageHeader>
 
-      {/* AI Deep-Dive BI & Financial Report Analyst */}
+      {/* AI Deep-Dive BI & Financial Report Analyst (on-demand + compact conversation box) */}
       <AiModuleInsightCard
         moduleCode="MOD_AI_BI_INSIGHTS"
         taskType="REPORT_DEEP_DIVE"
         title="IA Analista de BI, Curva ABC & Rentabilidade Financeira"
         subtitle="Interpreta margens líquidas, concentração ABC, retorno sobre estoque (GMROI) e sugere alavancas de lucro"
         compact
+        quickPrompts={[
+          {
+            label: 'Margens Curva A',
+            prompt: 'Quais produtos da Curva A possuem a maior margem líquida e quais estão com margem comprimida?',
+          },
+          {
+            label: 'Capital Parado',
+            prompt: 'Onde há maior capital imobilizado sem giro e como otimizar o retorno sobre o estoque (GMROI)?',
+          },
+          {
+            label: 'Perdas vs Vendas',
+            prompt: 'Faça um resumo executivo comparando as perdas/baixas do período frente ao faturamento.',
+          },
+        ]}
       />
 
       {/* Retail Performance KPI Summary Bar (Compact 1-line pills matching /expiration) */}
@@ -1149,6 +1137,31 @@ export function ReportsPage() {
 
           {/* Filters & Export Actions Group */}
           <div className="flex items-center gap-1.5 flex-wrap justify-end flex-shrink-0">
+            {/* Store / Branch Filter */}
+            {userStores.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8 shadow-2xs">
+                <Building2 className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                <select
+                  value={effectiveStoreId}
+                  onChange={(e) => {
+                    setSelectedStoreId(e.target.value)
+                    setPage(1)
+                  }}
+                  aria-label="Selecionar loja do relatório"
+                  className="bg-transparent text-xs font-medium text-foreground focus:outline-none cursor-pointer pr-1"
+                >
+                  <option value="all">Todas as Lojas (Consolidado)</option>
+                  {userStores
+                    .filter((s) => s.storeId !== 'all')
+                    .map((s) => (
+                      <option key={s.storeId} value={s.storeId}>
+                        {s.storeName}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            )}
+
             {/* Period & Custom Date Filter */}
             <div className="flex items-center gap-1.5 bg-background border border-input rounded-lg px-2 h-8 shadow-2xs">
               <Calendar className="h-3.5 w-3.5 text-primary flex-shrink-0" />
@@ -1320,10 +1333,10 @@ export function ReportsPage() {
         </div>
       </div>
 
-      {/* Main Report Table Card with Viewport Fitting & Pagination (matching /expiration) */}
-      <div ref={reportTableRef} className="flex-1 min-h-0 flex flex-col">
-        <Card className="flex-1 min-h-0 flex flex-col overflow-hidden border border-border shadow-xs bg-card">
-          <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
+      {/* Main Report Table Card with Pagination */}
+      <div ref={reportTableRef} className="flex flex-col">
+        <Card className="flex flex-col overflow-hidden border border-border shadow-xs bg-card">
+          <CardContent className="p-0 flex flex-col overflow-hidden">
             {isCurrentTabLoading ? (
               <div className="p-6">
                 <LoadingSkeleton count={8} />

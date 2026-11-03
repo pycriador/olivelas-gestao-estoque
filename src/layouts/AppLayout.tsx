@@ -492,7 +492,7 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="min-h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 py-2 sm:px-4 flex flex-col gap-2 md:h-12 md:flex-row md:items-center md:justify-between md:gap-3 md:py-0">
+        <header className="min-h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 py-2 sm:px-4 flex flex-col gap-2 md:min-h-12 md:flex-row md:items-center md:justify-between md:gap-3 md:py-1.5">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
