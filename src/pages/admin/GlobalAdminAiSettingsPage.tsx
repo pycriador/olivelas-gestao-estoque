@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Activity,
@@ -7,17 +7,25 @@ import {
   ArrowLeft,
   Bot,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Cpu,
   DollarSign,
+  Download,
   Eye,
   EyeOff,
+  Filter,
   KeyRound,
   Layers,
+  Link2,
   Lock,
   Play,
   Plus,
   RefreshCw,
   Save,
+  Search,
   Shield,
   ShieldAlert,
   ShieldCheck,
@@ -27,6 +35,7 @@ import {
   Terminal,
   Trash2,
   Users,
+  X,
   Zap,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -69,6 +78,34 @@ type AdminAiTab =
   | 'security-fallback'
   | 'commercial-modules'
   | 'telemetry'
+
+function resolveAdminAiTab(raw?: string | null): AdminAiTab {
+  const clean = (raw || '').trim().toLowerCase()
+  if (clean === 'personas' || clean === 'persona') return 'personas'
+  if (
+    clean === 'security-fallback' ||
+    clean === 'security' ||
+    clean === 'fallback' ||
+    clean === 'shield'
+  ) {
+    return 'security-fallback'
+  }
+  if (
+    clean === 'commercial-modules' ||
+    clean === 'modules' ||
+    clean === 'pricing'
+  ) {
+    return 'commercial-modules'
+  }
+  if (
+    clean === 'telemetry' ||
+    clean === 'logs' ||
+    clean === 'consumption'
+  ) {
+    return 'telemetry'
+  }
+  return 'providers'
+}
 
 const PROVIDER_META: Record<
   AiProviderCode,
@@ -130,10 +167,38 @@ const PROVIDER_META: Record<
 
 export const GlobalAdminAiSettingsPage: React.FC = () => {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { tab: routeTabParam } = useParams<{ tab?: string }>()
   const { storeId, storeName } = useTenant()
 
-  const [activeTab, setActiveTab] = useState<AdminAiTab>('providers')
+  const initialTab = useMemo<AdminAiTab>(() => {
+    const queryTab = new URLSearchParams(location.search).get('tab')
+    return resolveAdminAiTab(routeTabParam || queryTab)
+  }, [routeTabParam, location.search])
+
+  const [activeTab, setActiveTab] = useState<AdminAiTab>(initialTab)
   const [loading, setLoading] = useState(true)
+
+  // Sincroniza a aba ativa com a URL própria (/global-admin/ai/:tab)
+  useEffect(() => {
+    const queryTab = new URLSearchParams(location.search).get('tab')
+    const resolved = resolveAdminAiTab(routeTabParam || queryTab)
+    if (activeTab !== resolved) {
+      setActiveTab(resolved)
+    }
+    const canonicalPath = `/global-admin/ai/${resolved}`
+    if (location.pathname !== canonicalPath) {
+      navigate(canonicalPath, { replace: true })
+    }
+  }, [routeTabParam, location.pathname, location.search, activeTab, navigate])
+
+  const handleSelectTab = useCallback(
+    (nextTab: AdminAiTab) => {
+      setActiveTab(nextTab)
+      navigate(`/global-admin/ai/${nextTab}`)
+    },
+    [navigate]
+  )
 
   const [providers, setProviders] = useState<AiProviderConfig[]>(
     DEFAULT_AI_PROVIDER_CONFIGS
@@ -204,6 +269,28 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
   const [runningSimulator, setRunningSimulator] = useState(false)
   const [simulatorResult, setSimulatorResult] =
     useState<AiExecutionResult | null>(null)
+
+  // Telemetry Filters & Pagination State
+  const [telemetrySearch, setTelemetrySearch] = useState('')
+  const [telemetryProviderFilter, setTelemetryProviderFilter] = useState<
+    'ALL' | AiProviderCode
+  >('ALL')
+  const [telemetryModuleFilter, setTelemetryModuleFilter] =
+    useState<string>('ALL')
+  const [telemetryStatusFilter, setTelemetryStatusFilter] = useState<
+    'ALL' | 'SUCCESS' | 'FALLBACK_LOCAL' | 'BLOCKED_INJECTION' | 'ERROR'
+  >('ALL')
+  const [telemetryPersonaFilter, setTelemetryPersonaFilter] =
+    useState<string>('ALL')
+  const [telemetryStoreFilter, setTelemetryStoreFilter] =
+    useState<string>('ALL')
+  const [telemetryDatePreset, setTelemetryDatePreset] = useState<
+    'ALL' | 'TODAY' | '7D' | '30D' | 'CUSTOM'
+  >('ALL')
+  const [telemetryDateFrom, setTelemetryDateFrom] = useState('')
+  const [telemetryDateTo, setTelemetryDateTo] = useState('')
+  const [telemetryPage, setTelemetryPage] = useState(1)
+  const [telemetryPageSize, setTelemetryPageSize] = useState(10)
 
   const syncProviderForm = useCallback((cfg: AiProviderConfig) => {
     setDisplayName(cfg.displayName)
@@ -652,6 +739,279 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
     [aiModules, modulePrices]
   )
 
+  // Reseta a página da telemetria para 1 sempre que qualquer filtro ou pageSize mudar
+  useEffect(() => {
+    setTelemetryPage(1)
+  }, [
+    telemetrySearch,
+    telemetryProviderFilter,
+    telemetryModuleFilter,
+    telemetryStatusFilter,
+    telemetryPersonaFilter,
+    telemetryStoreFilter,
+    telemetryDatePreset,
+    telemetryDateFrom,
+    telemetryDateTo,
+    telemetryPageSize,
+  ])
+
+  const distinctTelemetryStores = useMemo(() => {
+    const set = new Set<string>()
+    for (const l of usageLogs) {
+      if (l.storeId) set.add(l.storeId)
+    }
+    return Array.from(set).sort()
+  }, [usageLogs])
+
+  const distinctTelemetryPersonas = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of personas) {
+      if (p.code) set.add(p.code)
+    }
+    for (const l of usageLogs) {
+      if (l.personaCode) set.add(l.personaCode)
+    }
+    return Array.from(set).sort()
+  }, [personas, usageLogs])
+
+  const filteredUsageLogs = useMemo(() => {
+    const searchNorm = telemetrySearch.trim().toLowerCase()
+    const now = Date.now()
+    const dayMs = 24 * 3600 * 1000
+
+    return usageLogs.filter((log) => {
+      if (
+        telemetryProviderFilter !== 'ALL' &&
+        log.providerCode !== telemetryProviderFilter
+      ) {
+        return false
+      }
+
+      if (
+        telemetryModuleFilter !== 'ALL' &&
+        log.moduleCode !== telemetryModuleFilter
+      ) {
+        return false
+      }
+
+      if (telemetryStatusFilter !== 'ALL') {
+        const resolvedStatus = log.promptInjectionBlocked
+          ? 'BLOCKED_INJECTION'
+          : log.fallbackUsed
+            ? 'FALLBACK_LOCAL'
+            : log.status || 'SUCCESS'
+        if (resolvedStatus !== telemetryStatusFilter) {
+          return false
+        }
+      }
+
+      if (
+        telemetryPersonaFilter !== 'ALL' &&
+        log.personaCode !== telemetryPersonaFilter
+      ) {
+        return false
+      }
+
+      if (
+        telemetryStoreFilter !== 'ALL' &&
+        (log.storeId || 'loja-matriz-olivelas') !== telemetryStoreFilter
+      ) {
+        return false
+      }
+
+      if (telemetryDatePreset !== 'ALL') {
+        const logTime = new Date(log.createdAt).getTime()
+        if (!Number.isNaN(logTime)) {
+          if (telemetryDatePreset === 'TODAY') {
+            const startOfToday = new Date()
+            startOfToday.setHours(0, 0, 0, 0)
+            if (logTime < startOfToday.getTime()) return false
+          } else if (telemetryDatePreset === '7D') {
+            if (now - logTime > 7 * dayMs) return false
+          } else if (telemetryDatePreset === '30D') {
+            if (now - logTime > 30 * dayMs) return false
+          } else if (telemetryDatePreset === 'CUSTOM') {
+            if (telemetryDateFrom) {
+              const fromTime = new Date(`${telemetryDateFrom}T00:00:00`).getTime()
+              if (!Number.isNaN(fromTime) && logTime < fromTime) return false
+            }
+            if (telemetryDateTo) {
+              const toTime = new Date(`${telemetryDateTo}T23:59:59.999`).getTime()
+              if (!Number.isNaN(toTime) && logTime > toTime) return false
+            }
+          }
+        }
+      }
+
+      if (searchNorm) {
+        const haystack = [
+          log.featureKey,
+          log.modelUsed,
+          log.moduleCode,
+          log.personaCode,
+          log.providerCode,
+          log.storeId || '',
+          log.errorMessage || '',
+        ]
+          .join(' ')
+          .toLowerCase()
+        if (!haystack.includes(searchNorm)) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }, [
+    usageLogs,
+    telemetrySearch,
+    telemetryProviderFilter,
+    telemetryModuleFilter,
+    telemetryStatusFilter,
+    telemetryPersonaFilter,
+    telemetryStoreFilter,
+    telemetryDatePreset,
+    telemetryDateFrom,
+    telemetryDateTo,
+  ])
+
+  const activeTelemetryFiltersCount = useMemo(() => {
+    let count = 0
+    if (telemetrySearch.trim()) count++
+    if (telemetryProviderFilter !== 'ALL') count++
+    if (telemetryModuleFilter !== 'ALL') count++
+    if (telemetryStatusFilter !== 'ALL') count++
+    if (telemetryPersonaFilter !== 'ALL') count++
+    if (telemetryStoreFilter !== 'ALL') count++
+    if (telemetryDatePreset !== 'ALL') count++
+    return count
+  }, [
+    telemetrySearch,
+    telemetryProviderFilter,
+    telemetryModuleFilter,
+    telemetryStatusFilter,
+    telemetryPersonaFilter,
+    telemetryStoreFilter,
+    telemetryDatePreset,
+  ])
+
+  const handleResetTelemetryFilters = () => {
+    setTelemetrySearch('')
+    setTelemetryProviderFilter('ALL')
+    setTelemetryModuleFilter('ALL')
+    setTelemetryStatusFilter('ALL')
+    setTelemetryPersonaFilter('ALL')
+    setTelemetryStoreFilter('ALL')
+    setTelemetryDatePreset('ALL')
+    setTelemetryDateFrom('')
+    setTelemetryDateTo('')
+    setTelemetryPage(1)
+  }
+
+  const telemetryTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(filteredUsageLogs.length / telemetryPageSize)),
+    [filteredUsageLogs.length, telemetryPageSize]
+  )
+
+  const safeTelemetryPage = Math.min(telemetryPage, telemetryTotalPages)
+
+  const paginatedUsageLogs = useMemo(() => {
+    const start = (safeTelemetryPage - 1) * telemetryPageSize
+    return filteredUsageLogs.slice(start, start + telemetryPageSize)
+  }, [filteredUsageLogs, safeTelemetryPage, telemetryPageSize])
+
+  const telemetryKpis = useMemo(() => {
+    const total = filteredUsageLogs.length
+    let totalTokens = 0
+    let totalLatency = 0
+    let successCount = 0
+    let fallbackCount = 0
+    let blockedCount = 0
+
+    for (const l of filteredUsageLogs) {
+      totalTokens += Number(l.estimatedTokens || 0)
+      totalLatency += Number(l.latencyMs || 0)
+      if (l.promptInjectionBlocked) {
+        blockedCount++
+      } else if (l.fallbackUsed) {
+        fallbackCount++
+      } else {
+        successCount++
+      }
+    }
+
+    return {
+      total,
+      totalTokens,
+      avgTokens: total > 0 ? Math.round(totalTokens / total) : 0,
+      avgLatency: total > 0 ? Math.round(totalLatency / total) : 0,
+      successCount,
+      fallbackCount,
+      blockedCount,
+    }
+  }, [filteredUsageLogs])
+
+  const handleGenerateDemoLogs = async () => {
+    try {
+      const updated = await aiOrchestratorService.appendDemoUsageLogsBatch()
+      setUsageLogs(updated)
+      toast.success(
+        `+10 chamadas de demonstração adicionadas! Total: ${updated.length} registros.`
+      )
+    } catch {
+      toast.error('Erro ao gerar chamadas de demonstração.')
+    }
+  }
+
+  const handleExportTelemetryCsv = () => {
+    if (filteredUsageLogs.length === 0) {
+      toast.warning('Não há registros filtrados para exportar.')
+      return
+    }
+    const headers = [
+      'DataHora',
+      'Loja',
+      'ModuloComercial',
+      'Tarefa',
+      'Provedor',
+      'Modelo',
+      'Persona',
+      'TokensEstimados',
+      'LatenciaMs',
+      'Status',
+    ]
+    const rows = filteredUsageLogs.map((l) => [
+      l.createdAt,
+      l.storeId || 'loja-matriz-olivelas',
+      l.moduleCode,
+      l.featureKey,
+      l.providerCode,
+      l.modelUsed,
+      l.personaCode,
+      String(l.estimatedTokens),
+      String(l.latencyMs),
+      l.promptInjectionBlocked
+        ? 'BLOCKED_INJECTION'
+        : l.fallbackUsed
+          ? 'FALLBACK_LOCAL'
+          : l.status || 'SUCCESS',
+    ])
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((r) =>
+        r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')
+      ),
+    ].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `telemetria-ia-olivelas-${new Date().toISOString().slice(0, 10)}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+    toast.success(`Exportados ${filteredUsageLogs.length} registros em CSV!`)
+  }
+
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
@@ -671,8 +1031,9 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
           </div>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-xs font-semibold text-primary">
-                /global-admin/ai
+              <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-2 py-0.5 font-mono text-xs font-semibold text-primary">
+                <Link2 className="h-3.5 w-3.5" />
+                /global-admin/ai/{activeTab}
               </span>
               <Badge variant="success">AES-256 pgcrypto Vault</Badge>
               <Badge variant="default">
@@ -680,7 +1041,7 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
               </Badge>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Configure as chaves de API (Gemini, OpenAI, Claude, Personalizada), modelos globais, proteção Anti-Prompt Injection, Personas e preços de acréscimo dos módulos de IA nas lojas.
+              Configure as chaves de API (Gemini, OpenAI, Claude, Personalizada), modelos globais, proteção Anti-Prompt Injection, Personas e preços de acréscimo dos módulos de IA nas lojas. Cada aba possui sua própria URL direta.
             </p>
           </div>
         </div>
@@ -713,31 +1074,36 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs (Cada aba tem URL própria em /global-admin/ai/:tab) */}
       <div className="flex flex-wrap gap-2 border-b border-border pb-3">
         {[
           {
             id: 'providers' as const,
+            path: '/global-admin/ai/providers',
             label: '1. Cofre de Chaves API & Modelos (Gemini Principal)',
             icon: KeyRound,
           },
           {
             id: 'personas' as const,
+            path: '/global-admin/ai/personas',
             label: '2. Personas & Prompt Injection de Contexto',
             icon: Bot,
           },
           {
             id: 'security-fallback' as const,
+            path: '/global-admin/ai/security-fallback',
             label: '3. Escudo Anti-Injection, Fallback & Simulador',
             icon: ShieldCheck,
           },
           {
             id: 'commercial-modules' as const,
+            path: '/global-admin/ai/commercial-modules',
             label: '4. Módulos Comerciais de IA (Acréscimo nas Lojas)',
             icon: DollarSign,
           },
           {
             id: 'telemetry' as const,
+            path: '/global-admin/ai/telemetry',
             label: `5. Telemetria & Consumo (${usageLogs.length})`,
             icon: Activity,
           },
@@ -748,16 +1114,29 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleSelectTab(tab.id)}
+              title={`URL direta: ${tab.path}`}
               className={cn(
-                'flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-bold transition',
+                'flex flex-col items-start gap-0.5 rounded-xl px-3.5 py-2 text-left transition',
                 active
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'border border-border bg-surface text-muted-foreground hover:bg-muted hover:text-foreground'
               )}
             >
-              <Icon className="h-3.5 w-3.5" />
-              {tab.label}
+              <span className="flex items-center gap-2 text-xs font-bold">
+                <Icon className="h-3.5 w-3.5" />
+                {tab.label}
+              </span>
+              <span
+                className={cn(
+                  'font-mono text-[10px]',
+                  active
+                    ? 'text-primary-foreground/80'
+                    : 'text-muted-foreground/80'
+                )}
+              >
+                {tab.path}
+              </span>
             </button>
           )
         })}
@@ -2002,82 +2381,584 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
 
           {/* TAB 5: TELEMETRIA & CONSUMO */}
           {activeTab === 'telemetry' && (
-            <Card className="p-6 space-y-4">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <div>
-                  <h2 className="text-base font-bold text-foreground">
-                    Auditoria de Execuções de IA, Fallback e Bloqueios de Segurança
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    Histórico em tempo real de chamadas realizadas pelos módulos de IA das lojas.
+            <div className="space-y-4">
+              {/* KPIs do Conjunto Filtrado */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <Card className="p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Chamadas Filtradas</span>
+                    <Badge variant="default">
+                      {telemetryKpis.total} / {usageLogs.length}
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-extrabold text-foreground">
+                    {telemetryKpis.total}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {telemetryKpis.successCount} sucesso API •{' '}
+                    {telemetryKpis.fallbackCount} fallback •{' '}
+                    {telemetryKpis.blockedCount} bloqueios
                   </p>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  onClick={loadAll}
-                >
-                  <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-                  Atualizar Logs
-                </Button>
+                </Card>
+
+                <Card className="p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Tokens Consumidos (Filtro)</span>
+                    <Badge variant="secondary">
+                      Média {telemetryKpis.avgTokens} tok/req
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-extrabold text-primary">
+                    {telemetryKpis.totalTokens.toLocaleString('pt-BR')}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Soma estimada de tokens de entrada + saída
+                  </p>
+                </Card>
+
+                <Card className="p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Latência Média</span>
+                    <Badge
+                      variant={
+                        telemetryKpis.avgLatency < 600 ? 'success' : 'warning'
+                      }
+                    >
+                      {telemetryKpis.avgLatency < 600 ? 'Rápida' : 'Moderada'}
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-extrabold text-foreground">
+                    {telemetryKpis.avgLatency}ms
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Tempo médio de resposta do orquestrador
+                  </p>
+                </Card>
+
+                <Card className="p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>Escudo & Resiliência</span>
+                    <Badge
+                      variant={
+                        telemetryKpis.blockedCount > 0 ? 'danger' : 'success'
+                      }
+                    >
+                      {telemetryKpis.blockedCount} Injection Bloqueado(s)
+                    </Badge>
+                  </div>
+                  <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400">
+                    100% Protegido
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    {telemetryKpis.fallbackCount} acionamento(s) do Motor Analítico Local
+                  </p>
+                </Card>
               </div>
 
-              {usageLogs.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-muted-foreground">
-                  Nenhuma chamada registrada ainda nesta sessão. Utilize o Simulador na aba 3 ou abra qualquer módulo com IA para gerar telemetria.
+              <Card className="p-6 space-y-5">
+                {/* Cabeçalho da Aba de Telemetria */}
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-base font-bold text-foreground">
+                        Auditoria de Execuções de IA, Fallback e Bloqueios de Segurança
+                      </h2>
+                      <Badge variant="outline" className="font-mono text-[10px]">
+                        /global-admin/ai/telemetry
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Histórico paginado e filtrável por provedor, módulo comercial, status, persona, loja e período.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleGenerateDemoLogs}
+                    >
+                      <Plus className="mr-1.5 h-3.5 w-3.5 text-primary" />
+                      Gerar +10 Logs Demo
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleExportTelemetryCsv}
+                    >
+                      <Download className="mr-1.5 h-3.5 w-3.5" />
+                      Exportar CSV ({filteredUsageLogs.length})
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={loadAll}
+                    >
+                      <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                      Atualizar Logs
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="border-b border-border text-[11px] uppercase text-muted-foreground">
-                        <th className="py-2.5 px-3">Data/Hora</th>
-                        <th className="py-2.5 px-3">Módulo Comercial</th>
-                        <th className="py-2.5 px-3">Tarefa</th>
-                        <th className="py-2.5 px-3">Provedor / Modelo</th>
-                        <th className="py-2.5 px-3">Persona</th>
-                        <th className="py-2.5 px-3">Tokens Est.</th>
-                        <th className="py-2.5 px-3">Latência</th>
-                        <th className="py-2.5 px-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border/60">
-                      {usageLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-muted/30">
-                          <td className="py-2.5 px-3 font-mono text-[11px]">
-                            {formatDateTime(log.createdAt)}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono text-[11px] font-semibold text-primary">
-                            {log.moduleCode}
-                          </td>
-                          <td className="py-2.5 px-3">{log.featureKey}</td>
-                          <td className="py-2.5 px-3 font-mono text-[11px]">
-                            {log.providerCode} ({log.modelUsed})
-                          </td>
-                          <td className="py-2.5 px-3">{log.personaCode}</td>
-                          <td className="py-2.5 px-3 font-mono">
-                            {log.estimatedTokens}
-                          </td>
-                          <td className="py-2.5 px-3 font-mono">
-                            {log.latencyMs}ms
-                          </td>
-                          <td className="py-2.5 px-3">
-                            {log.promptInjectionBlocked ? (
-                              <Badge variant="danger">Injection Bloqueado</Badge>
-                            ) : log.fallbackUsed ? (
-                              <Badge variant="warning">Fallback Analítico</Badge>
-                            ) : (
-                              <Badge variant="success">Sucesso API</Badge>
-                            )}
-                          </td>
+
+                {/* Painel de Filtros Multi-Dimensionais */}
+                <div className="space-y-3 rounded-xl border border-border bg-muted/20 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-xs font-bold text-foreground">
+                      <Filter className="h-3.5 w-3.5 text-primary" />
+                      <span>Filtros de Telemetria & Consumo</span>
+                      {activeTelemetryFiltersCount > 0 && (
+                        <Badge variant="default">
+                          {activeTelemetryFiltersCount} filtro(s) ativo(s)
+                        </Badge>
+                      )}
+                    </div>
+
+                    {activeTelemetryFiltersCount > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleResetTelemetryFilters}
+                        className="h-7 px-2.5 text-xs text-danger hover:text-danger"
+                      >
+                        <X className="mr-1 h-3.5 w-3.5" />
+                        Limpar todos os filtros
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                    {/* Busca Textual */}
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Busca rápida (modelo, tarefa, módulo, loja ou erro)
+                      </label>
+                      <div className="relative">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={telemetrySearch}
+                          onChange={(e) => setTelemetrySearch(e.target.value)}
+                          placeholder="Ex.: gemini-2.5-pro, POS_CROSS_SELL, injection, filial..."
+                          className="pl-8 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Filtro por Provedor */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Provedor de IA
+                      </label>
+                      <select
+                        value={telemetryProviderFilter}
+                        onChange={(e) =>
+                          setTelemetryProviderFilter(
+                            e.target.value as 'ALL' | AiProviderCode
+                          )
+                        }
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground"
+                      >
+                        <option value="ALL">Todos os Provedores</option>
+                        <option value="GEMINI">GEMINI (Principal)</option>
+                        <option value="OPENAI">OPENAI (GPT)</option>
+                        <option value="CLAUDE">CLAUDE (Anthropic)</option>
+                        <option value="CUSTOM">CUSTOM (OpenAI-Compatible)</option>
+                      </select>
+                    </div>
+
+                    {/* Filtro por Status */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Status da Execução
+                      </label>
+                      <select
+                        value={telemetryStatusFilter}
+                        onChange={(e) =>
+                          setTelemetryStatusFilter(
+                            e.target.value as
+                              | 'ALL'
+                              | 'SUCCESS'
+                              | 'FALLBACK_LOCAL'
+                              | 'BLOCKED_INJECTION'
+                              | 'ERROR'
+                          )
+                        }
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground"
+                      >
+                        <option value="ALL">Todos os Status</option>
+                        <option value="SUCCESS">Sucesso API</option>
+                        <option value="FALLBACK_LOCAL">Fallback Analítico Local</option>
+                        <option value="BLOCKED_INJECTION">
+                          Prompt Injection Bloqueado
+                        </option>
+                        <option value="ERROR">Erro de Execução</option>
+                      </select>
+                    </div>
+
+                    {/* Filtro por Módulo Comercial */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Módulo Comercial
+                      </label>
+                      <select
+                        value={telemetryModuleFilter}
+                        onChange={(e) => setTelemetryModuleFilter(e.target.value)}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground"
+                      >
+                        <option value="ALL">Todos os Módulos de IA</option>
+                        {AI_MODULE_CODES.map((code) => (
+                          <option key={code} value={code}>
+                            {code}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro por Persona */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Persona Utilizada
+                      </label>
+                      <select
+                        value={telemetryPersonaFilter}
+                        onChange={(e) => setTelemetryPersonaFilter(e.target.value)}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground"
+                      >
+                        <option value="ALL">Todas as Personas</option>
+                        {distinctTelemetryPersonas.map((pCode) => (
+                          <option key={pCode} value={pCode}>
+                            {pCode}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro por Loja */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Unidade / Loja
+                      </label>
+                      <select
+                        value={telemetryStoreFilter}
+                        onChange={(e) => setTelemetryStoreFilter(e.target.value)}
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground"
+                      >
+                        <option value="ALL">Todas as Lojas</option>
+                        {distinctTelemetryStores.map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filtro por Período */}
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-muted-foreground">
+                        Período de Consumo
+                      </label>
+                      <select
+                        value={telemetryDatePreset}
+                        onChange={(e) =>
+                          setTelemetryDatePreset(
+                            e.target.value as
+                              | 'ALL'
+                              | 'TODAY'
+                              | '7D'
+                              | '30D'
+                              | 'CUSTOM'
+                          )
+                        }
+                        className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground"
+                      >
+                        <option value="ALL">Todo o Histórico</option>
+                        <option value="TODAY">Hoje</option>
+                        <option value="7D">Últimos 7 dias</option>
+                        <option value="30D">Últimos 30 dias</option>
+                        <option value="CUSTOM">Intervalo Personalizado</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  {telemetryDatePreset === 'CUSTOM' && (
+                    <div className="grid grid-cols-1 gap-3 border-t border-border/60 pt-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground">
+                          Data Inicial
+                        </label>
+                        <Input
+                          type="date"
+                          value={telemetryDateFrom}
+                          onChange={(e) => setTelemetryDateFrom(e.target.value)}
+                          className="text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[11px] font-semibold text-muted-foreground">
+                          Data Final
+                        </label>
+                        <Input
+                          type="date"
+                          value={telemetryDateTo}
+                          onChange={(e) => setTelemetryDateTo(e.target.value)}
+                          className="text-xs"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Barra Superior de Paginação */}
+                <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <div>
+                    {filteredUsageLogs.length === 0 ? (
+                      <span>0 registros encontrados</span>
+                    ) : (
+                      <span>
+                        Exibindo{' '}
+                        <strong className="text-foreground">
+                          {(safeTelemetryPage - 1) * telemetryPageSize + 1}
+                        </strong>{' '}
+                        a{' '}
+                        <strong className="text-foreground">
+                          {Math.min(
+                            safeTelemetryPage * telemetryPageSize,
+                            filteredUsageLogs.length
+                          )}
+                        </strong>{' '}
+                        de{' '}
+                        <strong className="text-foreground">
+                          {filteredUsageLogs.length}
+                        </strong>{' '}
+                        registros filtrados (Total bruto: {usageLogs.length})
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium">
+                      Itens por página:
+                    </span>
+                    {[10, 20, 50, 100].map((size) => (
+                      <button
+                        key={size}
+                        type="button"
+                        onClick={() => setTelemetryPageSize(size)}
+                        className={cn(
+                          'rounded-lg px-2.5 py-1 text-xs font-bold transition',
+                          telemetryPageSize === size
+                            ? 'bg-primary text-primary-foreground'
+                            : 'border border-border bg-surface text-muted-foreground hover:bg-muted hover:text-foreground'
+                        )}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Tabela Paginada de Telemetria */}
+                {filteredUsageLogs.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-border p-8 text-center text-xs text-muted-foreground space-y-2">
+                    <p>
+                      Nenhuma chamada corresponde aos filtros selecionados nesta consulta.
+                    </p>
+                    {activeTelemetryFiltersCount > 0 && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleResetTelemetryFilters}
+                      >
+                        Limpar Filtros Ativos
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border border-border">
+                    <table className="w-full text-left text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                          <th className="py-2.5 px-3">Data/Hora</th>
+                          <th className="py-2.5 px-3">Unidade / Loja</th>
+                          <th className="py-2.5 px-3">Módulo Comercial</th>
+                          <th className="py-2.5 px-3">Tarefa</th>
+                          <th className="py-2.5 px-3">Provedor / Modelo</th>
+                          <th className="py-2.5 px-3">Persona</th>
+                          <th className="py-2.5 px-3">Tokens Est.</th>
+                          <th className="py-2.5 px-3">Latência</th>
+                          <th className="py-2.5 px-3">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </Card>
+                      </thead>
+                      <tbody className="divide-y divide-border/60">
+                        {paginatedUsageLogs.map((log) => (
+                          <tr key={log.id} className="hover:bg-muted/30">
+                            <td className="py-2.5 px-3 font-mono text-[11px] whitespace-nowrap">
+                              {formatDateTime(log.createdAt)}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] text-muted-foreground">
+                              {log.storeId || 'loja-matriz-olivelas'}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px] font-semibold text-primary">
+                              {log.moduleCode}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="font-medium text-foreground">
+                                {log.featureKey}
+                              </div>
+                              {log.errorMessage && (
+                                <div className="mt-0.5 text-[10px] text-danger line-clamp-1">
+                                  {log.errorMessage}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px]">
+                              <span className="font-bold text-foreground">
+                                {log.providerCode}
+                              </span>{' '}
+                              <span className="text-muted-foreground">
+                                ({log.modelUsed})
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 font-mono text-[11px]">
+                              {log.personaCode}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono">
+                              {log.estimatedTokens.toLocaleString('pt-BR')}
+                            </td>
+                            <td className="py-2.5 px-3 font-mono">
+                              {log.latencyMs}ms
+                            </td>
+                            <td className="py-2.5 px-3">
+                              {log.promptInjectionBlocked ? (
+                                <Badge variant="danger">
+                                  Injection Bloqueado
+                                </Badge>
+                              ) : log.fallbackUsed ? (
+                                <Badge variant="warning">
+                                  Fallback Analítico
+                                </Badge>
+                              ) : log.status === 'ERROR' ? (
+                                <Badge variant="danger">Erro API</Badge>
+                              ) : (
+                                <Badge variant="success">Sucesso API</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {/* Controles Inferiores de Paginação */}
+                {filteredUsageLogs.length > 0 && (
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+                    <div className="text-xs text-muted-foreground">
+                      Página{' '}
+                      <strong className="text-foreground">
+                        {safeTelemetryPage}
+                      </strong>{' '}
+                      de{' '}
+                      <strong className="text-foreground">
+                        {telemetryTotalPages}
+                      </strong>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={safeTelemetryPage <= 1}
+                        onClick={() => setTelemetryPage(1)}
+                        title="Primeira página"
+                      >
+                        <ChevronsLeft className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={safeTelemetryPage <= 1}
+                        onClick={() =>
+                          setTelemetryPage((p) => Math.max(1, p - 1))
+                        }
+                        title="Página anterior"
+                      >
+                        <ChevronLeft className="mr-1 h-3.5 w-3.5" />
+                        Anterior
+                      </Button>
+
+                      {Array.from(
+                        { length: telemetryTotalPages },
+                        (_, idx) => idx + 1
+                      )
+                        .filter(
+                          (pageNum) =>
+                            pageNum === 1 ||
+                            pageNum === telemetryTotalPages ||
+                            Math.abs(pageNum - safeTelemetryPage) <= 2
+                        )
+                        .map((pageNum, idx, arr) => {
+                          const prevPage = arr[idx - 1]
+                          const showEllipsis =
+                            prevPage !== undefined && pageNum - prevPage > 1
+                          return (
+                            <React.Fragment key={pageNum}>
+                              {showEllipsis && (
+                                <span className="px-1 text-xs text-muted-foreground">
+                                  ...
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setTelemetryPage(pageNum)}
+                                className={cn(
+                                  'h-8 min-w-[32px] rounded-lg px-2.5 text-xs font-bold transition',
+                                  safeTelemetryPage === pageNum
+                                    ? 'bg-primary text-primary-foreground shadow-xs'
+                                    : 'border border-border bg-surface text-muted-foreground hover:bg-muted hover:text-foreground'
+                                )}
+                              >
+                                {pageNum}
+                              </button>
+                            </React.Fragment>
+                          )
+                        })}
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={safeTelemetryPage >= telemetryTotalPages}
+                        onClick={() =>
+                          setTelemetryPage((p) =>
+                            Math.min(telemetryTotalPages, p + 1)
+                          )
+                        }
+                        title="Próxima página"
+                      >
+                        Próxima
+                        <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={safeTelemetryPage >= telemetryTotalPages}
+                        onClick={() => setTelemetryPage(telemetryTotalPages)}
+                        title="Última página"
+                      >
+                        <ChevronsRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </div>
           )}
         </>
       )}

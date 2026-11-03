@@ -197,6 +197,14 @@ export function AppRoutes() {
           }
         />
         <Route
+          path="/global-admin/ai/:tab"
+          element={
+            <ProtectedRoute requireGlobalAdmin>
+              <GlobalAdminAiSettingsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/ai-copilot"
           element={
             <PermissionGate moduleCode="MOD_AI_COPILOT_CHAT" showUpgradeScreen>
