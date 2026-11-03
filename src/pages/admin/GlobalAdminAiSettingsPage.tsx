@@ -153,10 +153,12 @@ const PROVIDER_META: Record<
   CUSTOM: {
     badge: 'Personalizada / OpenAI-Compatible',
     colorClass: 'border-violet-500/35 bg-violet-500/5',
-    keyPlaceholder: 'gsk_... / sk-... / Bearer Token Personalizado',
+    keyPlaceholder: 'xai-... / sk-... / Bearer Token Personalizado',
     description:
-      'Conector universal compatível com Groq, DeepSeek, OpenRouter, vLLM, Azure OpenAI ou Ollama corporativo.',
+      'Conector universal compatível com Grok, DeepSeek, OpenRouter, vLLM, Azure OpenAI ou Ollama corporativo.',
     suggestedModels: [
+      'grok-3',
+      'grok-3-mini',
       'deepseek-chat',
       'llama-3.3-70b-versatile',
       'qwen-2.5-72b-instruct',
@@ -1035,10 +1037,6 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                 <Link2 className="h-3.5 w-3.5" />
                 /global-admin/ai/{activeTab}
               </span>
-              <Badge variant="success">AES-256 pgcrypto Vault</Badge>
-              <Badge variant="default">
-                Gemini Principal + Multi-Provider Fallback
-              </Badge>
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
               Configure as chaves de API (Gemini, OpenAI, Claude, Personalizada), modelos globais, proteção Anti-Prompt Injection, Personas e preços de acréscimo dos módulos de IA nas lojas. Cada aba possui sua própria URL direta.

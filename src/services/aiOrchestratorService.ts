@@ -342,16 +342,18 @@ export const DEFAULT_AI_PROVIDER_CONFIGS: AiProviderConfig[] = [
   {
     id: 'provider-custom',
     providerCode: 'CUSTOM',
-    displayName: 'IA Personalizada (Groq / DeepSeek / OpenRouter / Ollama)',
+    displayName: 'IA Personalizada (Grok / DeepSeek / OpenRouter / Ollama)',
     isEnabled: false,
     isPrimary: false,
     fallbackPriority: 4,
     hasApiKey: false,
     maskedApiKey: null,
-    defaultModel: 'deepseek-chat',
-    fastModel: 'llama-3.3-70b-versatile',
+    defaultModel: 'grok-3',
+    fastModel: 'grok-3-mini',
     reasoningModel: 'deepseek-reasoner',
     availableModels: [
+      'grok-3',
+      'grok-3-mini',
       'deepseek-chat',
       'deepseek-reasoner',
       'llama-3.3-70b-versatile',
@@ -616,7 +618,7 @@ export const aiOrchestratorService = {
           return {
             id: row.id || `provider-${code.toLowerCase()}`,
             providerCode: code,
-            displayName: row.displayName,
+            displayName: String(row.displayName || '').replace(/\bGroq\b/gi, 'Grok'),
             isEnabled: Boolean(row.isEnabled),
             isPrimary: Boolean(row.isPrimary),
             fallbackPriority: Number(row.fallbackPriority ?? 1),
@@ -671,6 +673,10 @@ export const aiOrchestratorService = {
         return {
           ...def,
           ...saved,
+          displayName: String(saved.displayName || def.displayName).replace(
+            /\bGroq\b/gi,
+            'Grok'
+          ),
           availableModels:
             decoded.availableModels.length > 0 ? decoded.availableModels : def.availableModels,
           sectionModels: {
