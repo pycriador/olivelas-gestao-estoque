@@ -15,6 +15,7 @@
 -- =============================================================================
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
+SET search_path = public, extensions;
 
 -- -----------------------------------------------------------------------------
 -- 1. Expansão de Categorias em permission_modules + Seed dos Módulos de IA
@@ -627,12 +628,12 @@ RETURNS TEXT
 LANGUAGE sql
 IMMUTABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   SELECT COALESCE(
     NULLIF(current_setting('app.settings.ai_vault_secret', true), ''),
     'olivelas_supabase_pgcrypto_vault_key_2026_v1'
-  );
+  )::TEXT;
 $$;
 
 REVOKE ALL ON FUNCTION public.fn_internal_ai_vault_secret() FROM PUBLIC, anon, authenticated, service_role;
@@ -664,13 +665,13 @@ RETURNS JSONB
 LANGUAGE sql
 VOLATILE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH params AS (
     SELECT
-      UPPER(TRIM(COALESCE(p_provider_code, 'GEMINI'))) AS v_code,
-      public.fn_internal_ai_vault_secret() AS v_secret,
-      NULLIF(TRIM(COALESCE(p_api_key, '')), '') AS v_clean_key,
+      UPPER(TRIM(COALESCE(p_provider_code, 'GEMINI')))::TEXT AS v_code,
+      public.fn_internal_ai_vault_secret()::TEXT AS v_secret,
+      NULLIF(TRIM(COALESCE(p_api_key, '')), '')::TEXT AS v_clean_key,
       public.is_global_admin() AS v_is_admin
   ),
   existing AS (
@@ -684,7 +685,7 @@ AS $$
       p.v_is_admin,
       CASE
         WHEN COALESCE(p_clear_api_key, false) THEN NULL::BYTEA
-        WHEN p.v_clean_key IS NOT NULL THEN pgp_sym_encrypt(p.v_clean_key, p.v_secret)
+        WHEN p.v_clean_key IS NOT NULL THEN pgp_sym_encrypt(p.v_clean_key::TEXT, p.v_secret::TEXT)
         ELSE (SELECT e.encrypted_api_key FROM existing e LIMIT 1)
       END AS v_encrypted,
       CASE
@@ -818,7 +819,7 @@ RETURNS JSONB
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   SELECT COALESCE(
     jsonb_agg(
@@ -870,7 +871,7 @@ RETURNS JSONB
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = public, extensions, pg_temp
 AS $$
   WITH access_check AS (
     SELECT
@@ -892,7 +893,7 @@ AS $$
           'isPrimary', c.is_primary,
           'fallbackPriority', c.fallback_priority,
           'apiKey', CASE
-            WHEN c.encrypted_api_key IS NOT NULL THEN pgp_sym_decrypt(c.encrypted_api_key, public.fn_internal_ai_vault_secret())
+            WHEN c.encrypted_api_key IS NOT NULL THEN pgp_sym_decrypt(c.encrypted_api_key::BYTEA, public.fn_internal_ai_vault_secret()::TEXT)
             ELSE NULL
           END,
           'defaultModel', c.default_model,
