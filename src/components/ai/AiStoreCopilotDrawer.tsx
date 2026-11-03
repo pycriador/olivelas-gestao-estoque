@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   aiOrchestratorService,
   DEFAULT_AI_PERSONAS,
+  toDeterministicUuid,
 } from '@/services/aiOrchestratorService'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
@@ -72,14 +73,14 @@ export const AiStoreCopilotDrawer: React.FC = () => {
   const [messages, setMessages] = useState<AiChatMessage[]>([])
   const [inputPrompt, setInputPrompt] = useState('')
   const [sending, setSending] = useState(false)
-  const [sessionId, setSessionId] = useState<string>(
-    () => `drawer-${storeId || 'global'}`
+  const [sessionId, setSessionId] = useState<string>(() =>
+    toDeterministicUuid(`drawer-${storeId || 'global'}`)
   )
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const loadSession = useCallback(async () => {
-    const sid = `drawer-${storeId || 'global'}`
+    const sid = toDeterministicUuid(`drawer-${storeId || 'global'}`)
     setSessionId(sid)
     const [loadedPersonas, history] = await Promise.all([
       aiOrchestratorService.listPersonas(storeId),

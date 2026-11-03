@@ -29,6 +29,7 @@ import { Badge } from '@/components/ui/badge'
 import {
   aiOrchestratorService,
   DEFAULT_AI_PERSONAS,
+  toDeterministicUuid,
 } from '@/services/aiOrchestratorService'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
@@ -93,7 +94,7 @@ export const AiCopilotPage: React.FC = () => {
   const [loadingContext, setLoadingContext] = useState(true)
   const [pinnedModelBadge, setPinnedModelBadge] = useState<string>('GEMINI • gemini-2.5-flash')
 
-  const sessionId = `copilot-page-${storeId || 'global'}`
+  const sessionId = toDeterministicUuid(`copilot-page-${storeId || 'global'}`)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const loadCopilotEnvironment = useCallback(async () => {

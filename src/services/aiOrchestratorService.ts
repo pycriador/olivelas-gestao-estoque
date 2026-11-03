@@ -29,6 +29,51 @@ const LOCAL_AI_CHAT_SESSIONS_KEY = 'olivelas_ai_chat_sessions_v1'
 const LOCAL_AI_CHAT_MESSAGES_KEY = 'olivelas_ai_chat_messages_v1'
 const LOCAL_AI_USAGE_LOGS_KEY = 'olivelas_ai_usage_logs_v1'
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+export function isValidUuid(value?: string | null): boolean {
+  if (!value || typeof value !== 'string') return false
+  return UUID_REGEX.test(value.trim())
+}
+
+/**
+ * Converte qualquer identificador de sessão (ex: "drawer-f8fdfd0e-..." ou "copilot-page-...")
+ * em um UUID RFC 4122 determinístico válido para colunas UUID no PostgreSQL/PostgREST,
+ * evitando erros HTTP 400 (invalid input syntax for type uuid).
+ */
+export function toDeterministicUuid(seed: string): string {
+  const clean = (seed || 'default').trim()
+  if (UUID_REGEX.test(clean)) {
+    return clean.toLowerCase()
+  }
+
+  let h1 = 0xdeadbeef ^ clean.length
+  let h2 = 0x41c6ce57 ^ clean.length
+  let h3 = 0x9e3779b9 ^ clean.length
+  let h4 = 0x85ebca6b ^ clean.length
+
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean.charCodeAt(i)
+    h1 = Math.imul(h1 ^ ch, 2654435761)
+    h2 = Math.imul(h2 ^ ch, 1597334677)
+    h3 = Math.imul(h3 ^ ch, 2246822507)
+    h4 = Math.imul(h4 ^ ch, 3266489909)
+  }
+
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
+  h3 = Math.imul(h3 ^ (h3 >>> 16), 2246822507) ^ Math.imul(h4 ^ (h4 >>> 13), 3266489909)
+  h4 = Math.imul(h4 ^ (h4 >>> 16), 2246822507) ^ Math.imul(h3 ^ (h3 >>> 13), 3266489909)
+
+  const hex =
+    (h1 >>> 0).toString(16).padStart(8, '0') +
+    (h2 >>> 0).toString(16).padStart(8, '0') +
+    (h3 >>> 0).toString(16).padStart(8, '0') +
+    (h4 >>> 0).toString(16).padStart(8, '0')
+
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-4${hex.slice(13, 16)}-a${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+}
+
 export interface AiSiteSectionDefinition {
   key: AiSiteSectionKey
   label: string
@@ -2002,7 +2047,7 @@ export const aiOrchestratorService = {
         .eq('is_active', true)
         .order('is_default', { ascending: false })
 
-      if (storeId && storeId !== 'all') {
+      if (isValidUuid(storeId)) {
         query = query.or(`store_id.is.null,store_id.eq.${storeId}`)
       } else {
         query = query.is('store_id', null)
@@ -2106,7 +2151,7 @@ export const aiOrchestratorService = {
       monthlyRequestsQuota: 3000,
     }
 
-    if (!storeId || storeId === 'all') return defaultCfg
+    if (!isValidUuid(storeId)) return defaultCfg
 
     try {
       const { data, error } = await supabase
@@ -2152,11 +2197,13 @@ export const aiOrchestratorService = {
     }
     writeLocal(LOCAL_AI_STORE_CFG_CACHE_KEY, allLocal)
 
-    if (config.storeId && config.storeId !== 'all') {
+    if (isValidUuid(config.storeId)) {
       try {
         await supabase.from('ai_store_configs').upsert({
           store_id: config.storeId,
-          active_persona_id: config.activePersonaId,
+          active_persona_id: isValidUuid(config.activePersonaId)
+            ? config.activePersonaId
+            : null,
           business_niche: config.businessNiche,
           target_margin_percent: config.targetMarginPercent,
           expiration_warning_days: config.expirationWarningDays,
@@ -2713,7 +2760,7 @@ export const aiOrchestratorService = {
 
     try {
       const { data, error } = await supabase.rpc('resolve_ai_execution_runtime', {
-        p_store_id: storeId && storeId !== 'all' ? storeId : null,
+        p_store_id: isValidUuid(storeId) ? storeId : null,
         p_module_code: moduleCode,
       })
 
@@ -3124,6 +3171,12 @@ export const aiOrchestratorService = {
    */
   async listChatSessions(storeId: string | null, userId: string): Promise<AiChatSession[]> {
     const localSessions = readLocal<AiChatSession[]>(LOCAL_AI_CHAT_SESSIONS_KEY, [])
+    if (!isValidUuid(userId)) {
+      return localSessions.filter(
+        (s) => s.userId === userId && (!storeId || storeId === 'all' || s.storeId === storeId)
+      )
+    }
+
     try {
       let query = supabase
         .from('ai_chat_sessions')
@@ -3132,8 +3185,8 @@ export const aiOrchestratorService = {
         .order('updated_at', { ascending: false })
         .limit(20)
 
-      if (storeId && storeId !== 'all') {
-        query = query.eq('store_id', storeId)
+      if (isValidUuid(storeId)) {
+        query = query.eq('store_id', storeId!)
       }
 
       const { data, error } = await query
@@ -3160,11 +3213,13 @@ export const aiOrchestratorService = {
 
   async listChatMessages(sessionId: string): Promise<AiChatMessage[]> {
     const allLocal = readLocal<Record<string, AiChatMessage[]>>(LOCAL_AI_CHAT_MESSAGES_KEY, {})
+    const dbSessionId = toDeterministicUuid(sessionId)
+
     try {
       const { data, error } = await supabase
         .from('ai_chat_messages')
         .select('*')
-        .eq('session_id', sessionId)
+        .eq('session_id', dbSessionId)
         .order('created_at', { ascending: true })
 
       if (!error && data && data.length > 0) {
@@ -3187,20 +3242,47 @@ export const aiOrchestratorService = {
       // Fallback
     }
 
-    return allLocal[sessionId] || []
+    return allLocal[sessionId] || allLocal[dbSessionId] || []
   },
 
   async appendChatMessage(msg: AiChatMessage): Promise<void> {
     const allLocal = readLocal<Record<string, AiChatMessage[]>>(LOCAL_AI_CHAT_MESSAGES_KEY, {})
-    const list = allLocal[msg.sessionId] || []
-    allLocal[msg.sessionId] = [...list, msg]
+    const dbSessionId = toDeterministicUuid(msg.sessionId)
+    const dbMessageId = isValidUuid(msg.id)
+      ? msg.id
+      : toDeterministicUuid(msg.id || crypto.randomUUID())
+    const validStoreId = isValidUuid(msg.storeId) ? msg.storeId : null
+
+    const list = allLocal[msg.sessionId] || allLocal[dbSessionId] || []
+    const updatedList = [...list, msg]
+    allLocal[msg.sessionId] = updatedList
+    allLocal[dbSessionId] = updatedList
     writeLocal(LOCAL_AI_CHAT_MESSAGES_KEY, allLocal)
 
     try {
+      // Garante que a sessão pai exista em public.ai_chat_sessions (FK de session_id)
+      const { data: authData } = await supabase.auth.getUser()
+      const currentUserId = authData?.user?.id
+      if (isValidUuid(currentUserId)) {
+        await supabase.from('ai_chat_sessions').upsert(
+          {
+            id: dbSessionId,
+            store_id: validStoreId,
+            user_id: currentUserId,
+            persona_code: msg.personaCode || 'PRACTICAL_COPILOT',
+            title: String(msg.sessionId || '').startsWith('drawer-')
+              ? 'Copiloto Rápido (Gaveta Lateral)'
+              : 'Central Copiloto IA',
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'id' }
+        )
+      }
+
       await supabase.from('ai_chat_messages').insert({
-        id: msg.id,
-        session_id: msg.sessionId,
-        store_id: msg.storeId && msg.storeId !== 'all' ? msg.storeId : null,
+        id: dbMessageId,
+        session_id: dbSessionId,
+        store_id: validStoreId,
         role: msg.role,
         content: msg.content,
         provider_used: msg.providerUsed || null,
@@ -3233,8 +3315,8 @@ export const aiOrchestratorService = {
     try {
       await supabase.from('ai_usage_logs').insert({
         id: logItem.id,
-        store_id: logItem.storeId,
-        user_id: logItem.userId,
+        store_id: isValidUuid(logItem.storeId) ? logItem.storeId : null,
+        user_id: isValidUuid(logItem.userId) ? logItem.userId : null,
         module_code: logItem.moduleCode,
         feature_key: logItem.featureKey,
         provider_code: logItem.providerCode,
@@ -3261,8 +3343,8 @@ export const aiOrchestratorService = {
         .order('created_at', { ascending: false })
         .limit(500)
 
-      if (storeId && storeId !== 'all') {
-        query = query.eq('store_id', storeId)
+      if (isValidUuid(storeId)) {
+        query = query.eq('store_id', storeId!)
       }
 
       const { data, error } = await query
