@@ -126,6 +126,12 @@ export function AppLayout() {
       }
       return false
     }
+    if (itemPath === '/global-admin/ai') {
+      return (
+        location.pathname === '/global-admin/ai' ||
+        location.pathname.startsWith('/global-admin/ai/')
+      )
+    }
     if (itemPath === '/team') {
       return (
         location.pathname === '/team' ||

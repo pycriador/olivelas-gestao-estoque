@@ -55,7 +55,9 @@ O menu lateral autenticado organiza todas as páginas e telas dedicadas em seç�
 
 1. **Topo**:
    - `/dashboard` — Painel Geral (Dashboard Executivo Multi-Loja)
+   - `/ai-copilot` — Copiloto IA da Loja
 2. **Seção `Admin Global` (`id: 'global-admin'`, exclusiva para `GLOBAL_ADMIN`)**:
+   - `/global-admin/ai` — Central de IA & Chaves API (destaca tanto `/global-admin/ai` quanto todas as sub-rotas `/global-admin/ai/:tab` como `/global-admin/ai/providers`, `/global-admin/ai/personas`, `/global-admin/ai/security-fallback`, `/global-admin/ai/commercial-modules` e `/global-admin/ai/telemetry`)
    - `/global-admin?tab=stores` — Lojas & Filiais (Matriz) (também destaca `/global-admin` sem `tab` e `/global-admin/stores/:storeId/edit`; o item duplicado "Painel Admin Global" e o menu horizontal de abas dentro da página `/global-admin` foram removidos)
    - `/global-admin/stores/new` — Nova Loja / Filial
    - `/global-admin?tab=users` — Usuários Store Admin (também destaca `/global-admin/users/:userId/*`)
