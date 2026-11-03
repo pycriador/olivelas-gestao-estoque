@@ -39,6 +39,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
+import { AiMarkdownContent } from '@/components/ai/AiMarkdownContent'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -2295,8 +2296,8 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                         </Badge>
                       )}
                     </div>
-                    <div className="whitespace-pre-line leading-relaxed text-foreground">
-                      {simulatorResult.answer}
+                    <div className="leading-relaxed text-foreground">
+                      <AiMarkdownContent content={simulatorResult.answer} />
                     </div>
                   </div>
                 )}

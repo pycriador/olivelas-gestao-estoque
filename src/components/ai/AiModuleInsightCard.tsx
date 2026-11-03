@@ -25,6 +25,7 @@ import {
   aiOrchestratorService,
   DEFAULT_AI_PERSONAS,
 } from '@/services/aiOrchestratorService'
+import { AiMarkdownContent } from '@/components/ai/AiMarkdownContent'
 import { DEFAULT_PERMISSION_MODULES } from '@/constants/screenDependencies'
 import { useTenant } from '@/hooks/useTenant'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -371,7 +372,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
               </div>
             ) : result ? (
               <div className="space-y-3">
-                <div className="whitespace-pre-line">{result.answer}</div>
+                <AiMarkdownContent content={result.answer} />
 
                 {/* Ações Recomendadas pela IA */}
                 {result.actionSuggestions.length > 0 && (

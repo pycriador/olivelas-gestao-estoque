@@ -23,6 +23,7 @@ import {
   DEFAULT_AI_PERSONAS,
   toDeterministicUuid,
 } from '@/services/aiOrchestratorService'
+import { AiMarkdownContent } from '@/components/ai/AiMarkdownContent'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -340,7 +341,11 @@ export const AiStoreCopilotDrawer: React.FC = () => {
                         </div>
                       )}
 
-                      <div className="whitespace-pre-line">{msg.content}</div>
+                      {isUser ? (
+                        <div className="whitespace-pre-line">{msg.content}</div>
+                      ) : (
+                        <AiMarkdownContent content={msg.content} />
+                      )}
 
                       {!isUser &&
                         msg.actionSuggestions &&
