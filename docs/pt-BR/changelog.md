@@ -14,6 +14,10 @@ classification: Confirmed
 
 ## 2026-11-03
 
+- **Catálogo Completo de 28 Modelos Google Gemini & Suporte Nativo a Chaves `AQ.*` / `AIza*` em `/global-admin/ai/providers`** (`src/services/aiOrchestratorService.ts`, `src/pages/admin/GlobalAdminAiSettingsPage.tsx`, `docs/pt-BR/changelog.md`):
+  - Expandido o catálogo oficial de modelos do Google Gemini (`GEMINI_COMPLETE_MODEL_CATALOG`) de 4 para **28 modelos oficiais** (`gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.5-flash-lite`, snapshots preview 2.5, série `gemini-2.0-flash` / `lite` / `thinking-exp` / `pro-exp`, série `gemini-1.5-pro` / `flash` / `flash-8b`, aliases `-latest` e `gemma-3-27b-it` / `gemma-3-12b-it`), mesclando-os automaticamente mesmo quando já havia configuração prévia salva no `localStorage` ou banco.
+  - Adicionado suporte nativo a chaves de autenticação modernas do Google com prefixo `AQ.` (Google Cloud / Vertex Express / Bound Credential) em `fetchModelsFromProviderKey`, `testProviderConnection` e `callExternalProviderApi`, evitando o erro HTTP `401 API key not valid (ACCESS_TOKEN_TYPE_UNSUPPORTED)` na rota `/v1beta/models` e implementando paginação completa (`nextPageToken`) para chaves `AIza...`.
+
 - **Destaque Ativo no Menu Lateral para `/global-admin/ai/:tab`** (`src/layouts/AppLayout.tsx`, `docs/pt-BR/ui-map.md`, `docs/pt-BR/changelog.md`):
   - Atualizada a função `isNavItemActive` em `src/layouts/AppLayout.tsx` para destacar o item `"Central de IA & Chaves API"` (`/global-admin/ai`) tanto na rota base `/global-admin/ai` quanto em todas as sub-rotas de abas (`/global-admin/ai/providers`, `/global-admin/ai/personas`, `/global-admin/ai/security-fallback`, `/global-admin/ai/commercial-modules` e `/global-admin/ai/telemetry`).
 

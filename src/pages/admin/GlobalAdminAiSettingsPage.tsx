@@ -49,6 +49,7 @@ import {
   buildDefaultSectionModels,
   DEFAULT_AI_PERSONAS,
   DEFAULT_AI_PROVIDER_CONFIGS,
+  GEMINI_COMPLETE_MODEL_CATALOG,
 } from '@/services/aiOrchestratorService'
 import { permissionGroupService } from '@/services/permissionGroupService'
 import {
@@ -120,34 +121,42 @@ const PROVIDER_META: Record<
   GEMINI: {
     badge: 'IA Principal Padrão',
     colorClass: 'border-emerald-500/40 bg-emerald-500/5',
-    keyPlaceholder: 'AIzaSyYourGoogleGeminiApiKey...',
+    keyPlaceholder: 'AIzaSy... ou AQ.Ab8... (Google AI Studio / Vertex Express)',
     description:
       'Motor principal oficial do Olivelas ERP. Alimenta todos os módulos de IA das lojas habilitadas com baixa latência e janela de contexto ampla.',
-    suggestedModels: [
-      'gemini-2.5-flash',
-      'gemini-2.5-pro',
-      'gemini-2.0-flash',
-      'gemini-1.5-pro',
-    ],
+    suggestedModels: GEMINI_COMPLETE_MODEL_CATALOG.map((m) => m.id),
   },
   OPENAI: {
     badge: 'OpenAI GPT',
     colorClass: 'border-sky-500/35 bg-sky-500/5',
     keyPlaceholder: 'sk-proj-YourOpenAiApiKey...',
     description:
-      'Provedor secundário ou principal opcional compatível com GPT-4o, GPT-4o-mini e o3-mini.',
-    suggestedModels: ['gpt-4o-mini', 'gpt-4o', 'o3-mini', 'gpt-4.1-mini'],
+      'Provedor secundário ou principal opcional compatível com GPT-4o, GPT-4.1 e o3-mini.',
+    suggestedModels: [
+      'gpt-4o-mini',
+      'gpt-4o',
+      'gpt-4.1',
+      'gpt-4.1-mini',
+      'gpt-4.1-nano',
+      'o3-mini',
+      'o1',
+      'o1-mini',
+      'gpt-4-turbo',
+    ],
   },
   CLAUDE: {
     badge: 'Anthropic Claude',
     colorClass: 'border-amber-500/35 bg-amber-500/5',
     keyPlaceholder: 'sk-ant-api03-YourClaudeApiKey...',
     description:
-      'Especializado em raciocínio executivo profundo, relatórios mensais e auditoria com Claude 3.7 Sonnet e 3.5 Haiku.',
+      'Especializado em raciocínio executivo profundo, relatórios mensais e auditoria com Claude 3.7 Sonnet, Claude 4 e 3.5 Haiku.',
     suggestedModels: [
       'claude-3-7-sonnet-latest',
       'claude-3-5-sonnet-latest',
       'claude-3-5-haiku-latest',
+      'claude-sonnet-4-20250514',
+      'claude-opus-4-20250514',
+      'claude-3-opus-latest',
     ],
   },
   CUSTOM: {
@@ -314,11 +323,18 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
     )
     setAvailableModels(initialModels)
     setDiscoveredModels(
-      initialModels.map((id) => ({
-        id,
-        displayName: id,
-        recommendedTier: 'default' as const,
-      }))
+      initialModels.map((id) => {
+        const geminiCat =
+          cfg.providerCode === 'GEMINI'
+            ? GEMINI_COMPLETE_MODEL_CATALOG.find((c) => c.id === id)
+            : undefined
+        if (geminiCat) return geminiCat
+        return {
+          id,
+          displayName: id,
+          recommendedTier: 'default' as const,
+        }
+      })
     )
     setModelsSource('CATALOG_FALLBACK')
     setModelsSourceMessage('')
@@ -1535,9 +1551,9 @@ export const GlobalAdminAiSettingsPage: React.FC = () => {
                       {/* Chips de seleção rápida dos modelos descobertos */}
                       <div className="space-y-1">
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Modelos Disponíveis na Chave (clique para definir como Padrão):
+                          Modelos Disponíveis na Chave ({availableModels.length} modelos — clique para definir como Padrão):
                         </span>
-                        <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-border/70 bg-background/70 p-2">
+                        <div className="flex max-h-40 flex-wrap gap-1.5 overflow-y-auto rounded-lg border border-border/70 bg-background/70 p-2">
                           {availableModels.map((m) => {
                             const isCurrentDefault = m === defaultModel
                             return (
