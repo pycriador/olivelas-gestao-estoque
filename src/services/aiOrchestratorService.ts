@@ -246,6 +246,178 @@ export function resolveSiteSectionFromTask(
 }
 
 export const GEMINI_COMPLETE_MODEL_CATALOG: AiDiscoveredModel[] = [
+  // Gemini 4 Series (Next-Gen Flagship & Deep Reasoning)
+  {
+    id: 'gemini-4-argon',
+    displayName: 'gemini-4-argon (Gemini 4 Argon • Flagship Reasoning 1M Context & 1M Output)',
+    description:
+      'Modelo flagship de geração 4 do Google com janela compartilhada de 1M tokens e decodificação longa de até 1M tokens.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 1048576,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-4.0-pro',
+    displayName: 'gemini-4.0-pro (Gemini 4.0 Pro • Raciocínio Multimodal & Estratégia)',
+    description:
+      'Versão Pro da série Gemini 4 voltada para raciocínio complexo, auditoria executiva e simulações financeiras.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-4.0-flash',
+    displayName: 'gemini-4.0-flash (Gemini 4.0 Flash • Multimodal Ultra Veloz 1M)',
+    description:
+      'Modelo Flash de 4ª geração com raciocínio rápido para o Copiloto da Loja, CRM e análises em tempo real.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+  {
+    id: 'gemini-4.0-flash-lite',
+    displayName: 'gemini-4.0-flash-lite (Gemini 4.0 Flash-Lite • Alta Vazão & Baixo Custo)',
+    description:
+      'Variante leve da geração Gemini 4 para altíssimo volume de requisições no PDV e alertas instantâneos.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'fast',
+  },
+
+  // Gemini 3.8 & 3.7 Series (Agentic & Enterprise Workflows)
+  {
+    id: 'gemini-3.8-flash',
+    displayName: 'gemini-3.8-flash (Gemini 3.8 Flash • Agentes Autônomos & Workflows Longos)',
+    description:
+      'Modelo Flash inteligente projetado para fluxos empresariais complexos, agentes autônomos e análise profunda (1M contexto, 65K saída).',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+  {
+    id: 'gemini-3.7-pro',
+    displayName: 'gemini-3.7-pro (Gemini 3.7 Pro • Raciocínio Multi-Etapas & BI)',
+    description:
+      'Modelo Pro da geração 3.7 otimizado para cadeias longas de decisão, compras e planejamento.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-3.7-flash',
+    displayName: 'gemini-3.7-flash (Gemini 3.7 Flash • Execução Agêntica & Ferramentas)',
+    description:
+      'Modelo Flash da família 3.7 otimizado para uso de ferramentas, análise estruturada e execução multi-etapas confiável.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+  {
+    id: 'gemini-3.7-flash-lite',
+    displayName: 'gemini-3.7-flash-lite (Gemini 3.7 Flash-Lite • Baixa Latência)',
+    description: 'Versão compacta e econômica da série Gemini 3.7.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'fast',
+  },
+
+  // Gemini 3.6 & 3.5 Series (High-Performance Multimodal)
+  {
+    id: 'gemini-3.6-pro',
+    displayName: 'gemini-3.6-pro (Gemini 3.6 Pro • Inteligência Analítica & Auditoria)',
+    description: 'Modelo Pro da geração 3.6 para relatórios analíticos e avaliação de estoque.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-3.6-flash',
+    displayName: 'gemini-3.6-flash (Gemini 3.6 Flash • Velocidade & Eficiência Multimodal)',
+    description:
+      'Modelo Flash 3.6 equilibrando alta velocidade, eficiência e capacidades multimodais expandidas.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+  {
+    id: 'gemini-3.6-flash-lite',
+    displayName: 'gemini-3.6-flash-lite (Gemini 3.6 Flash-Lite • Resposta Instantânea)',
+    description: 'Versão leve da família Gemini 3.6 para operações rápidas de balcão.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'fast',
+  },
+  {
+    id: 'gemini-3.5-pro',
+    displayName: 'gemini-3.5-pro (Gemini 3.5 Pro • Raciocínio Avançado & Dados)',
+    description:
+      'Modelo Pro da série 3.5 para raciocínio analítico profundo, previsão de demanda e diagnóstico executivo.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-3.5-flash',
+    displayName: 'gemini-3.5-flash (Gemini 3.5 Flash • Performance Multimodal & Agentes)',
+    description:
+      'Modelo Flash baseline da geração 3.5 com alta velocidade e performance em tarefas de agentes e análise.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+  {
+    id: 'gemini-3.5-flash-lite',
+    displayName: 'gemini-3.5-flash-lite (Gemini 3.5 Flash-Lite • Alto Throughput & Economia)',
+    description:
+      'Versão leve de altíssima vazão e baixo custo da família Gemini 3.5.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'fast',
+  },
+
+  // Gemini 3.1 & 3.0 Series (Vertex AI Express & Gemini 3)
+  {
+    id: 'gemini-3.1-pro',
+    displayName: 'gemini-3.1-pro (Gemini 3.1 Pro • Resolução Complexa & Agentes)',
+    description:
+      'Modelo de inteligência avançada da série 3.1 otimizado para resolução de problemas complexos.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-3.1-pro-preview',
+    displayName: 'gemini-3.1-pro-preview (Gemini 3.1 Pro Preview • Vertex AI Express)',
+    description: 'Versão preview do Gemini 3.1 Pro habilitada no Vertex AI Express Mode.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'reasoning',
+  },
+  {
+    id: 'gemini-3.1-flash-lite',
+    displayName: 'gemini-3.1-flash-lite (Gemini 3.1 Flash-Lite • Eficiência Frontier)',
+    description: 'Modelo multimodal rápido e econômico da geração 3.1.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'fast',
+  },
+  {
+    id: 'gemini-3-flash',
+    displayName: 'gemini-3-flash (Gemini 3.0 Flash • Velocidade & Multimodalidade)',
+    description: 'Modelo Flash principal da geração Gemini 3.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+  {
+    id: 'gemini-3-flash-preview',
+    displayName: 'gemini-3-flash-preview (Gemini 3.0 Flash Preview • Vertex AI Express)',
+    description: 'Snapshot preview do Gemini 3 Flash suportado no Vertex AI Express Mode.',
+    inputTokenLimit: 1048576,
+    outputTokenLimit: 65536,
+    recommendedTier: 'default',
+  },
+
   // Gemini 2.5 Series (Flagship & Hybrid Reasoning)
   {
     id: 'gemini-2.5-pro',
@@ -1194,7 +1366,7 @@ export const aiOrchestratorService = {
             ok: true,
             models: GEMINI_COMPLETE_MODEL_CATALOG,
             source: 'LIVE_API',
-            message: `${GEMINI_COMPLETE_MODEL_CATALOG.length} modelos Google Gemini habilitados para sua chave autenticada (${maskApiKey(resolvedKey)}). Todos os modelos 2.5, 2.0, 1.5 e Gemma 3 estão liberados.`,
+            message: `${GEMINI_COMPLETE_MODEL_CATALOG.length} modelos Google Gemini habilitados para sua chave Vertex AI Express (${maskApiKey(resolvedKey)}). Séries Gemini 4, 3.8, 3.7, 3.6, 3.5, 3.1, 3.0, 2.5, 2.0, 1.5 e Gemma 3 liberadas.`,
           }
         }
 
@@ -1311,19 +1483,33 @@ export const aiOrchestratorService = {
 
         const generativeModels = Array.from(mergedMap.values()).sort((a, b) => {
           const score = (id: string) =>
-            id.includes('2.5-pro')
-              ? 350
-              : id.includes('2.5-flash')
-                ? 320
-                : id.includes('2.5')
-                  ? 300
-                  : id.includes('2.0')
-                    ? 200
-                    : id.includes('1.5')
-                      ? 150
-                      : id.includes('latest')
-                        ? 120
-                        : 80
+            id.includes('gemini-4')
+              ? 600
+              : id.includes('3.8')
+                ? 550
+                : id.includes('3.7')
+                  ? 520
+                  : id.includes('3.6')
+                    ? 490
+                    : id.includes('3.5')
+                      ? 460
+                      : id.includes('3.1')
+                        ? 430
+                        : id.startsWith('gemini-3')
+                          ? 400
+                          : id.includes('2.5-pro')
+                            ? 350
+                            : id.includes('2.5-flash')
+                              ? 320
+                              : id.includes('2.5')
+                                ? 300
+                                : id.includes('2.0')
+                                  ? 200
+                                  : id.includes('1.5')
+                                    ? 150
+                                    : id.includes('latest')
+                                      ? 120
+                                      : 80
           return score(b.id) - score(a.id) || a.id.localeCompare(b.id)
         })
 
@@ -1663,7 +1849,7 @@ export const aiOrchestratorService = {
         const base = (
           params.baseUrl ||
           (isAqBoundKey
-            ? 'https://aiplatform.googleapis.com/v1beta1/publishers/google'
+            ? 'https://aiplatform.googleapis.com/v1/publishers/google'
             : 'https://generativelanguage.googleapis.com/v1beta')
         ).replace(/\/$/, '')
 
@@ -1686,7 +1872,7 @@ export const aiOrchestratorService = {
           },
         })
 
-        const res = await fetch(url, {
+        let res = await fetch(url, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -1696,6 +1882,21 @@ export const aiOrchestratorService = {
           body: requestBody,
           signal: controller.signal,
         })
+
+        // Em Vertex AI Express Mode (AQ.*), modelos preview podem residir em v1beta1
+        if (!res.ok && res.status === 404 && isAqBoundKey && !params.baseUrl) {
+          const betaUrl = `https://aiplatform.googleapis.com/v1beta1/publishers/google/models/${encodeURIComponent(cleanModel)}:generateContent?key=${encodeURIComponent(cleanKey)}`
+          res = await fetch(betaUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-goog-api-key': cleanKey,
+              ...(params.customHeaders || {}),
+            },
+            body: requestBody,
+            signal: controller.signal,
+          })
+        }
 
         const json = await res.json().catch(() => ({}))
         if (!res.ok) {

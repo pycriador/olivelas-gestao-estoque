@@ -511,27 +511,12 @@ export const userService = {
   async listStoreMembers(storeId: string): Promise<StoreMember[]> {
     let rows: any[] | null = null
 
-    // Try with migration 26 columns first
+    // Usa '*' na tabela store_users para que o PostgREST expanda automaticamente apenas
+    // as colunas existentes no banco (evitando erro HTTP 400 caso a migration 26 ainda não tenha sido aplicada)
     const fullQuery = await supabase
       .from('store_users')
       .select(`
-        id,
-        user_id,
-        store_id,
-        role,
-        is_active,
-        employee_registration,
-        job_title,
-        custom_role_id,
-        can_approve_writeoff,
-        approval_pin,
-        require_pin_reset,
-        pin_requirements,
-        pin_updated_at,
-        max_writeoff_value,
-        granted_permissions,
-        revoked_permissions,
-        created_at,
+        *,
         store_custom_roles (
           id,
           name
@@ -550,28 +535,11 @@ export const userService = {
     if (!fullQuery.error) {
       rows = fullQuery.data || []
     } else {
-      // Fallback if migration 26 columns are not yet present in DB
+      // Fallback caso o relacionamento store_custom_roles ainda não exista no schema
       const { data, error } = await supabase
         .from('store_users')
         .select(`
-          id,
-          user_id,
-          store_id,
-          role,
-          is_active,
-          employee_registration,
-          job_title,
-          custom_role_id,
-          can_approve_writeoff,
-          approval_pin,
-          max_writeoff_value,
-          granted_permissions,
-          revoked_permissions,
-          created_at,
-          store_custom_roles (
-            id,
-            name
-          ),
+          *,
           profiles (
             id,
             email,
