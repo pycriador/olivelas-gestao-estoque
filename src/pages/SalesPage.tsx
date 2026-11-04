@@ -262,7 +262,7 @@ export function SalesPage() {
     return map
   }, [products, cart])
 
-  // Add to cart
+  // Add to cart (abre o modal de quantidade/pesagem para todos os itens: KG ou Unidade)
   const addToCart = (product: Product) => {
     const available = stockByProduct.get(product.id) ?? Number(product.stock_quantity ?? 0)
     if (available <= 0) {
@@ -270,45 +270,20 @@ export function SalesPage() {
       return
     }
 
-    // Se o produto é vendido por peso (KG), abrir modal de pesagem/gramatura
-    if (isWeighedProduct(product)) {
-      const existing = cart.find((i) => i.product.id === product.id)
-      setWeighedInitialQty(existing ? existing.quantity : 0.15)
-      setWeighedProduct(product)
-      return
-    }
-
     const existing = cart.find((i) => i.product.id === product.id)
-    if (existing) {
-      if (existing.quantity + 1 > available) {
-        setErrorMsg(
-          `Estoque insuficiente para "${product.name}". Disponível: ${available}.`
-        )
-        return
-      }
-      setCart(
-        cart.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        )
-      )
-    } else {
-      setCart([
-        ...cart,
-        {
-          product,
-          quantity: 1,
-          unitPrice: Number(product.selling_price),
-          discount: 0,
-        },
-      ])
-    }
+    const isWeighed = isWeighedProduct(product)
+    setWeighedInitialQty(existing ? existing.quantity : isWeighed ? 0.15 : 1)
+    setWeighedProduct(product)
   }
 
-  const handleConfirmWeight = (quantityInKg: number) => {
+  const handleConfirmWeight = (quantity: number) => {
     if (!weighedProduct) return
+    const isWeighed = isWeighedProduct(weighedProduct)
     const available = stockByProduct.get(weighedProduct.id) ?? Number(weighedProduct.stock_quantity ?? 0)
-    if (quantityInKg > available) {
-      setErrorMsg(`Estoque insuficiente para "${weighedProduct.name}". Disponível: ${available} kg.`)
+    if (quantity > available) {
+      setErrorMsg(
+        `Estoque insuficiente para "${weighedProduct.name}". Disponível: ${available}${isWeighed ? ' kg' : ' un'}.`
+      )
       return
     }
 
@@ -316,7 +291,7 @@ export function SalesPage() {
     if (existingIndex >= 0) {
       setCart(
         cart.map((item, idx) =>
-          idx === existingIndex ? { ...item, quantity: quantityInKg } : item
+          idx === existingIndex ? { ...item, quantity } : item
         )
       )
     } else {
@@ -324,7 +299,7 @@ export function SalesPage() {
         ...cart,
         {
           product: weighedProduct,
-          quantity: quantityInKg,
+          quantity,
           unitPrice: Number(weighedProduct.selling_price),
           discount: 0,
         },
@@ -636,8 +611,6 @@ export function SalesPage() {
                     const inCart = cart.find((i) => i.product.id === p.id)
                     const inCartQty = inCart?.quantity ?? 0
                     const isOutOfStock = stock <= 0
-                    // Ja atingiu o saldo disponivel: nao deixa passar.
-                    const atStockLimit = !isOutOfStock && inCartQty >= stock
                     const isWeighed = isWeighedProduct(p)
                     const primaryImage =
                       (p.images || []).find((img) => img.is_primary) || (p.images || [])[0]
@@ -646,18 +619,16 @@ export function SalesPage() {
                       <button
                         key={p.id}
                         onClick={() => addToCart(p)}
-                        disabled={isOutOfStock || atStockLimit}
+                        disabled={isOutOfStock}
                         title={
                           isOutOfStock
                             ? 'Sem estoque disponível'
-                            : atStockLimit
-                              ? `Todo o estoque disponível (${stock}${isWeighed ? ' kg' : ''}) já está no carrinho`
-                              : isWeighed
-                                ? 'Clique para pesar / definir quantidade em gramas/kg'
-                                : undefined
+                            : isWeighed
+                              ? 'Clique para pesar / definir quantidade em gramas/kg'
+                              : 'Clique para digitar / selecionar a quantidade'
                         }
-                        className={`p-3 sm:p-2.5 rounded-xl border text-left transition-all flex flex-col sm:justify-between group relative ${
-                          isOutOfStock || atStockLimit
+                        className={`p-3 sm:p-2.5 rounded-xl border text-left transition-all flex flex-col sm:justify-between group relative cursor-pointer ${
+                          isOutOfStock
                             ? 'opacity-40 cursor-not-allowed bg-muted/20 border-border/40'
                             : inCart
                             ? 'bg-primary/5 border-primary/40 shadow-xs ring-1 ring-primary/20'
@@ -855,9 +826,17 @@ export function SalesPage() {
                               >
                                 <Minus className="h-2.5 w-2.5" />
                               </button>
-                              <span className="w-5 text-center font-mono font-bold text-xs">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setWeighedProduct(item.product)
+                                  setWeighedInitialQty(item.quantity)
+                                }}
+                                className="px-2 h-6 min-w-7 rounded-md border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary font-mono font-bold text-xs flex items-center justify-center transition-colors cursor-pointer"
+                                title="Clique para digitar / alterar a quantidade"
+                              >
                                 {item.quantity}
-                              </span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => updateQuantity(item.product.id, 1)}

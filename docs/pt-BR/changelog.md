@@ -12,6 +12,12 @@ classification: Confirmed
 
 # Changelog da documentação
 
+## 2026-11-04
+
+- **Modal de Digitação e Seleção de Quantidade Também para Itens por Unidade no PDV (`/sales`)** (`src/components/sales/WeightInputModal.tsx`, `src/pages/SalesPage.tsx`, `docs/pt-BR/changelog.md`):
+  - **Abertura do Modal para Todos os Produtos (`addToCart` em `src/pages/SalesPage.tsx`)**: ao clicar em qualquer card de produto no catálogo do PDV (`/sales`) ou no badge numérico de quantidade dentro do carrinho, o sistema abre o modal interativo (`WeightInputModal.tsx`), tanto para produtos vendidos por peso (`KG`) quanto para itens vendidos por unidade (`UN`, `CX`, `PCT`, `DZ`, etc.).
+  - **Modo Unidades no `WeightInputModal.tsx`**: quando o produto não é pesável (`isWeighedProduct(product) === false`), o modal adapta automaticamente o título para **"Digitar / Selecionar Quantidade (UN)"**, exibe abas para **Quantidade (`UN`)** e **Valor em R$**, campo numérico com foco e seleção automática (`autoFocus`), botões de passo `-1` / `+1`, atalhos rápidos de 1 toque (`1 un`, `2 un`, `3 un`, `5 un`, `6 un`, `10 un`), prévia em tempo real do **Total a Pagar** e validação de limite de estoque.
+
 ## 2026-11-03
 
 - **Agentes de IA Minimizados por Padrão em Todas as Telas e Modo de Leitura/Chat em Tela Cheia (`isFullScreen`)** (`src/components/ai/AiModuleInsightCard.tsx`, `src/components/ai/AiStoreCopilotDrawer.tsx`, `src/pages/InventoryPage.tsx`, `src/pages/PurchasingPage.tsx`, `docs/pt-BR/changelog.md`):
