@@ -14,6 +14,11 @@ classification: Confirmed
 
 ## 2026-11-04
 
+- **Correção do Botão e do Modo "Tela Cheia" dos Agentes de IA na Versão Mobile** (`src/components/ai/AiModuleInsightCard.tsx`, `src/components/ai/AiStoreCopilotDrawer.tsx`, `docs/pt-BR/changelog.md`):
+  - **Renderização via Portal (`createPortal(..., document.body)`) em `AiModuleInsightCard.tsx`**: o modal de **Tela Cheia** dos agentes de IA de módulo passou a ser montado diretamente no `document.body` com `fixed inset-0 z-[100] h-dvh w-screen overflow-hidden` e bloqueio de rolagem do fundo (`document.body.style.overflow = 'hidden'`), evitando que containers pais com `animate-in` (CSS transform) ou `overflow-x-hidden` prendessem ou cortassem a visualização em tela cheia no celular.
+  - **Header Compacto e Sem Estouro Horizontal no Mobile (`AiModuleInsightCard.tsx` e `AiStoreCopilotDrawer.tsx`)**: o seletor de Persona passou a usar `min-w-0 flex-1 truncate` e rótulos enxutos (`Persona: ${p.name}`), eliminando o estouro horizontal causado pela descrição longa de tom (`${p.tone}`) dentro do `<select>` nativo; os botões **Analisar IA**, **Tela Cheia** e **Sair da Tela Cheia / Voltar** receberam `shrink-0 whitespace-nowrap` para nunca quebrarem em duas linhas no mobile.
+  - **Expansão Real na Gaveta `AiStoreCopilotDrawer.tsx` no Mobile**: no celular, a gaveta abre como bottom-sheet (`h-[82dvh] rounded-t-2xl`) e, ao tocar em **Tela Cheia**, expande para `100%` da altura do dispositivo (`h-dvh rounded-none`).
+
 - **Responsividade Mobile da Barra de Filtros e Caixas de Visão em `/dashboard`** (`src/pages/DashboardPage.tsx`, `docs/pt-BR/changelog.md`):
   - **Barra de Filtros Executiva Contida no Viewport Mobile**: os seletores de `Unidade` e `Canal` passaram a ter `w-full sm:w-auto min-w-0 max-w-full` com `flex-1 min-w-0 truncate` nos elementos `<select>`, evitando que nomes longos de lojas/unidades estourassem a largura do card em telas mobile.
   - **Atalhos de Período, Datas e Granularidade em Grids Responsivos**: os botões de granularidade (`grid-cols-3 sm:flex`), atalhos de período (`grid-cols-4 sm:flex`), inputs de data `De/Até` (`grid-cols-2 sm:flex min-w-0`) e botões de ação (`Atualizar`, `Exportar Dados` e `Nova Venda`) foram organizados em grades fluidas para mobile.

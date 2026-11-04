@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -153,16 +154,21 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
     }
   }, [historyMessages, loading, isFullScreen, expanded])
 
-  // Fechar tela cheia com tecla ESC
+  // Fechar tela cheia com tecla ESC e travar scroll do body no mobile
   useEffect(() => {
     if (!isFullScreen) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsFullScreen(false)
       }
     }
     window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
   }, [isFullScreen])
 
   const runAnalysis = useCallback(
@@ -494,72 +500,90 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
     <>
       <Card
         className={cn(
-          'flex-shrink-0 overflow-hidden border-violet-500/35 bg-gradient-to-br from-violet-500/[0.06] via-surface to-emerald-500/[0.03] shadow-2xs',
+          'flex-shrink-0 min-w-0 overflow-hidden border-violet-500/35 bg-gradient-to-br from-violet-500/[0.06] via-surface to-emerald-500/[0.03] shadow-2xs',
           className
         )}
       >
         {/* Barra Superior (Por padrão minimizada; clicável para expandir ou abrir em Tela Cheia) */}
         <div
           className={cn(
-            'flex flex-wrap items-center justify-between gap-2 px-3 py-2',
+            'flex flex-col lg:flex-row lg:items-center justify-between gap-2 px-3 py-2.5 sm:py-2 min-w-0',
             expanded && 'border-b border-border/60'
           )}
         >
-          <button
-            type="button"
-            onClick={() => setExpanded((prev) => !prev)}
-            className="flex items-center gap-2 min-w-0 text-left cursor-pointer group"
-            title={
-              expanded
-                ? 'Clique para minimizar o painel de IA'
-                : 'Clique para expandir o painel de IA'
-            }
-          >
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-2xs group-hover:scale-105 transition-transform">
-              <Sparkles className="h-3.5 w-3.5" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h3 className="text-xs font-bold text-foreground truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
-                  {title}
-                </h3>
-                <Badge
-                  variant="default"
-                  className="font-mono text-[10px] h-4.5 px-1.5"
-                >
-                  {activeModelLabel}
-                </Badge>
-                {analysisCount > 0 && (
+          <div className="flex items-start sm:items-center justify-between gap-2 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => !prev)}
+              className="flex items-start sm:items-center gap-2 min-w-0 flex-1 text-left cursor-pointer group"
+              title={
+                expanded
+                  ? 'Clique para minimizar o painel de IA'
+                  : 'Clique para expandir o painel de IA'
+              }
+            >
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-600 text-white shadow-2xs group-hover:scale-105 transition-transform mt-0.5 sm:mt-0">
+                <Sparkles className="h-3.5 w-3.5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+                  <h3 className="text-xs font-bold text-foreground line-clamp-1 sm:truncate group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors">
+                    {title}
+                  </h3>
                   <Badge
-                    variant="outline"
-                    className="text-[10px] h-4.5 px-1.5 gap-1"
+                    variant="default"
+                    className="font-mono text-[10px] h-4.5 px-1.5 shrink-0 max-w-full truncate"
                   >
-                    <History className="h-2.5 w-2.5 text-violet-500" />
-                    {analysisCount}{' '}
-                    {analysisCount === 1 ? 'análise' : 'análises'}
+                    {activeModelLabel}
                   </Badge>
-                )}
-                {!expanded && (
-                  <span className="text-[10px] font-medium text-muted-foreground hidden md:inline">
-                    • Clique para expandir ou abra em Tela Cheia
-                  </span>
+                  {analysisCount > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] h-4.5 px-1.5 gap-1 shrink-0"
+                    >
+                      <History className="h-2.5 w-2.5 text-violet-500" />
+                      {analysisCount}{' '}
+                      {analysisCount === 1 ? 'análise' : 'análises'}
+                    </Badge>
+                  )}
+                  {!expanded && (
+                    <span className="text-[10px] font-medium text-muted-foreground hidden xl:inline">
+                      • Clique para expandir ou abra em Tela Cheia
+                    </span>
+                  )}
+                </div>
+                {!compact && (
+                  <p className="text-[11px] text-muted-foreground line-clamp-1 sm:truncate mt-0.5">
+                    {subtitle}
+                  </p>
                 )}
               </div>
-              {!compact && (
-                <p className="text-[11px] text-muted-foreground truncate">
-                  {subtitle}
-                </p>
-              )}
-            </div>
-          </button>
+            </button>
 
-          <div className="flex flex-wrap items-center gap-1.5">
+            {/* Botão rápido de Expandir/Minimizar visível no topo direito no mobile */}
+            <button
+              type="button"
+              onClick={() => setExpanded(!expanded)}
+              className="lg:hidden inline-flex items-center justify-center rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 cursor-pointer"
+              aria-label={
+                expanded ? 'Minimizar painel de IA' : 'Expandir painel de IA'
+              }
+            >
+              {expanded ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 w-full lg:w-auto min-w-0">
             {/* Seletor de Persona */}
             <select
               value={selectedPersonaCode}
               onChange={(e) => setSelectedPersonaCode(e.target.value)}
               aria-label="Selecionar Persona de IA"
-              className="h-7 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground cursor-pointer"
+              className="h-7 min-w-0 flex-1 sm:flex-initial sm:max-w-[190px] truncate rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground cursor-pointer"
             >
               {personas.map((p) => (
                 <option key={p.code} value={p.code}>
@@ -574,10 +598,10 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
               variant="default"
               isLoading={loading}
               onClick={() => runAnalysis(customQuestion.trim() || defaultPrompt)}
-              className="h-7 px-2.5 text-[11px] bg-violet-600 hover:bg-violet-700 text-white cursor-pointer"
+              className="h-7 px-2.5 text-[11px] bg-violet-600 hover:bg-violet-700 text-white shrink-0 whitespace-nowrap cursor-pointer"
             >
-              <Sparkles className="mr-1 h-3 w-3" />
-              {historyMessages.length > 0 ? 'Nova Análise IA' : 'Analisar com IA'}
+              <Sparkles className="mr-1 h-3 w-3 shrink-0" />
+              {historyMessages.length > 0 ? 'Nova Análise' : 'Analisar IA'}
             </Button>
 
             {/* Botão Abrir em Tela Cheia */}
@@ -587,9 +611,9 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
               variant="outline"
               onClick={() => setIsFullScreen(true)}
               title="Abrir o agente de IA desta tela em modo Tela Cheia para leitura detalhada"
-              className="h-7 px-2.5 text-[11px] border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/15 cursor-pointer"
+              className="h-7 px-2.5 text-[11px] border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/15 shrink-0 whitespace-nowrap cursor-pointer"
             >
-              <Maximize2 className="mr-1 h-3 w-3" />
+              <Maximize2 className="mr-1 h-3 w-3 shrink-0" />
               Tela Cheia
             </Button>
 
@@ -598,7 +622,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
                 type="button"
                 onClick={handleClearLocalHistory}
                 title="Limpar histórico de conversa deste módulo"
-                className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 cursor-pointer"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -607,7 +631,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
             <button
               type="button"
               onClick={() => setExpanded(!expanded)}
-              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+              className="hidden lg:inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[11px] font-semibold text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 whitespace-nowrap cursor-pointer"
               aria-label={
                 expanded ? 'Minimizar painel de IA' : 'Expandir painel de IA'
               }
@@ -617,12 +641,12 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
             >
               {expanded ? (
                 <>
-                  <span className="hidden sm:inline">Minimizar</span>
+                  <span>Minimizar</span>
                   <ChevronUp className="h-4 w-4" />
                 </>
               ) : (
                 <>
-                  <span className="hidden sm:inline">Expandir</span>
+                  <span>Expandir</span>
                   <ChevronDown className="h-4 w-4" />
                 </>
               )}
@@ -659,7 +683,7 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
               <Input
                 value={customQuestion}
                 onChange={(e) => setCustomQuestion(e.target.value)}
-                placeholder="Pergunte à IA sobre os dados desta tela e pressione Enter..."
+                placeholder="Pergunte à IA sobre os dados desta tela..."
                 className="h-8 text-xs"
                 icon={<MessageSquare className="h-3.5 w-3.5" />}
               />
@@ -669,9 +693,9 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
                 variant="default"
                 isLoading={loading}
                 disabled={!customQuestion.trim()}
-                className="h-8 px-3 text-xs shrink-0"
+                className="h-8 px-3 text-xs shrink-0 whitespace-nowrap"
               >
-                <Send className="mr-1 h-3 w-3" />
+                <Send className="mr-1 h-3 w-3 shrink-0" />
                 Perguntar
               </Button>
             </form>
@@ -679,175 +703,182 @@ export const AiModuleInsightCard: React.FC<AiModuleInsightCardProps> = ({
         )}
       </Card>
 
-      {/* MODAL EM TELA CHEIA PARA LEITURA E CONVERSA DETALHADA */}
-      {isFullScreen && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col bg-background/98 backdrop-blur-xs animate-in fade-in duration-150"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`Tela Cheia: ${title}`}
-        >
-          {/* Header Tela Cheia */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-violet-600/12 via-surface to-emerald-500/5 px-4 sm:px-6 py-3 shrink-0">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
-                <Sparkles className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-sm sm:text-base font-bold text-foreground">
-                    {title}
-                  </h2>
-                  <Badge variant="default" className="font-mono text-xs">
-                    {activeModelLabel}
-                  </Badge>
-                  {analysisCount > 0 && (
-                    <Badge variant="outline" className="text-xs gap-1">
-                      <History className="h-3 w-3 text-violet-500" />
-                      {analysisCount}{' '}
-                      {analysisCount === 1 ? 'análise salva' : 'análises salvas'}
-                    </Badge>
-                  )}
+      {/* MODAL EM TELA CHEIA RENDERIZADO VIA PORTAL NO BODY PARA FUNCIONAR PERFEITAMENTE NO MOBILE */}
+      {isFullScreen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex h-dvh w-screen flex-col bg-background overflow-hidden animate-in fade-in duration-150"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Tela Cheia: ${title}`}
+          >
+            {/* Header Tela Cheia */}
+            <div className="flex flex-col gap-2 border-b border-border bg-gradient-to-r from-violet-600/12 via-surface to-emerald-500/5 px-3 sm:px-6 py-2.5 sm:py-3 shrink-0">
+              {/* Linha 1: Título + Badge + Botão Sair/Fechar */}
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-sm">
+                    <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <h2 className="text-xs sm:text-base font-bold text-foreground truncate">
+                        {title}
+                      </h2>
+                      <Badge
+                        variant="default"
+                        className="font-mono text-[10px] sm:text-xs shrink-0 hidden sm:inline-flex"
+                      >
+                        {activeModelLabel}
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] sm:text-xs text-muted-foreground truncate">
+                      Unidade: <strong>{storeName || 'Consolidado'}</strong> •{' '}
+                      <span className="font-mono">{activeModelLabel}</span>
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-muted-foreground truncate">
-                  {subtitle} • Unidade: <strong>{storeName || 'Consolidado'}</strong>
-                </p>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setIsFullScreen(false)}
+                    className="h-8 px-2.5 sm:px-3 text-xs font-semibold border-border whitespace-nowrap cursor-pointer"
+                    title="Voltar para a tela (Esc)"
+                  >
+                    <Minimize2 className="mr-1 h-3.5 w-3.5 shrink-0" />
+                    <span className="hidden xs:inline">Sair da Tela Cheia</span>
+                    <span className="xs:hidden">Voltar</span>
+                  </Button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsFullScreen(false)}
+                    aria-label="Fechar tela cheia"
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <select
-                value={selectedPersonaCode}
-                onChange={(e) => setSelectedPersonaCode(e.target.value)}
-                aria-label="Selecionar Persona de IA"
-                className="h-8 rounded-lg border border-border bg-background px-2.5 text-xs font-semibold text-foreground cursor-pointer"
-              >
-                {personas.map((p) => (
-                  <option key={p.code} value={p.code}>
-                    Persona: {p.name} ({p.tone})
-                  </option>
-                ))}
-              </select>
+              {/* Linha 2: Controles (Persona + Analisar + Limpar + Central Copiloto) */}
+              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                <select
+                  value={selectedPersonaCode}
+                  onChange={(e) => setSelectedPersonaCode(e.target.value)}
+                  aria-label="Selecionar Persona de IA"
+                  className="h-8 min-w-0 flex-1 sm:flex-initial sm:w-64 truncate rounded-lg border border-border bg-background px-2 text-xs font-semibold text-foreground cursor-pointer"
+                >
+                  {personas.map((p) => (
+                    <option key={p.code} value={p.code}>
+                      Persona: {p.name}
+                    </option>
+                  ))}
+                </select>
 
-              <Button
-                type="button"
-                size="sm"
-                variant="default"
-                isLoading={loading}
-                onClick={() => runAnalysis(customQuestion.trim() || defaultPrompt)}
-                className="h-8 px-3 text-xs bg-violet-600 hover:bg-violet-700 text-white cursor-pointer"
-              >
-                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                {historyMessages.length > 0 ? 'Nova Análise IA' : 'Analisar com IA'}
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  setIsFullScreen(false)
-                  navigate('/ai-copilot')
-                }}
-                className="h-8 px-2.5 text-xs text-primary cursor-pointer"
-              >
-                <Bot className="mr-1 h-3.5 w-3.5" />
-                Central Copiloto
-              </Button>
-
-              {historyMessages.length > 0 && (
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  onClick={handleClearLocalHistory}
-                  className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-                  title="Limpar histórico de conversa deste módulo"
+                  variant="default"
+                  isLoading={loading}
+                  onClick={() => runAnalysis(customQuestion.trim() || defaultPrompt)}
+                  className="h-8 px-2.5 sm:px-3 text-xs bg-violet-600 hover:bg-violet-700 text-white shrink-0 whitespace-nowrap cursor-pointer"
                 >
-                  <Trash2 className="mr-1 h-3.5 w-3.5" />
-                  Limpar
+                  <Sparkles className="mr-1 h-3.5 w-3.5 shrink-0" />
+                  {historyMessages.length > 0 ? 'Nova Análise' : 'Analisar IA'}
                 </Button>
-              )}
 
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => setIsFullScreen(false)}
-                className="h-8 px-3 text-xs font-semibold border-border cursor-pointer"
-                title="Voltar para a tela (Esc)"
-              >
-                <Minimize2 className="mr-1.5 h-3.5 w-3.5" />
-                Sair da Tela Cheia
-              </Button>
-
-              <button
-                type="button"
-                onClick={() => setIsFullScreen(false)}
-                aria-label="Fechar tela cheia"
-                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Barra de Atalhos Rápidos na Tela Cheia */}
-          {quickPrompts.length > 0 && (
-            <div className="border-b border-border/70 bg-muted/20 px-4 sm:px-6 py-2.5 shrink-0">
-              <div className="mx-auto flex max-w-6xl items-center gap-2 overflow-x-auto pb-0.5 custom-scrollbar">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
-                  Perguntas Rápidas:
-                </span>
-                {quickPrompts.map((qp, idx) => (
-                  <button
-                    key={idx}
+                {historyMessages.length > 0 && (
+                  <Button
                     type="button"
-                    disabled={loading}
-                    onClick={() => runAnalysis(qp.prompt)}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/35 bg-violet-500/10 px-3 py-1 text-xs font-semibold text-foreground hover:bg-violet-500/20 transition shrink-0 disabled:opacity-50 cursor-pointer"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleClearLocalHistory}
+                    className="h-8 px-2 sm:px-2.5 text-xs text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+                    title="Limpar histórico de conversa deste módulo"
                   >
-                    <Zap className="h-3 w-3 text-violet-500" />
-                    {qp.label}
-                  </button>
-                ))}
+                    <Trash2 className="h-3.5 w-3.5 sm:mr-1 shrink-0" />
+                    <span className="hidden sm:inline">Limpar</span>
+                  </Button>
+                )}
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setIsFullScreen(false)
+                    navigate('/ai-copilot')
+                  }}
+                  className="hidden md:inline-flex h-8 px-2.5 text-xs text-primary shrink-0 cursor-pointer"
+                >
+                  <Bot className="mr-1 h-3.5 w-3.5" />
+                  Central Copiloto
+                </Button>
               </div>
             </div>
-          )}
 
-          {/* Corpo Principal Rolável em Tela Cheia */}
-          <div className="flex-1 min-h-0 flex flex-col mx-auto w-full max-w-6xl p-4 sm:p-6 overflow-hidden">
-            {renderMessagesList(true)}
-          </div>
+            {/* Barra de Atalhos Rápidos na Tela Cheia */}
+            {quickPrompts.length > 0 && (
+              <div className="border-b border-border/70 bg-muted/20 px-3 sm:px-6 py-2 shrink-0">
+                <div className="mx-auto flex max-w-6xl items-center gap-1.5 sm:gap-2 overflow-x-auto pb-0.5 custom-scrollbar">
+                  <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
+                    Atalhos:
+                  </span>
+                  {quickPrompts.map((qp, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      disabled={loading}
+                      onClick={() => runAnalysis(qp.prompt)}
+                      className="inline-flex items-center gap-1 rounded-full border border-violet-500/35 bg-violet-500/10 px-2.5 sm:px-3 py-1 text-[11px] sm:text-xs font-semibold text-foreground hover:bg-violet-500/20 transition shrink-0 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Zap className="h-3 w-3 text-violet-500 shrink-0" />
+                      {qp.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
-          {/* Barra de Pergunta Fixa no Rodapé da Tela Cheia */}
-          <div className="border-t border-border bg-surface/95 px-4 sm:px-6 py-3 shrink-0">
-            <form
-              onSubmit={handleAskCustom}
-              className="mx-auto flex max-w-6xl items-center gap-2"
-            >
-              <Input
-                value={customQuestion}
-                onChange={(e) => setCustomQuestion(e.target.value)}
-                placeholder="Faça uma pergunta detalhada sobre os indicadores desta tela e pressione Enter..."
-                className="h-10 text-sm"
-                icon={<MessageSquare className="h-4 w-4" />}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                variant="default"
-                isLoading={loading}
-                disabled={!customQuestion.trim()}
-                className="h-10 px-5 text-xs sm:text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white shrink-0 cursor-pointer"
+            {/* Corpo Principal Rolável em Tela Cheia */}
+            <div className="flex-1 min-h-0 flex flex-col mx-auto w-full max-w-6xl p-2.5 sm:p-6 overflow-hidden">
+              {renderMessagesList(true)}
+            </div>
+
+            {/* Barra de Pergunta Fixa no Rodapé da Tela Cheia */}
+            <div className="border-t border-border bg-surface/95 px-3 sm:px-6 py-2.5 sm:py-3 shrink-0">
+              <form
+                onSubmit={handleAskCustom}
+                className="mx-auto flex max-w-6xl items-center gap-2"
               >
-                <Send className="mr-1.5 h-4 w-4" />
-                Enviar Pergunta
-              </Button>
-            </form>
-          </div>
-        </div>
-      )}
+                <Input
+                  value={customQuestion}
+                  onChange={(e) => setCustomQuestion(e.target.value)}
+                  placeholder="Pergunte sobre os indicadores desta tela..."
+                  className="h-9 sm:h-10 text-xs sm:text-sm"
+                  icon={<MessageSquare className="h-4 w-4" />}
+                />
+                <Button
+                  type="submit"
+                  size="sm"
+                  variant="default"
+                  isLoading={loading}
+                  disabled={!customQuestion.trim()}
+                  className="h-9 sm:h-10 px-3 sm:px-5 text-xs sm:text-sm font-semibold bg-violet-600 hover:bg-violet-700 text-white shrink-0 whitespace-nowrap cursor-pointer"
+                >
+                  <Send className="h-3.5 w-3.5 sm:mr-1.5 shrink-0" />
+                  <span className="hidden xs:inline ml-1 sm:ml-0">Enviar</span>
+                </Button>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   )
 }

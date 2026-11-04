@@ -218,36 +218,38 @@ export const AiStoreCopilotDrawer: React.FC = () => {
 
       {/* Drawer / Modal Tela Cheia do Chatbot */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-xs">
+        <div className="fixed inset-0 z-[90] flex items-end sm:items-stretch justify-end bg-black/50 backdrop-blur-xs">
           <div
             className={cn(
-              'flex h-full w-full flex-col border-l border-border bg-surface shadow-2xl transition-all duration-150',
-              isFullScreen ? 'max-w-none' : 'max-w-lg'
+              'flex w-full flex-col border-t sm:border-t-0 sm:border-l border-border bg-surface shadow-2xl transition-all duration-150 overflow-hidden',
+              isFullScreen
+                ? 'h-dvh max-w-none rounded-none'
+                : 'h-[82dvh] sm:h-full max-w-lg rounded-t-2xl sm:rounded-none'
             )}
           >
             {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-gradient-to-r from-violet-600/15 via-primary/10 to-transparent px-4 py-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-600 text-white shadow-xs">
-                  <Bot className="h-5 w-5" />
+            <div className="flex items-center justify-between gap-2 border-b border-border bg-gradient-to-r from-violet-600/15 via-primary/10 to-transparent px-3 sm:px-4 py-2.5 sm:py-3 shrink-0 min-w-0">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                <div className="flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-xl bg-violet-600 text-white shadow-xs">
+                  <Bot className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <h2 className="text-sm font-bold text-foreground">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <h2 className="text-xs sm:text-sm font-bold text-foreground truncate">
                       Copiloto IA • {storeName || 'Loja'}
                     </h2>
-                    <Badge variant="success" className="text-[9px]">
+                    <Badge variant="success" className="text-[9px] shrink-0 hidden xs:inline-flex">
                       <ShieldCheck className="mr-0.5 h-2.5 w-2.5" />
                       Shield Ativo
                     </Badge>
                   </div>
-                  <p className="text-[11px] text-muted-foreground">
-                    Pergunte sobre vendas, estoque, lotes vencendo, clientes e tendências
+                  <p className="text-[10px] sm:text-[11px] text-muted-foreground truncate">
+                    Vendas, estoque, validades, clientes e tendências
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 shrink-0">
                 <Button
                   type="button"
                   size="sm"
@@ -255,19 +257,19 @@ export const AiStoreCopilotDrawer: React.FC = () => {
                   onClick={() => setIsFullScreen((prev) => !prev)}
                   title={
                     isFullScreen
-                      ? 'Voltar ao painel lateral'
+                      ? 'Restaurar tamanho padrão'
                       : 'Expandir em Tela Cheia para leitura detalhada'
                   }
-                  className="h-7 px-2.5 text-[11px] border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/15 cursor-pointer"
+                  className="h-7 px-2 sm:px-2.5 text-[11px] border-violet-500/40 text-violet-700 dark:text-violet-300 hover:bg-violet-500/15 shrink-0 whitespace-nowrap cursor-pointer"
                 >
                   {isFullScreen ? (
                     <>
-                      <Minimize2 className="mr-1 h-3.5 w-3.5" />
+                      <Minimize2 className="mr-1 h-3 w-3 shrink-0" />
                       Restaurar
                     </>
                   ) : (
                     <>
-                      <Maximize2 className="mr-1 h-3.5 w-3.5" />
+                      <Maximize2 className="mr-1 h-3 w-3 shrink-0" />
                       Tela Cheia
                     </>
                   )}
@@ -280,7 +282,7 @@ export const AiStoreCopilotDrawer: React.FC = () => {
                     navigate('/ai-copilot')
                   }}
                   title="Ir para a Central Copiloto (/ai-copilot)"
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 cursor-pointer"
                 >
                   <ExternalLink className="h-4 w-4" />
                 </button>
@@ -288,7 +290,7 @@ export const AiStoreCopilotDrawer: React.FC = () => {
                   type="button"
                   onClick={handleClearChat}
                   title="Limpar conversa"
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 cursor-pointer"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -299,7 +301,7 @@ export const AiStoreCopilotDrawer: React.FC = () => {
                     setIsFullScreen(false)
                   }}
                   aria-label="Fechar Copiloto de IA"
-                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                  className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground shrink-0 cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -307,19 +309,19 @@ export const AiStoreCopilotDrawer: React.FC = () => {
             </div>
 
             {/* Seletor de Persona & Atalhos */}
-            <div className="space-y-2 border-b border-border bg-muted/20 px-4 py-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-muted-foreground">
-                  Persona Especialista:
+            <div className="space-y-2 border-b border-border bg-muted/20 px-3 sm:px-4 py-2 shrink-0 min-w-0">
+              <div className="flex items-center justify-between gap-2 min-w-0">
+                <span className="text-[11px] font-semibold text-muted-foreground shrink-0">
+                  Persona:
                 </span>
                 <select
                   value={selectedPersonaCode}
                   onChange={(e) => setSelectedPersonaCode(e.target.value)}
-                  className="h-7 rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground"
+                  className="h-7 min-w-0 flex-1 sm:flex-initial sm:w-64 truncate rounded-lg border border-border bg-background px-2 text-[11px] font-semibold text-foreground"
                 >
                   {personas.map((p) => (
                     <option key={p.code} value={p.code}>
-                      {p.name} ({p.tone})
+                      {p.name}
                     </option>
                   ))}
                 </select>
