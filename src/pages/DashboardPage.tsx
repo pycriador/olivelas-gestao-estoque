@@ -684,12 +684,12 @@ export function DashboardPage() {
   const kpis = analytics?.kpis
 
   return (
-    <div className="w-full space-y-5 pb-10 animate-in fade-in duration-150">
+    <div className="w-full min-w-0 space-y-4 sm:space-y-5 pb-10 animate-in fade-in duration-150 overflow-x-hidden">
       {/* Top Header */}
       <PageHeader
         title="Dashboard Analítico & Inteligência Comercial"
         badge={
-          <Badge variant="default" className="text-[10px] gap-1">
+          <Badge variant="default" className="text-[10px] gap-1 hidden xs:inline-flex">
             <Sparkles className="h-3 w-3" /> Tempo Real
           </Badge>
         }
@@ -722,19 +722,19 @@ export function DashboardPage() {
       />
 
       {/* Executive Filter & Export Control Bar */}
-      <Card className="border-primary/20 bg-card shadow-xs">
-        <CardContent className="p-4 space-y-3.5">
+      <Card className="border-primary/20 bg-card shadow-xs min-w-0 overflow-hidden">
+        <CardContent className="p-3 sm:p-4 space-y-3 sm:space-y-3.5">
           {/* Row 1: Store Selector, Channel, Granularity & Quick Actions / Export */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 sm:gap-2.5 min-w-0">
               {/* Store Selector (Matriz + Filiais or Consolidated) */}
-              <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-xl px-2.5 py-1">
+              <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-xl px-2.5 py-1.5 sm:py-1 w-full sm:w-auto min-w-0 max-w-full">
                 <Building2 className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-[11px] font-semibold text-muted-foreground">Unidade:</span>
+                <span className="text-[11px] font-semibold text-muted-foreground shrink-0">Unidade:</span>
                 <select
                   value={selectedStoreScope}
                   onChange={(e) => handleStoreScopeChange(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none pr-1 cursor-pointer"
+                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none pr-1 cursor-pointer flex-1 min-w-0 truncate"
                 >
                   <option value="ALL">
                     Todas as Lojas ({accessibleStores.length} unidades consolidadas)
@@ -749,13 +749,13 @@ export function DashboardPage() {
               </div>
 
               {/* Channel Filter */}
-              <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-xl px-2.5 py-1">
+              <div className="flex items-center gap-1.5 bg-muted/50 border border-border rounded-xl px-2.5 py-1.5 sm:py-1 w-full sm:w-auto min-w-0 max-w-full">
                 <Filter className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                <span className="text-[11px] font-semibold text-muted-foreground">Canal:</span>
+                <span className="text-[11px] font-semibold text-muted-foreground shrink-0">Canal:</span>
                 <select
                   value={channelFilter}
                   onChange={(e) => handleChannelChange(e.target.value)}
-                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-bold text-foreground focus:outline-none cursor-pointer flex-1 min-w-0 truncate"
                 >
                   <option value="ALL">Todos os Canais</option>
                   <option value="IN_STORE">PDV / Balcão</option>
@@ -765,7 +765,7 @@ export function DashboardPage() {
               </div>
 
               {/* Granularity Selector */}
-              <div className="flex items-center gap-1 bg-muted/50 border border-border rounded-xl p-0.5">
+              <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-muted/50 border border-border rounded-xl p-1 sm:p-0.5 w-full sm:w-auto">
                 {(
                   [
                     { id: 'DAY', label: 'Diário' },
@@ -777,7 +777,7 @@ export function DashboardPage() {
                     key={g.id}
                     type="button"
                     onClick={() => handleGranularityChange(g.id)}
-                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition text-center justify-center ${
                       granularity === g.id
                         ? 'bg-primary text-primary-foreground shadow-xs'
                         : 'text-muted-foreground hover:text-foreground'
@@ -790,20 +790,22 @@ export function DashboardPage() {
             </div>
 
             {/* Right Actions: Refresh, Export Dropdown, Print, POS */}
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2 w-full lg:w-auto">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 text-xs"
+                className="h-8 text-xs w-full sm:w-auto justify-center"
                 onClick={() => refetch()}
                 title="Atualizar indicadores"
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isFetching ? 'animate-spin' : ''}`} />
-                Atualizar
+                <RefreshCw className={`h-3.5 w-3.5 mr-1 shrink-0 ${isFetching ? 'animate-spin' : ''}`} />
+                <span className="truncate">Atualizar</span>
               </Button>
 
               <DropdownMenu
-                triggerLabel="Baixar Dados do Período"
+                className="w-full sm:w-auto"
+                buttonClassName="w-full sm:w-auto justify-center h-8 text-xs"
+                triggerLabel="Exportar Dados"
                 items={[
                   {
                     key: 'csv-orders',
@@ -844,55 +846,57 @@ export function DashboardPage() {
                 ]}
               />
 
-              <Link to="/sales">
-                <Button variant="default" size="sm" className="h-8 text-xs shadow-sm">
-                  <ShoppingBag className="h-3.5 w-3.5 mr-1" /> Nova Venda (PDV)
+              <Link to="/sales" className="col-span-2 sm:col-span-1 w-full sm:w-auto">
+                <Button variant="default" size="sm" className="h-8 text-xs shadow-sm w-full sm:w-auto justify-center">
+                  <ShoppingBag className="h-3.5 w-3.5 mr-1 shrink-0" /> Nova Venda (PDV)
                 </Button>
               </Link>
             </div>
           </div>
 
           {/* Row 2: Time Period Presets + Custom Date Range Inputs */}
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border/60">
-            <div className="flex flex-wrap items-center gap-1.5">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3 pt-2.5 border-t border-border/60">
+            <div className="space-y-1.5 sm:space-y-0 sm:flex sm:flex-wrap sm:items-center gap-1.5 min-w-0">
               <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mr-1 flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5 text-primary" /> Período:
+                <Calendar className="h-3.5 w-3.5 text-primary shrink-0" /> Período:
               </span>
-              {PRESET_OPTIONS.map((preset) => (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => handleSelectPreset(preset.id)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
-                    periodPreset === preset.id
-                      ? 'bg-primary text-primary-foreground shadow-xs'
-                      : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
-                  }`}
-                >
-                  {preset.label}
-                </button>
-              ))}
+              <div className="grid grid-cols-4 sm:flex sm:flex-wrap items-center gap-1.5">
+                {PRESET_OPTIONS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => handleSelectPreset(preset.id)}
+                    className={`px-2 sm:px-2.5 py-1.5 sm:py-1 rounded-lg text-[11px] sm:text-xs font-semibold transition text-center truncate ${
+                      periodPreset === preset.id
+                        ? 'bg-primary text-primary-foreground shadow-xs'
+                        : 'bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground'
+                    }`}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-muted-foreground font-medium">De:</span>
+            <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full lg:w-auto min-w-0">
+              <div className="flex items-center gap-1.5 text-xs min-w-0">
+                <span className="text-muted-foreground font-medium shrink-0">De:</span>
                 <input
                   type="date"
                   value={dateFrom}
                   max={dateTo}
                   onChange={(e) => handleCustomDateChange('from', e.target.value)}
-                  className="h-7 rounded-lg border border-input bg-background px-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="h-8 sm:h-7 w-full min-w-0 flex-1 rounded-lg border border-input bg-background px-2 text-[11px] sm:text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-muted-foreground font-medium">Até:</span>
+              <div className="flex items-center gap-1.5 text-xs min-w-0">
+                <span className="text-muted-foreground font-medium shrink-0">Até:</span>
                 <input
                   type="date"
                   value={dateTo}
                   min={dateFrom}
                   onChange={(e) => handleCustomDateChange('to', e.target.value)}
-                  className="h-7 rounded-lg border border-input bg-background px-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="h-8 sm:h-7 w-full min-w-0 flex-1 rounded-lg border border-input bg-background px-2 text-[11px] sm:text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
             </div>
@@ -902,26 +906,26 @@ export function DashboardPage() {
 
       {/* 8 Executive KPI Cards */}
       {isLoading || !kpis ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           <LoadingSkeleton count={8} className="h-28" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
           {/* Card 1: Faturamento no Período */}
-          <Card className="relative overflow-hidden border-emerald-500/25 hover:border-emerald-500/50 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden border-emerald-500/25 hover:border-emerald-500/50 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Faturamento no Período
                 </span>
-                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-emerald-500/10 text-emerald-500 shrink-0">
                   <DollarSign className="h-4 w-4" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-extrabold tracking-tight text-foreground">
+              <div className="mt-2 text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
                 {formatCurrency(kpis.periodRevenue)}
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <span
                   className={`inline-flex items-center gap-0.5 font-bold ${
                     kpis.revenueGrowthPercent >= 0 ? 'text-emerald-500' : 'text-danger'
@@ -943,20 +947,20 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 2: Lucro Bruto & Margem */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Lucro Bruto Estimado
                 </span>
-                <div className="p-2 rounded-xl bg-primary/10 text-primary">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-primary/10 text-primary shrink-0">
                   <TrendingUp className="h-4 w-4" />
                 </div>
               </div>
-              <div className="mt-2 text-2xl font-extrabold tracking-tight text-foreground">
+              <div className="mt-2 text-xl sm:text-2xl font-extrabold tracking-tight text-foreground truncate">
                 {formatCurrency(kpis.periodProfit)}
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <Badge variant="success" className="text-[10px] py-0 px-1.5">
                   Margem {kpis.periodMarginPercent}%
                 </Badge>
@@ -968,23 +972,23 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 3: Pedidos Concluídos & Ticket Médio */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Vendas & Ticket Médio
                 </span>
-                <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-blue-500/10 text-blue-500 shrink-0">
                   <ShoppingCart className="h-4 w-4" />
                 </div>
               </div>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold tracking-tight text-foreground">
+                <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
                   {kpis.periodOrdersCount}
                 </span>
                 <span className="text-xs font-semibold text-muted-foreground">pedidos</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <span className="text-muted-foreground">
                   Ticket Médio: <b className="text-foreground">{formatCurrency(kpis.averageTicket)}</b>
                 </span>
@@ -998,23 +1002,23 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 4: Giro Físico (Unidades Vendidas) */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Volume Físico Vendido
                 </span>
-                <div className="p-2 rounded-xl bg-violet-500/10 text-violet-500">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-violet-500/10 text-violet-500 shrink-0">
                   <Package className="h-4 w-4" />
                 </div>
               </div>
               <div className="mt-2 flex items-baseline gap-1.5">
-                <span className="text-2xl font-extrabold tracking-tight text-foreground">
+                <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
                   {kpis.periodUnitsSold}
                 </span>
                 <span className="text-xs font-semibold text-muted-foreground">itens vendidos</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px] text-muted-foreground">
                 <span>
                   Catálogo ativo: <b className="text-foreground">{kpis.totalProductsCount} SKUs</b>
                 </span>
@@ -1026,20 +1030,20 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 5: Patrimônio em Estoque (Potencial de Venda vs Custo) */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Estoque (Valor de Venda)
                 </span>
-                <div className="p-2 rounded-xl bg-cyan-500/10 text-cyan-500">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-cyan-500/10 text-cyan-500 shrink-0">
                   <Layers className="h-4 w-4" />
                 </div>
               </div>
-              <div className="mt-2 text-xl font-extrabold tracking-tight text-foreground">
+              <div className="mt-2 text-lg sm:text-xl font-extrabold tracking-tight text-foreground truncate">
                 {formatCurrency(kpis.stockSellingValuation)}
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px] text-muted-foreground">
                 <span>
                   Custo: <b className="text-foreground">{formatCurrency(kpis.stockCostValuation)}</b>
                 </span>
@@ -1051,23 +1055,23 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 6: Alerta de Estoque Baixo & Ruptura */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Estoque Baixo & Ruptura
                 </span>
-                <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
                   <AlertTriangle className="h-4 w-4" />
                 </div>
               </div>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold tracking-tight text-foreground">
+                <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
                   {kpis.lowStockCount + kpis.outOfStockCount}
                 </span>
                 <span className="text-xs text-muted-foreground">produtos em alerta</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <span className="text-orange-500 font-semibold">
                   {kpis.lowStockCount} baixo • {kpis.outOfStockCount} zerado(s)
                 </span>
@@ -1079,23 +1083,23 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 7: Lotes Próximos do Vencimento (<= 30d) */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Lotes Vencendo (≤ 30d)
                 </span>
-                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-amber-500/10 text-amber-500 shrink-0">
                   <Clock className="h-4 w-4" />
                 </div>
               </div>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold tracking-tight text-foreground">
+                <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
                   {kpis.expiring30dCount}
                 </span>
                 <span className="text-xs text-muted-foreground">lotes em atenção</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 <span className="text-muted-foreground">Controle FEFO ativo</span>
                 <Link to="/expiration" className="text-primary font-semibold hover:underline">
                   Ver validades →
@@ -1105,23 +1109,23 @@ export function DashboardPage() {
           </Card>
 
           {/* Card 8: Lotes Vencidos / Críticos */}
-          <Card className="relative overflow-hidden hover:border-primary/40 transition-colors">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">
+          <Card className="relative min-w-0 overflow-hidden hover:border-primary/40 transition-colors">
+            <CardContent className="p-3.5 sm:p-4">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-muted-foreground truncate">
                   Lotes Vencidos / Baixas
                 </span>
-                <div className="p-2 rounded-xl bg-danger/10 text-danger">
+                <div className="p-1.5 sm:p-2 rounded-xl bg-danger/10 text-danger shrink-0">
                   <PackageX className="h-4 w-4" />
                 </div>
               </div>
               <div className="mt-2 flex items-baseline gap-2">
-                <span className="text-2xl font-extrabold tracking-tight text-foreground">
+                <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground">
                   {kpis.expiredCount}
                 </span>
                 <span className="text-xs text-muted-foreground">lotes vencidos</span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-[11px]">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-1 text-[11px]">
                 {kpis.expiredCount > 0 ? (
                   <Badge variant="destructive" className="text-[10px] py-0 px-1.5">
                     Ação Imediata
@@ -1141,28 +1145,30 @@ export function DashboardPage() {
       )}
 
       {/* ROW 1 OF CHARTS: Monthly Sales & Timeline Evolution (7 cols) + Store Comparison (5 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* CHART 1: Vendas Mensais & Evolução Temporal */}
-        <Card className="lg:col-span-7 flex flex-col">
-          <CardHeader className="p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60">
-            <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                {timeChartMode === 'MONTHLY_12M'
-                  ? 'Evolução de Vendas Mensais (Últimos 12 Meses)'
-                  : `Evolução no Período (${formatDate(dateFrom)} a ${formatDate(dateTo)})`}
+        <Card className="lg:col-span-7 flex flex-col min-w-0 overflow-hidden">
+          <CardHeader className="p-3.5 sm:p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-border/60">
+            <div className="min-w-0">
+              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                <BarChart3 className="h-4 w-4 text-primary shrink-0" />
+                <span className="truncate">
+                  {timeChartMode === 'MONTHLY_12M'
+                    ? 'Evolução de Vendas Mensais (12M)'
+                    : `Evolução no Período (${formatDate(dateFrom)} a ${formatDate(dateTo)})`}
+                </span>
               </CardTitle>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
                 Faturamento bruto (R$), lucro estimado (R$) e volume de vendas em{' '}
                 <strong className="text-foreground">{selectedStoreLabel}</strong>
               </p>
             </div>
 
-            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border self-start">
+            <div className="grid grid-cols-2 sm:flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border w-full sm:w-auto shrink-0">
               <button
                 type="button"
                 onClick={() => setTimeChartMode('MONTHLY_12M')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] font-bold transition text-center truncate ${
                   timeChartMode === 'MONTHLY_12M'
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -1173,7 +1179,7 @@ export function DashboardPage() {
               <button
                 type="button"
                 onClick={() => setTimeChartMode('PERIOD_TIMELINE')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] font-bold transition text-center truncate ${
                   timeChartMode === 'PERIOD_TIMELINE'
                     ? 'bg-primary text-primary-foreground shadow-xs'
                     : 'text-muted-foreground hover:text-foreground'
@@ -1184,7 +1190,7 @@ export function DashboardPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-4">
+          <CardContent className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between space-y-4">
             {isLoading ? (
               <LoadingSkeleton count={1} className="h-64" />
             ) : activeTimeSeries.length === 0 ? (
@@ -1299,28 +1305,28 @@ export function DashboardPage() {
                 </div>
 
                 {/* Summary Footer */}
-                <div className="grid grid-cols-3 gap-3 pt-1 text-xs">
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 pt-1 text-xs">
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 min-w-0">
                     <span className="text-[10px] text-muted-foreground block">
                       Total na Série Exibida
                     </span>
-                    <span className="font-extrabold text-sm text-foreground">
+                    <span className="font-extrabold text-sm text-foreground truncate block">
                       {formatCurrency(timeSeriesStats.totalRevenue)}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60">
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 min-w-0">
                     <span className="text-[10px] text-muted-foreground block">
                       Média por Período Ativo
                     </span>
-                    <span className="font-extrabold text-sm text-foreground">
+                    <span className="font-extrabold text-sm text-foreground truncate block">
                       {formatCurrency(timeSeriesStats.avgRevenue)}
                     </span>
                   </div>
-                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60">
+                  <div className="p-2.5 rounded-xl bg-muted/40 border border-border/60 min-w-0">
                     <span className="text-[10px] text-muted-foreground block">
                       Melhor Desempenho
                     </span>
-                    <span className="font-extrabold text-sm text-emerald-500">
+                    <span className="font-extrabold text-sm text-emerald-500 truncate block">
                       {timeSeriesStats.bestPoint && timeSeriesStats.bestPoint.revenue > 0
                         ? `${timeSeriesStats.bestPoint.label} (${formatCurrency(
                             timeSeriesStats.bestPoint.revenue
@@ -1335,19 +1341,19 @@ export function DashboardPage() {
         </Card>
 
         {/* CHART 2: Gráficos por Loja (Comparativo Matriz & Filiais) */}
-        <Card className="lg:col-span-5 flex flex-col">
-          <CardHeader className="p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/60">
-            <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Building2 className="h-4 w-4 text-primary" />
-                Desempenho por Loja (Matriz & Filiais)
+        <Card className="lg:col-span-5 flex flex-col min-w-0 overflow-hidden">
+          <CardHeader className="p-3.5 sm:p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-border/60">
+            <div className="min-w-0">
+              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-primary shrink-0" />
+                <span className="truncate">Desempenho por Loja (Matriz & Filiais)</span>
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Clique em uma loja para filtrar ou comparar todas as unidades
               </p>
             </div>
 
-            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border self-start">
+            <div className="grid grid-cols-4 sm:flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border w-full sm:w-auto shrink-0">
               {(
                 [
                   { id: 'REVENUE', label: 'Vendas' },
@@ -1360,7 +1366,7 @@ export function DashboardPage() {
                   key={m.id}
                   type="button"
                   onClick={() => setStoreChartMetric(m.id)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition ${
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition text-center truncate ${
                     storeChartMetric === m.id
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1372,7 +1378,7 @@ export function DashboardPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-3 overflow-y-auto max-h-[380px] custom-scrollbar">
+          <CardContent className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between space-y-3 overflow-y-auto max-h-[380px] custom-scrollbar">
             {isLoading ? (
               <LoadingSkeleton count={4} className="h-14" />
             ) : sortedStoreComparison.length === 0 ? (
@@ -1423,7 +1429,7 @@ export function DashboardPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
                           {st.isBranch ? (
                             <GitBranch className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                           ) : (
@@ -1446,7 +1452,7 @@ export function DashboardPage() {
                               ? `${st.ordersCount} pedidos`
                               : formatCurrency(currentVal)}
                           </span>
-                          <span className="text-[10px] text-muted-foreground ml-1.5 font-mono">
+                          <span className="text-[10px] text-muted-foreground ml-1 font-mono">
                             ({st.sharePercent}%)
                           </span>
                         </div>
@@ -1497,33 +1503,33 @@ export function DashboardPage() {
       </div>
 
       {/* ROW 2 OF CHARTS: Top Selling Products (7 cols) + Category & Channel/Payment Breakdown (5 cols) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
         {/* CHART 3: Produtos Mais Vendidos no Período */}
-        <Card className="lg:col-span-7 flex flex-col">
-          <CardHeader className="p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60">
-            <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <Award className="h-4 w-4 text-amber-500" />
-                Produtos Mais Vendidos no Período
+        <Card className="lg:col-span-7 flex flex-col min-w-0 overflow-hidden">
+          <CardHeader className="p-3.5 sm:p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 border-b border-border/60">
+            <div className="min-w-0">
+              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                <Award className="h-4 w-4 text-amber-500 shrink-0" />
+                <span className="truncate">Produtos Mais Vendidos no Período</span>
               </CardTitle>
               <p className="text-xs text-muted-foreground mt-0.5">
                 Ranking de giro, receita gerada, margem de lucro e cobertura atual de estoque
               </p>
             </div>
 
-            <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border self-start">
+            <div className="grid grid-cols-3 sm:flex items-center gap-1 bg-muted/60 p-1 rounded-xl border border-border w-full sm:w-auto shrink-0">
               {(
                 [
-                  { id: 'REVENUE', label: 'Por Faturamento (R$)' },
-                  { id: 'QUANTITY', label: 'Por Qtd. Vendida' },
-                  { id: 'PROFIT', label: 'Por Lucro (R$)' },
+                  { id: 'REVENUE', label: 'Faturamento (R$)' },
+                  { id: 'QUANTITY', label: 'Qtd. Vendida' },
+                  { id: 'PROFIT', label: 'Lucro (R$)' },
                 ] as const
               ).map((m) => (
                 <button
                   key={m.id}
                   type="button"
                   onClick={() => setTopProductsMetric(m.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition ${
+                  className={`px-2 sm:px-2.5 py-1 rounded-lg text-[10px] font-bold transition text-center truncate ${
                     topProductsMetric === m.id
                       ? 'bg-primary text-primary-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground'
@@ -1535,7 +1541,7 @@ export function DashboardPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="p-5 flex-1">
+          <CardContent className="p-3.5 sm:p-5 flex-1">
             {isLoading ? (
               <LoadingSkeleton count={5} className="h-14" />
             ) : sortedTopProducts.length === 0 ? (
@@ -1572,8 +1578,8 @@ export function DashboardPage() {
                       key={`${prod.productId}-${idx}`}
                       className="p-3 rounded-xl border border-border/70 bg-muted/15 hover:bg-muted/35 transition"
                     >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                           {/* Rank Badge */}
                           <div
                             className={`h-7 w-7 rounded-lg flex items-center justify-center text-xs font-extrabold shrink-0 ${
@@ -1602,7 +1608,7 @@ export function DashboardPage() {
                             </div>
                           )}
 
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="text-xs font-bold text-foreground truncate">
                                 {prod.productName}
@@ -1623,7 +1629,7 @@ export function DashboardPage() {
                           </div>
                         </div>
 
-                        <div className="text-right shrink-0">
+                        <div className="flex items-center justify-between sm:block sm:text-right shrink-0 pt-1.5 sm:pt-0 border-t sm:border-t-0 border-border/40">
                           <div className="text-xs font-extrabold text-foreground">
                             {formatCurrency(prod.revenue)}
                           </div>
@@ -1649,18 +1655,18 @@ export function DashboardPage() {
         </Card>
 
         {/* CHART 4: Mix por Categoria (Donut SVG) + Canais & Pagamentos */}
-        <Card className="lg:col-span-5 flex flex-col">
-          <CardHeader className="p-5 pb-3 border-b border-border/60">
-            <CardTitle className="text-base font-bold flex items-center gap-2">
-              <PieChartIcon className="h-4 w-4 text-primary" />
-              Vendas por Categoria, Canal & Pagamento
+        <Card className="lg:col-span-5 flex flex-col min-w-0 overflow-hidden">
+          <CardHeader className="p-3.5 sm:p-5 pb-3 border-b border-border/60">
+            <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+              <PieChartIcon className="h-4 w-4 text-primary shrink-0" />
+              <span className="truncate">Vendas por Categoria, Canal & Pagamento</span>
             </CardTitle>
             <p className="text-xs text-muted-foreground mt-0.5">
               Distribuição percentual do faturamento no período selecionado
             </p>
           </CardHeader>
 
-          <CardContent className="p-5 flex-1 flex flex-col justify-between space-y-5">
+          <CardContent className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between space-y-5">
             {isLoading ? (
               <LoadingSkeleton count={3} className="h-24" />
             ) : (
@@ -1857,13 +1863,13 @@ export function DashboardPage() {
       </div>
 
       {/* BOTTOM SECTION: Detailed Dynamic Inspection Tables for the Selected Period */}
-      <Card className="border-border shadow-xs">
-        <CardHeader className="p-5 pb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/60">
-          <div className="flex flex-wrap items-center gap-1.5">
+      <Card className="border-border shadow-xs min-w-0 overflow-hidden">
+        <CardHeader className="p-3.5 sm:p-5 pb-3 flex flex-col lg:flex-row lg:items-center justify-between gap-2.5 sm:gap-3 border-b border-border/60">
+          <div className="grid grid-cols-1 sm:grid-cols-3 lg:flex items-center gap-1.5 w-full lg:w-auto">
             <button
               type="button"
               onClick={() => setBottomTab('ORDERS')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition text-center truncate ${
                 bottomTab === 'ORDERS'
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'bg-muted/60 text-muted-foreground hover:text-foreground'
@@ -1874,7 +1880,7 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={() => setBottomTab('PRODUCTS')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition text-center truncate ${
                 bottomTab === 'PRODUCTS'
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'bg-muted/60 text-muted-foreground hover:text-foreground'
@@ -1885,7 +1891,7 @@ export function DashboardPage() {
             <button
               type="button"
               onClick={() => setBottomTab('STORES')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition text-center truncate ${
                 bottomTab === 'STORES'
                   ? 'bg-primary text-primary-foreground shadow-xs'
                   : 'bg-muted/60 text-muted-foreground hover:text-foreground'
@@ -1895,20 +1901,20 @@ export function DashboardPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative w-56">
-              <Search className="h-3.5 w-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto min-w-0">
+            <div className="relative flex-1 sm:w-56 min-w-0">
+              <Search className="h-3.5 w-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2 z-10 pointer-events-none" />
               <Input
                 value={tableSearch}
                 onChange={(e) => setTableSearch(e.target.value)}
                 placeholder="Filtrar na tabela abaixo..."
-                className="h-8 pl-8 text-xs"
+                className="h-8 pl-8 text-xs w-full"
               />
             </div>
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs"
+              className="h-8 text-xs w-full sm:w-auto justify-center shrink-0"
               onClick={
                 bottomTab === 'ORDERS'
                   ? handleExportPeriodOrdersCSV
@@ -1917,7 +1923,7 @@ export function DashboardPage() {
                   : handleExportStoresCSV
               }
             >
-              <Download className="h-3.5 w-3.5 mr-1" /> Baixar Aba (CSV)
+              <Download className="h-3.5 w-3.5 mr-1 shrink-0" /> Baixar Aba (CSV)
             </Button>
           </div>
         </CardHeader>

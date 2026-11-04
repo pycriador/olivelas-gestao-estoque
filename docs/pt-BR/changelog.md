@@ -14,6 +14,11 @@ classification: Confirmed
 
 ## 2026-11-04
 
+- **Responsividade Mobile da Barra de Filtros e Caixas de Visão em `/dashboard`** (`src/pages/DashboardPage.tsx`, `docs/pt-BR/changelog.md`):
+  - **Barra de Filtros Executiva Contida no Viewport Mobile**: os seletores de `Unidade` e `Canal` passaram a ter `w-full sm:w-auto min-w-0 max-w-full` com `flex-1 min-w-0 truncate` nos elementos `<select>`, evitando que nomes longos de lojas/unidades estourassem a largura do card em telas mobile.
+  - **Atalhos de Período, Datas e Granularidade em Grids Responsivos**: os botões de granularidade (`grid-cols-3 sm:flex`), atalhos de período (`grid-cols-4 sm:flex`), inputs de data `De/Até` (`grid-cols-2 sm:flex min-w-0`) e botões de ação (`Atualizar`, `Exportar Dados` e `Nova Venda`) foram organizados em grades fluidas para mobile.
+  - **Filtros Internos das Caixas de Visão e Tabelas (`min-w-0 overflow-hidden`)**: adicionadas travas `min-w-0 overflow-hidden` em todos os cards de gráficos/KPIs e convertidos os seletores internos (`Vendas Mensais (12M) | Período Filtrado`, `Vendas | Lucro | Pedidos | Estoque`, `Faturamento (R$) | Qtd. Vendida | Lucro (R$)` e abas da tabela inferior + busca) para grids responsivos que nunca ultrapassam as bordas dos cards no celular.
+
 - **Modal de Digitação e Seleção de Quantidade Também para Itens por Unidade no PDV (`/sales`)** (`src/components/sales/WeightInputModal.tsx`, `src/pages/SalesPage.tsx`, `docs/pt-BR/changelog.md`):
   - **Abertura do Modal para Todos os Produtos (`addToCart` em `src/pages/SalesPage.tsx`)**: ao clicar em qualquer card de produto no catálogo do PDV (`/sales`) ou no badge numérico de quantidade dentro do carrinho, o sistema abre o modal interativo (`WeightInputModal.tsx`), tanto para produtos vendidos por peso (`KG`) quanto para itens vendidos por unidade (`UN`, `CX`, `PCT`, `DZ`, etc.).
   - **Modo Unidades no `WeightInputModal.tsx`**: quando o produto não é pesável (`isWeighedProduct(product) === false`), o modal adapta automaticamente o título para **"Digitar / Selecionar Quantidade (UN)"**, exibe abas para **Quantidade (`UN`)** e **Valor em R$**, campo numérico com foco e seleção automática (`autoFocus`), botões de passo `-1` / `+1`, atalhos rápidos de 1 toque (`1 un`, `2 un`, `3 un`, `5 un`, `6 un`, `10 un`), prévia em tempo real do **Total a Pagar** e validação de limite de estoque.
