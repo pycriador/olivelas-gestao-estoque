@@ -24,6 +24,7 @@ import { GlobalDeletePanel } from '@/components/admin/GlobalDeletePanel'
 import { GlobalBackupPanel } from '@/components/admin/GlobalBackupPanel'
 import { GlobalDbExplorerPanel } from '@/components/admin/GlobalDbExplorerPanel'
 import { GlobalApiKeyHbacPanel } from '@/components/admin/GlobalApiKeyHbacPanel'
+import { BulkStoreAiBuilderModal } from '@/components/admin/BulkStoreAiBuilderModal'
 import { DEFAULT_PERMISSION_MODULES } from '@/constants/screenDependencies'
 import { formatCurrency } from '@/utils/currency'
 import {
@@ -121,6 +122,7 @@ export function GlobalAdminDashboardPage() {
   const [deleteChildBranches, setDeleteChildBranches] = React.useState(false)
   const [transferModalStore, setTransferModalStore] = React.useState<StoreType | null>(null)
   const [selectedNewOwnerId, setSelectedNewOwnerId] = React.useState('')
+  const [isBulkBuilderOpen, setIsBulkBuilderOpen] = React.useState(false)
 
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null)
@@ -541,10 +543,28 @@ export function GlobalAdminDashboardPage() {
             </select>
           )}
 
+          {activeTab === 'stores' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsBulkBuilderOpen(true)}
+              className="h-8 text-xs px-2.5 border-violet-500/40 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold"
+              title="Criar Matriz, Filiais, Fornecedores e Produtos em lote com IA"
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1" /> Criação em Lote (IA)
+            </Button>
+          )}
+
           {/* Unified Quick Actions Dropdown Menu across ALL tabs */}
           <DropdownMenu
             triggerLabel="Ações Rápidas"
             items={[
+              {
+                key: 'bulk-store-ai',
+                label: 'Criação de Rede de Lojas em Lote (IA)',
+                icon: <Sparkles className="h-3.5 w-3.5 text-violet-500" />,
+                onSelect: () => setIsBulkBuilderOpen(true),
+              },
               {
                 key: 'new-store',
                 label: 'Cadastrar Nova Loja (Matriz)',
@@ -1843,6 +1863,18 @@ export function GlobalAdminDashboardPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Modal de Criação de Rede de Lojas em Lote (IA) */}
+      <BulkStoreAiBuilderModal
+        isOpen={isBulkBuilderOpen}
+        onClose={() => setIsBulkBuilderOpen(false)}
+        onCompleted={() => {
+          queryClient.invalidateQueries({ queryKey: ['all-stores'] })
+          queryClient.invalidateQueries({ queryKey: ['all-stores-raw-list'] })
+          queryClient.invalidateQueries({ queryKey: ['global-admin-metrics'] })
+          setSuccessMessage('Rede de lojas (Matriz, Filiais, Fornecedores e Produtos) criada em lote com sucesso!')
+        }}
+      />
     </div>
   )
 }

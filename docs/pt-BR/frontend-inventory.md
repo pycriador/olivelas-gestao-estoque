@@ -98,7 +98,7 @@ Grupos (ids no código):
 
 Links soltos (inferiores): `/sales`, `/integrations`, `/notifications`, `/audit`, `/settings`.
 
-Link “Catálogo Público” se `storeSlug` existe e não é `'global'`. Link “+ Gerenciar Todas as Lojas” no switcher só se `isGlobalAdmin`.
+Link “Catálogo Público” se `storeSlug` existe e não é `'global'`. O seletor de lojas no topo da barra lateral (`AppLayout.tsx`) agrupa as unidades hierarquicamente (`Matriz -> └─ Filial` com busca rápida e nome completo composto `${parentStoreName} • Filial ${storeName}`, ex.: `Primor • Filial P1`). Link “+ Gerenciar Todas as Lojas & Filiais” no switcher só se `isGlobalAdmin`.
 
 Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 
@@ -138,7 +138,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | Pasta | Arquivos |
 | --- | --- |
 | `ai/` | `AiModuleInsightCard.tsx` (card de inteligência contextual incorporado em `/dashboard`, `/expiration`, `/customers`, `/sales`, `/purchases`, `/inventory` e `/reports`), `AiStoreCopilotDrawer.tsx` (chatbot flutuante global para o Administrador da Loja) |
-| `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx`, `UserPermissionsAndPricingModal.tsx`, `UserBillingHistoryModal.tsx`, `PermissionGroupsManagerModal.tsx` |
+| `admin/` | `GlobalDeletePanel.tsx`, `GlobalDbExplorerPanel.tsx`, `GlobalBackupPanel.tsx`, `GlobalApiKeyHbacPanel.tsx`, `BulkStoreAiBuilderModal.tsx`, `UserPermissionsAndPricingModal.tsx`, `UserBillingHistoryModal.tsx`, `PermissionGroupsManagerModal.tsx` |
 | `commercial/` | `InteractivePlanBuilderSection.tsx` (configurador interativo de planos + módulos adicionais avulsos + pré-cadastro com Nome, E-mail e Celular na Landing Page `/` e `/pricing`) |
 | `inventory/` | `StockWriteoffModal.tsx`, `BulkStockWriteoffModal.tsx`, `StockBranchTransferModal.tsx`, `StockImportModal.tsx` |
 | `team/` | `EmployeeRolePermissionsModal.tsx`, `StoreCustomRolesModal.tsx` |
@@ -194,6 +194,7 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `permissionGroupService` | `listModules`, `updateModulePrice`, `listGroups`, `listLandingPageGroups`, `toggleLandingPageVisibility`, `saveGroup`, `deleteGroup`, `listAllUserProfiles`, `getUserProfile`, `saveUserProfile`, `listUserPayments`, `createPayment`, `markPaymentAsPaid`, `updatePaymentStatus`, `listUserAuditLogs` |
 | `contractService` | `generateContractNumber`, `submitProposal`, `listProposals`, `updateProposalStatus`, `deleteProposal`, `interpolateContractTerms`, `buildStandaloneContractHtml`, `listContracts`, `saveContract`, `deleteContract`, `exportContractAsHTML`, `exportContractAsDOCX`, `exportContractAsPDF`, `getGoogleDriveConfig`, `saveGoogleDriveConfig`, `syncContractToGoogleDrive` |
 | `aiOrchestratorService` | `inspectPromptSecurity`, `listProviderConfigs`, `saveProviderConfig`, `testProviderConnection`, `listPersonas`, `savePersona`, `deletePersona`, `getStoreAiConfig`, `saveStoreAiConfig`, `buildStoreContextSnapshot`, `executeAiTask`, `executeModulePrompt`, `resolveOrderedRuntimeProviders`, `generateAnalyticalFallbackResponse`, `listChatSessions`, `listChatMessages`, `appendChatMessage`, `recordUsageLog`, `listUsageLogs` |
+| `bulkStoreBuilderService` | `generateSpecFromPrompt` (geração de JSON de rede Matriz + Filiais via IA da Loja), `executeBulkCreation` (provisionamento idempotente em lote de Matriz, Filiais, Administradores `STORE_ADMIN`, Fornecedores, Categorias, Produtos, Fotos Royalty-Free no bucket `products` e Lotes FEFO), `PRIMOR_PresetSpec` |
 | `notificationService` | list, mark read, `generateStockAlerts` (RPC) |
 | `auditService` | `listAuditLogs`, `logAction` |
 | `reportService` | `getRetailSummaryKPIs`, `getValuationReport`, `getAbcCurveReport`, `getConsumptionDemandReport`, `getCustomerTicketReport`, `getCapitalInvestmentReport`, `getPurchasingReport`, `getLossesReport`, `getStockoutsReport`, `getSalesPerformanceReport`, `getAvailableReportsList`, `getGlobalAdminMetrics` |

@@ -26,6 +26,8 @@ Comandos em `package.json`:
 | Script | Comando |
 | --- | --- |
 | `dev` | `vite` (porta 5173, `host: true`) |
+| `store:bulk` | `node scripts/bulk-store-builder.mjs` (`--spec <json>` ou `--prompt "<texto>"`) |
+| `store:primor` | `node scripts/bulk-store-builder.mjs --spec scripts/specs/primor.json` |
 | `build` | `tsc -b && vite build` |
 | `lint` | `oxlint` |
 | `preview` | `vite preview` |
@@ -63,6 +65,16 @@ A aplicação conta com uma central nativa de backup e exportação no painel de
 - **Pacote Estruturado `.JSON`**: Exportação unificada para auditoria, migração de dados e relatórios externos.
 
 Para disaster recovery em nível de infraestrutura, os snapshots continuam gerenciados na plataforma Supabase.
+
+## Criação de Rede de Lojas em Lote (Matriz + Filiais + Produtos + Estoque)
+
+O repositório conta com automação completa para criação em massa de redes de lojas (Matriz, Filiais vinculadas, Administradores `STORE_ADMIN`, Fornecedores, Categorias, Produtos com fotos sem direitos autorais e Lotes de Validade FEFO):
+
+- **Script CLI (`scripts/bulk-store-builder.mjs`)**:
+  - Por especificação JSON estruturada: `npm run store:bulk -- --spec scripts/specs/primor.json` (ou `npm run store:primor`).
+  - Por linguagem natural (usando a IA da Loja configurada em `public.ai_provider_configs`): `npm run store:bulk -- --prompt "Criar matriz Primor com filiais P1 a P5..."`.
+- **Skill do Agente (`.agents/skills/bulk-store-creator/SKILL.md`)**: instrui o agente a converter pedidos em linguagem natural em especificações JSON e executar o provisionamento em lote no Supabase.
+- **Interface Web (`BulkStoreAiBuilderModal.tsx` + `bulkStoreBuilderService.ts`)**: disponível em `/stores`, `/global-admin?tab=stores` e `/ai-copilot` através do botão **"Criação em Lote (IA)"**.
 
 ## Mudança de schema
 

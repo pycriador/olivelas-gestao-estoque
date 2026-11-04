@@ -203,7 +203,9 @@ export function DashboardPage() {
               parent_store_id: null,
             }))
 
-    const roots = rawList.filter((s) => !s.is_branch && !s.parent_store_id)
+    const roots = rawList
+      .filter((s) => !s.is_branch && !s.parent_store_id)
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
     const branches = rawList.filter((s) => s.is_branch || s.parent_store_id)
     const ordered: DashboardStoreOption[] = []
     const visited = new Set<string>()
@@ -219,11 +221,17 @@ export function DashboardPage() {
       })
       visited.add(root.id)
 
-      const children = branches.filter((b) => b.parent_store_id === root.id)
+      const children = branches
+        .filter((b) => b.parent_store_id === root.id)
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { numeric: true }))
       for (const child of children) {
+        const rawChildName = child.name.trim()
+        const displayChildName = rawChildName.toLowerCase().startsWith(root.name.toLowerCase())
+          ? rawChildName
+          : `${root.name} • Filial ${rawChildName}`
         ordered.push({
           id: child.id,
-          name: child.name,
+          name: displayChildName,
           slug: child.slug,
           isBranch: true,
           branchCode: child.branch_code || null,
@@ -741,8 +749,7 @@ export function DashboardPage() {
                   </option>
                   {accessibleStores.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.isBranch ? `└─ [Filial] ${s.name}` : `[Matriz] ${s.name}`}
-                      {s.branchCode ? ` (${s.branchCode})` : ''}
+                      {s.isBranch ? `└─ ${s.name}` : `[Matriz] ${s.name}`}
                     </option>
                   ))}
                 </select>

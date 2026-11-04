@@ -44,7 +44,10 @@ export const authService = {
         stores (
           id,
           name,
-          slug
+          slug,
+          is_branch,
+          parent_store_id,
+          branch_code
         )
       `)
       .eq('user_id', userId)
@@ -52,14 +55,76 @@ export const authService = {
 
     if (error) throw error
 
-    return (data || []).map((item: any) => ({
-      id: item.id,
-      storeId: item.store_id,
-      storeName: item.stores?.name || 'Loja',
-      storeSlug: item.stores?.slug || '',
-      role: item.role,
-      isActive: item.is_active,
-    }))
+    const rawItems = data || []
+    const storeNameById = new Map<string, string>()
+    const missingParentIds = new Set<string>()
+
+    for (const item of rawItems as any[]) {
+      if (item.stores?.id && item.stores?.name) {
+        storeNameById.set(item.stores.id, item.stores.name)
+      }
+    }
+
+    for (const item of rawItems as any[]) {
+      const pid = item.stores?.parent_store_id
+      if (pid && !storeNameById.has(pid)) {
+        missingParentIds.add(pid)
+      }
+    }
+
+    if (missingParentIds.size > 0) {
+      const { data: parentRows } = await supabase
+        .from('stores')
+        .select('id, name')
+        .in('id', Array.from(missingParentIds))
+      for (const p of parentRows || []) {
+        storeNameById.set(p.id, p.name)
+      }
+    }
+
+    const mapped: StoreUserMembership[] = (rawItems as any[]).map((item) => {
+      const st = item.stores
+      const parentId = st?.parent_store_id || null
+      const isBranch = Boolean(st?.is_branch || parentId)
+      return {
+        id: item.id,
+        storeId: item.store_id,
+        storeName: st?.name || 'Loja',
+        storeSlug: st?.slug || '',
+        role: item.role,
+        isActive: item.is_active,
+        isBranch,
+        parentStoreId: parentId,
+        parentStoreName: parentId ? storeNameById.get(parentId) || null : null,
+        branchCode: st?.branch_code || null,
+      }
+    })
+
+    // Sort hierarchically: Matriz followed immediately by its Filiais (natural sort P1, P2, P3...)
+    const byStoreId = new Set(mapped.map((m) => m.storeId))
+    const roots = mapped
+      .filter((m) => !m.isBranch || !m.parentStoreId || !byStoreId.has(m.parentStoreId))
+      .sort((a, b) => a.storeName.localeCompare(b.storeName, 'pt-BR', { numeric: true }))
+
+    const childrenByParent = new Map<string, StoreUserMembership[]>()
+    for (const m of mapped) {
+      if (m.isBranch && m.parentStoreId && byStoreId.has(m.parentStoreId)) {
+        const list = childrenByParent.get(m.parentStoreId) || []
+        list.push(m)
+        childrenByParent.set(m.parentStoreId, list)
+      }
+    }
+
+    const ordered: StoreUserMembership[] = []
+    for (const root of roots) {
+      ordered.push(root)
+      const children = (childrenByParent.get(root.storeId) || []).sort((a, b) =>
+        a.storeName.localeCompare(b.storeName, 'pt-BR', { numeric: true })
+      )
+      ordered.push(...children)
+    }
+
+    return ordered
   },
 
   async signInWithEmail(email: string, password: string) {

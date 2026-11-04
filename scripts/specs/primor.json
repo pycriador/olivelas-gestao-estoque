@@ -1,0 +1,283 @@
+{
+  "headquarters": {
+    "name": "Primor",
+    "slug": "primor",
+    "document": "45.120.890/0001-10",
+    "email": "contato@primorrefeicoes.com.br",
+    "phone": "(11) 3580-1000",
+    "whatsapp": "(11) 98800-1000",
+    "description": "Primor Matriz — Central de Produção, Distribuição de Marmitas e Bebidas e Catálogo Online."
+  },
+  "branches": [
+    {
+      "name": "P1",
+      "slug": "primor-p1",
+      "branchCode": "P1",
+      "description": "Filial P1 vinculada à Matriz Primor — Ponto de Venda e Catálogo Online."
+    },
+    {
+      "name": "P2",
+      "slug": "primor-p2",
+      "branchCode": "P2",
+      "description": "Filial P2 vinculada à Matriz Primor — Ponto de Venda e Catálogo Online."
+    },
+    {
+      "name": "P3",
+      "slug": "primor-p3",
+      "branchCode": "P3",
+      "description": "Filial P3 vinculada à Matriz Primor — Ponto de Venda e Catálogo Online."
+    },
+    {
+      "name": "P4",
+      "slug": "primor-p4",
+      "branchCode": "P4",
+      "description": "Filial P4 vinculada à Matriz Primor — Ponto de Venda e Catálogo Online."
+    },
+    {
+      "name": "P5",
+      "slug": "primor-p5",
+      "branchCode": "P5",
+      "description": "Filial P5 vinculada à Matriz Primor — Ponto de Venda e Catálogo Online."
+    }
+  ],
+  "admins": [
+    {
+      "email": "willian.o.jesus@gmail.com",
+      "fullName": "Willian Rosa Oliveira Lima de Jesus",
+      "role": "STORE_ADMIN"
+    },
+    {
+      "email": "priscilamnmiranda@gmail.com",
+      "fullName": "Priscila Miranda",
+      "role": "STORE_ADMIN"
+    }
+  ],
+  "suppliers": [
+    {
+      "key": "cozinha_a",
+      "corporateName": "Cozinha A Produção de Alimentos Ltda",
+      "tradeName": "Cozinha A",
+      "document": "31.410.100/0001-01",
+      "contactName": "Coordenação Cozinha A",
+      "phone": "(11) 3580-1011",
+      "email": "cozinha.a@primorrefeicoes.com.br",
+      "notes": "Fornecedor homologado — Linha Marmita A, Marmita A/B e Bebidas."
+    },
+    {
+      "key": "cozinha_b",
+      "corporateName": "Cozinha B Gastronomia e Refeições Ltda",
+      "tradeName": "Cozinha B",
+      "document": "31.410.200/0001-02",
+      "contactName": "Coordenação Cozinha B",
+      "phone": "(11) 3580-1022",
+      "email": "cozinha.b@primorrefeicoes.com.br",
+      "notes": "Fornecedor homologado — Linha Marmita B."
+    }
+  ],
+  "categories": [
+    {
+      "key": "bebidas",
+      "name": "Bebidas & Sucos",
+      "slug": "bebidas-sucos"
+    },
+    {
+      "key": "marmitas",
+      "name": "Marmitas & Refeições",
+      "slug": "marmitas-refeicoes"
+    }
+  ],
+  "defaultExpirationDate": "2026-12-31",
+  "defaultManufacturingDate": "2026-11-04",
+  "products": [
+    {
+      "name": "Refrigerante Lata",
+      "sku": "PRM-BEB-001",
+      "barcode": "7894900011517",
+      "categoryKey": "bebidas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 3.50,
+      "sellingPrice": 6.00,
+      "minStock": 15,
+      "maxStock": 500,
+      "headquartersQty": 100,
+      "branchQty": 100,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Refrigerante em lata 350ml gelado, ideal para acompanhar refeições.",
+      "imageUrl": "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Refrigerante Pequeno",
+      "sku": "PRM-BEB-002",
+      "barcode": "7894900010015",
+      "categoryKey": "bebidas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 2.50,
+      "sellingPrice": 4.50,
+      "minStock": 15,
+      "maxStock": 500,
+      "headquartersQty": 100,
+      "branchQty": 100,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Refrigerante garrafa pequena (caçulinha/200ml), prático e refrescante.",
+      "imageUrl": "https://images.unsplash.com/photo-1581006852262-e4307cf6283a?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Água sem gás",
+      "sku": "PRM-BEB-003",
+      "barcode": "7896005800012",
+      "categoryKey": "bebidas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 1.50,
+      "sellingPrice": 3.50,
+      "minStock": 20,
+      "maxStock": 500,
+      "headquartersQty": 100,
+      "branchQty": 100,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Água mineral natural sem gás 500ml.",
+      "imageUrl": "https://images.unsplash.com/photo-1548839140-29a749e1cf4d?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Guaraná Dolly",
+      "sku": "PRM-BEB-004",
+      "barcode": "7896065800014",
+      "categoryKey": "bebidas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 2.80,
+      "sellingPrice": 5.00,
+      "minStock": 15,
+      "maxStock": 500,
+      "headquartersQty": 100,
+      "branchQty": 100,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Refrigerante Guaraná Dolly tradicional gelado.",
+      "imageUrl": "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Suco natural",
+      "sku": "PRM-BEB-005",
+      "barcode": "7898901234056",
+      "categoryKey": "bebidas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 4.20,
+      "sellingPrice": 8.00,
+      "minStock": 15,
+      "maxStock": 300,
+      "headquartersQty": 100,
+      "branchQty": 100,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Suco natural da fruta 300ml preparado diariamente, sem conservantes.",
+      "imageUrl": "https://images.unsplash.com/photo-1600271886742-f049cd451bba?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Marmita A",
+      "sku": "PRM-MAR-A15",
+      "barcode": "7898990015011",
+      "categoryKey": "marmitas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 8.50,
+      "sellingPrice": 15.00,
+      "minStock": 5,
+      "maxStock": 300,
+      "headquartersQty": 100,
+      "branchQty": 10,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Marmita A (Porção Padrão R$ 15,00) — Preparada pela Cozinha A com arroz, feijão, proteína principal e acompanhamentos frescos.",
+      "imageUrl": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Marmita B",
+      "sku": "PRM-MAR-B15",
+      "barcode": "7898990015028",
+      "categoryKey": "marmitas",
+      "supplierKey": "cozinha_b",
+      "unit": "UN",
+      "costPrice": 8.50,
+      "sellingPrice": 15.00,
+      "minStock": 5,
+      "maxStock": 300,
+      "headquartersQty": 100,
+      "branchQty": 10,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Marmita B (Porção Padrão R$ 15,00) — Preparada pela Cozinha B com seleção especial do dia e guarnições caseiras.",
+      "imageUrl": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Marmita A",
+      "sku": "PRM-MAR-A20",
+      "barcode": "7898990020015",
+      "categoryKey": "marmitas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 11.50,
+      "sellingPrice": 20.00,
+      "minStock": 5,
+      "maxStock": 300,
+      "headquartersQty": 100,
+      "branchQty": 10,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Marmita A Executiva (Porção Grande R$ 20,00) — Preparada pela Cozinha A com proteína dupla e acompanhamentos completos.",
+      "imageUrl": "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Marmita B",
+      "sku": "PRM-MAR-B20",
+      "barcode": "7898990020022",
+      "categoryKey": "marmitas",
+      "supplierKey": "cozinha_b",
+      "unit": "UN",
+      "costPrice": 11.50,
+      "sellingPrice": 20.00,
+      "minStock": 5,
+      "maxStock": 300,
+      "headquartersQty": 100,
+      "branchQty": 10,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Marmita B Executiva (Porção Grande R$ 20,00) — Preparada pela Cozinha B com proteína dupla e guarnições especiais.",
+      "imageUrl": "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=800&q=80"
+    },
+    {
+      "name": "Marmita A/B",
+      "sku": "PRM-MAR-AB15",
+      "barcode": "7898990015035",
+      "categoryKey": "marmitas",
+      "supplierKey": "cozinha_a",
+      "unit": "UN",
+      "costPrice": 8.50,
+      "sellingPrice": 15.00,
+      "minStock": 3,
+      "maxStock": 200,
+      "headquartersQty": 50,
+      "branchQty": 5,
+      "expirationDate": "2026-12-31",
+      "isPublishedCatalog": true,
+      "isActive": true,
+      "description": "Marmita A/B Mista (R$ 15,00) — Combinação meio a meio das especialidades da Cozinha A e Cozinha B.",
+      "imageUrl": "https://images.unsplash.com/photo-1547592180-85f173990554?auto=format&fit=crop&w=800&q=80"
+    }
+  ]
+}

@@ -219,7 +219,14 @@ export function ReportsPage() {
   const effectiveStoreName = React.useMemo(() => {
     if (effectiveStoreId === 'all') return 'Todas as Lojas (Consolidado)'
     const found = userStores.find((s) => s.storeId === effectiveStoreId)
-    return found?.storeName || storeName || 'Loja'
+    if (found) {
+      const isBranch = Boolean(found.isBranch || found.parentStoreId)
+      if (isBranch && found.parentStoreName && !found.storeName.toLowerCase().startsWith(found.parentStoreName.toLowerCase())) {
+        return `${found.parentStoreName} • Filial ${found.storeName}`
+      }
+      return found.storeName
+    }
+    return storeName || 'Loja'
   }, [effectiveStoreId, userStores, storeName])
 
   const categoryFilter = filters.category || 'ALL'
@@ -1153,11 +1160,22 @@ export function ReportsPage() {
                   <option value="all">Todas as Lojas (Consolidado)</option>
                   {userStores
                     .filter((s) => s.storeId !== 'all')
-                    .map((s) => (
-                      <option key={s.storeId} value={s.storeId}>
-                        {s.storeName}
-                      </option>
-                    ))}
+                    .map((s) => {
+                      const isBranch = Boolean(s.isBranch || s.parentStoreId)
+                      const label =
+                        isBranch &&
+                        s.parentStoreName &&
+                        !s.storeName.toLowerCase().startsWith(s.parentStoreName.toLowerCase())
+                          ? `└─ ${s.parentStoreName} • Filial ${s.storeName}`
+                          : isBranch
+                            ? `└─ Filial ${s.storeName}`
+                            : `[Matriz] ${s.storeName}`
+                      return (
+                        <option key={s.storeId} value={s.storeId}>
+                          {label}
+                        </option>
+                      )
+                    })}
                 </select>
               </div>
             )}

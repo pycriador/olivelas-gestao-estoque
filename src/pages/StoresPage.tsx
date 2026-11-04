@@ -22,6 +22,7 @@ import { PageHeader } from '@/components/common/PageHeader'
 import { ResponsiveTable } from '@/components/common/ResponsiveTable'
 import { DropdownMenu } from '@/components/ui/dropdown-menu'
 import { StockBranchTransferModal } from '@/components/inventory/StockBranchTransferModal'
+import { BulkStoreAiBuilderModal } from '@/components/admin/BulkStoreAiBuilderModal'
 import { usePermissions } from '@/hooks/usePermissions'
 import {
   Store as StoreIcon,
@@ -40,6 +41,7 @@ import {
   Truck,
   Building2,
   CornerDownRight,
+  Sparkles,
 } from 'lucide-react'
 import type { Store } from '@/types/store.types'
 
@@ -94,6 +96,7 @@ export function StoresPage() {
   // Modal State
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [isTransferModalOpen, setIsTransferModalOpen] = React.useState(false)
+  const [isBulkBuilderOpen, setIsBulkBuilderOpen] = React.useState(false)
   const [editingStore, setEditingStore] = React.useState<StoreDisplayRow | null>(null)
   const [togglingStore, setTogglingStore] = React.useState<StoreDisplayRow | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -507,6 +510,16 @@ export function StoresPage() {
               <Truck className="h-3.5 w-3.5 mr-1" /> Enviar Estoque p/ Filial
             </Button>
           )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsBulkBuilderOpen(true)}
+            className="h-8 text-xs px-2.5 border-violet-500/40 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold"
+            title="Criar Matriz, Filiais, Fornecedores e Produtos em lote com IA"
+          >
+            <Sparkles className="h-3.5 w-3.5 mr-1" /> Criação em Lote (IA)
+          </Button>
 
           <Button
             variant="outline"
@@ -992,6 +1005,16 @@ export function StoresPage() {
         onClose={() => setIsTransferModalOpen(false)}
         originStoreId={activeStoreId || ''}
         originStoreName={currentStore?.storeName || 'Loja Matriz'}
+      />
+
+      {/* Modal de Criação de Rede de Lojas em Lote (IA) */}
+      <BulkStoreAiBuilderModal
+        isOpen={isBulkBuilderOpen}
+        onClose={() => setIsBulkBuilderOpen(false)}
+        onCompleted={async () => {
+          await refreshStores()
+          queryClient.invalidateQueries({ queryKey: ['stores-list'] })
+        }}
       />
     </div>
   )

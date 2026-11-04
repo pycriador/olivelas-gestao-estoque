@@ -8,6 +8,8 @@
     "test:e2e": "node test-automation/executar_roteiro_e2e_browser.mjs",
     "test:data": "node test-automation/executar_roteiro_testes.js",
     "test": "node test-automation/executar_roteiro_e2e_browser.mjs",
+    "store:bulk": "node scripts/bulk-store-builder.mjs",
+    "store:primor": "node scripts/bulk-store-builder.mjs --spec scripts/specs/primor.json",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"
@@ -35,6 +37,7 @@
     "@vitejs/plugin-react": "^6.1.1",
     "autoprefixer": "^10.6.1",
     "oxlint": "^1.81.0",
+    "pg": "^8.13.0",
     "postcss": "^8.5.28",
     "puppeteer-core": "^25.12.0",
     "tailwindcss": "^3.4.19",

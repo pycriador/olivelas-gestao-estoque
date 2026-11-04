@@ -32,6 +32,7 @@ import {
   toDeterministicUuid,
 } from '@/services/aiOrchestratorService'
 import { AiMarkdownContent } from '@/components/ai/AiMarkdownContent'
+import { BulkStoreAiBuilderModal } from '@/components/admin/BulkStoreAiBuilderModal'
 import { useTenant } from '@/hooks/useTenant'
 import { useAuth } from '@/hooks/useAuth'
 import { formatCurrency } from '@/utils/currency'
@@ -87,6 +88,7 @@ export const AiCopilotPage: React.FC = () => {
     useState<string>('PRACTICAL_COPILOT')
   const [storeConfig, setStoreConfig] = useState<AiStoreConfig | null>(null)
   const [showStoreConfigModal, setShowStoreConfigModal] = useState(false)
+  const [showBulkBuilderModal, setShowBulkBuilderModal] = useState(false)
   const [savingConfig, setSavingConfig] = useState(false)
 
   const [messages, setMessages] = useState<AiChatMessage[]>([])
@@ -264,6 +266,16 @@ export const AiCopilotPage: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => setShowBulkBuilderModal(true)}
+            className="border-violet-500/40 text-violet-600 dark:text-violet-400 hover:bg-violet-500/10 font-semibold"
+          >
+            <Layers className="mr-1.5 h-4 w-4" />
+            Criação de Loja em Lote (IA)
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -654,6 +666,14 @@ export const AiCopilotPage: React.FC = () => {
           </form>
         </Card>
       </div>
+
+      <BulkStoreAiBuilderModal
+        isOpen={showBulkBuilderModal}
+        onClose={() => setShowBulkBuilderModal(false)}
+        onCompleted={() => {
+          loadCopilotEnvironment()
+        }}
+      />
     </div>
   )
 }

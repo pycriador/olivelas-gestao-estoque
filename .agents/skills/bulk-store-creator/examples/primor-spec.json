@@ -1,0 +1,51 @@
+{
+  "headquarters": {
+    "name": "Primor",
+    "slug": "primor",
+    "description": "Primor Matriz — Central de Produção e Catálogo Online."
+  },
+  "branches": [
+    { "name": "P1", "slug": "primor-p1", "branchCode": "P1" },
+    { "name": "P2", "slug": "primor-p2", "branchCode": "P2" },
+    { "name": "P3", "slug": "primor-p3", "branchCode": "P3" },
+    { "name": "P4", "slug": "primor-p4", "branchCode": "P4" },
+    { "name": "P5", "slug": "primor-p5", "branchCode": "P5" }
+  ],
+  "admins": [
+    { "email": "willian.o.jesus@gmail.com", "fullName": "Willian Rosa Oliveira Lima de Jesus", "role": "STORE_ADMIN" },
+    { "email": "priscilamnmiranda@gmail.com", "fullName": "Priscila Miranda", "role": "STORE_ADMIN" }
+  ],
+  "suppliers": [
+    { "key": "cozinha_a", "corporateName": "Cozinha A Produção de Alimentos Ltda", "tradeName": "Cozinha A" },
+    { "key": "cozinha_b", "corporateName": "Cozinha B Gastronomia e Refeições Ltda", "tradeName": "Cozinha B" }
+  ],
+  "categories": [
+    { "key": "bebidas", "name": "Bebidas & Sucos", "slug": "bebidas-sucos" },
+    { "key": "marmitas", "name": "Marmitas & Refeições", "slug": "marmitas-refeicoes" }
+  ],
+  "defaultExpirationDate": "2026-12-31",
+  "products": [
+    {
+      "name": "Refrigerante Lata",
+      "sku": "PRM-BEB-001",
+      "categoryKey": "bebidas",
+      "supplierKey": "cozinha_a",
+      "costPrice": 3.50,
+      "sellingPrice": 6.00,
+      "headquartersQty": 100,
+      "branchQty": 100,
+      "expirationDate": "2026-12-31"
+    },
+    {
+      "name": "Marmita A",
+      "sku": "PRM-MAR-A15",
+      "categoryKey": "marmitas",
+      "supplierKey": "cozinha_a",
+      "costPrice": 8.50,
+      "sellingPrice": 15.00,
+      "headquartersQty": 100,
+      "branchQty": 10,
+      "expirationDate": "2026-12-31"
+    }
+  ]
+}
