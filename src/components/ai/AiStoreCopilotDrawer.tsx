@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -203,30 +204,32 @@ export const AiStoreCopilotDrawer: React.FC = () => {
 
   return (
     <>
-      {/* Botão Flutuante Global no Canto Inferior Direito */}
-      <div className="fixed bottom-4 right-4 z-40">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          aria-label="Abrir Chatbot Copiloto de IA da Loja"
-          className="group flex items-center gap-2.5 rounded-full bg-gradient-to-r from-violet-600 to-primary px-4 py-3 text-xs font-bold text-white shadow-lg shadow-violet-600/30 transition hover:scale-105"
-        >
-          <Sparkles className="h-4 w-4 animate-pulse" />
-          <span className="hidden sm:inline">Copiloto IA da Loja</span>
-        </button>
-      </div>
+      {/* Botão na Barra Superior (ao lado do seletor de idioma) */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(true)}
+        aria-label="Abrir Chatbot Copiloto de IA da Loja"
+        title="Abrir Copiloto IA da Loja"
+        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95 shrink-0 cursor-pointer"
+      >
+        <Sparkles className="h-3.5 w-3.5 shrink-0" />
+        <span className="hidden sm:inline">Copiloto IA da Loja</span>
+        <span className="sm:hidden">Copiloto IA</span>
+      </button>
 
-      {/* Drawer / Modal Tela Cheia do Chatbot */}
-      {isOpen && (
-        <div className="fixed inset-0 z-[90] flex items-end sm:items-stretch justify-end bg-black/50 backdrop-blur-xs">
-          <div
-            className={cn(
-              'flex w-full flex-col border-t sm:border-t-0 sm:border-l border-border bg-surface shadow-2xl transition-all duration-150 overflow-hidden',
-              isFullScreen
-                ? 'h-dvh max-w-none rounded-none'
-                : 'h-[82dvh] sm:h-full max-w-lg rounded-t-2xl sm:rounded-none'
-            )}
-          >
+      {/* Drawer / Modal Tela Cheia do Chatbot renderizado no body via Portal */}
+      {isOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className="fixed inset-0 z-[90] flex items-end sm:items-stretch justify-end bg-black/50 backdrop-blur-xs">
+            <div
+              className={cn(
+                'flex w-full flex-col border-t sm:border-t-0 sm:border-l border-border bg-surface shadow-2xl transition-all duration-150 overflow-hidden',
+                isFullScreen
+                  ? 'h-dvh max-w-none rounded-none'
+                  : 'h-[82dvh] sm:h-full max-w-lg rounded-t-2xl sm:rounded-none'
+              )}
+            >
             {/* Header */}
             <div className="flex items-center justify-between gap-2 border-b border-border bg-gradient-to-r from-violet-600/15 via-primary/10 to-transparent px-3 sm:px-4 py-2.5 sm:py-3 shrink-0 min-w-0">
               <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
@@ -460,7 +463,8 @@ export const AiStoreCopilotDrawer: React.FC = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

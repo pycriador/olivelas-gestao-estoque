@@ -14,6 +14,16 @@ classification: Confirmed
 
 ## 2026-11-04
 
+- **Melhorias no PDV (`/sales`) Mobile & Desktop e Botão "Copiloto IA da Loja" na Barra Superior** (`src/pages/SalesPage.tsx`, `src/layouts/AppLayout.tsx`, `src/components/ai/AiStoreCopilotDrawer.tsx`, `docs/pt-BR/changelog.md`):
+  - **PDV (`/sales`) no Mobile — 5 Itens por Página, Persistência de Filtros e Dock Fixo de Checkout**:
+    - O catálogo de produtos em telas mobile (`< 1024px`) exibe por padrão **5 itens por página** (`pageSize = 5`, com opções `[5, 12, 24, 48, 96]` na paginação).
+    - Todos os filtros aplicados no PDV (`stock`: `Com estoque` / `Todos` / `Zerados`, `category`, `search` e `pageSize`) são salvos automaticamente em `localStorage` (`olivelas_pos_filters_v1`) e sincronizados com a URL, mantendo-se preservados ao navegar entre telas, recarregar a página ou concluir uma venda.
+    - A área de fechamento (**Cliente**, **Pagamento**, **Total a Pagar** e botão **Finalizar Venda**) permanece fixa na parte inferior da tela mobile (`flex-shrink-0`), enquanto o restante da interface acima rola em seu próprio container (`flex-1 min-h-0 overflow-y-auto`), respeitando integralmente o espaço fixo sem sobreposição.
+  - **PDV (`/sales`) no Desktop — Catálogo e Carrinho Ocupando Até o Final da Página**:
+    - Na visão desktop (`lg:grid-cols-12 lg:flex-1 lg:min-h-0`), tanto a coluna de **Catálogo de Produtos** (8 colunas) quanto a coluna de **Carrinho & Checkout** (4 colunas) utilizam `lg:h-full lg:flex-1 lg:min-h-0`, estendendo os cards até o final da tela com rolagem interna independente e rodapés (paginação à esquerda e fechamento de venda à direita) alinhados na base da página.
+  - **Botão "Copiloto IA da Loja" na Barra Superior ao Lado do Idioma (`src/layouts/AppLayout.tsx`, `src/components/ai/AiStoreCopilotDrawer.tsx`)**:
+    - Removido o botão flutuante do canto inferior direito (`fixed bottom-4 right-4`) e posicionado o botão **"Copiloto IA da Loja"** diretamente no `<header>` superior do `AppLayout`, imediatamente ao lado do seletor de idioma (`<LanguageSelector />`), abrindo a gaveta/modal do Copiloto via `createPortal(..., document.body)`.
+
 - **Correção do Botão e do Modo "Tela Cheia" dos Agentes de IA na Versão Mobile** (`src/components/ai/AiModuleInsightCard.tsx`, `src/components/ai/AiStoreCopilotDrawer.tsx`, `docs/pt-BR/changelog.md`):
   - **Renderização via Portal (`createPortal(..., document.body)`) em `AiModuleInsightCard.tsx`**: o modal de **Tela Cheia** dos agentes de IA de módulo passou a ser montado diretamente no `document.body` com `fixed inset-0 z-[100] h-dvh w-screen overflow-hidden` e bloqueio de rolagem do fundo (`document.body.style.overflow = 'hidden'`), evitando que containers pais com `animate-in` (CSS transform) ou `overflow-x-hidden` prendessem ou cortassem a visualização em tela cheia no celular.
   - **Header Compacto e Sem Estouro Horizontal no Mobile (`AiModuleInsightCard.tsx` e `AiStoreCopilotDrawer.tsx`)**: o seletor de Persona passou a usar `min-w-0 flex-1 truncate` e rótulos enxutos (`Persona: ${p.name}`), eliminando o estouro horizontal causado pela descrição longa de tom (`${p.tone}`) dentro do `<select>` nativo; os botões **Analisar IA**, **Tela Cheia** e **Sair da Tela Cheia / Voltar** receberam `shrink-0 whitespace-nowrap` para nunca quebrarem em duas linhas no mobile.

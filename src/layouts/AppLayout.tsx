@@ -244,7 +244,6 @@ export function AppLayout() {
     <div className="h-dvh max-h-dvh bg-background flex flex-col md:flex-row overflow-hidden">
       <GlobalCommandK />
       <EmployeePinResetModal />
-      <AiStoreCopilotDrawer />
 
       {/* Mobile Backdrop */}
       {sidebarOpen && (
@@ -492,7 +491,7 @@ export function AppLayout() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="min-h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 py-2 sm:px-4 flex flex-col gap-2 md:min-h-12 md:flex-row md:items-center md:justify-between md:gap-3 md:py-1.5">
+        <header className="min-h-12 border-b border-border bg-surface/80 backdrop-blur-md flex-shrink-0 z-30 px-3 py-1.5 sm:px-4 flex flex-wrap items-center justify-between gap-2 md:gap-3">
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -507,7 +506,8 @@ export function AppLayout() {
           </div>
 
           {/* Right Header Utilities */}
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2">
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
+            <AiStoreCopilotDrawer />
             <LanguageSelector />
             <Link
               to="/settings#theme"
