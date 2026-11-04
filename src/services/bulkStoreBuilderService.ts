@@ -739,7 +739,7 @@ ${trimmed}`
         `Configurando filial "${branchSpec.name}", fornecedores, produtos, fotos e estoque...`,
         completedUnits / totalUnits
       )
-      const branchStore = await this.upsertStoreRecord(branchSpec, hqStore.id)
+      const branchStore = await this.upsertStoreRecord(branchSpec, hqStore.id, hqStore.name)
       await this.populateSingleUnit(
         branchStore.id,
         branchStore.name,
@@ -780,15 +780,25 @@ ${trimmed}`
       whatsapp?: string
       description?: string
     },
-    parentStoreId: string | null
+    parentStoreId: string | null,
+    parentStoreName: string | null = null
   ): Promise<{ id: string; name: string; slug: string; branchCode: string }> {
     const isBranch = Boolean(parentStoreId)
+    const rawName = (unitSpec.name || '').trim()
     const slug = slugifyText(
-      unitSpec.slug || (isBranch ? `primor-${unitSpec.name}` : unitSpec.name)
+      unitSpec.slug || (isBranch ? `primor-${rawName}` : rawName)
     )
     const branchCode = isBranch
-      ? (unitSpec.branchCode || unitSpec.name).trim().toUpperCase()
+      ? (unitSpec.branchCode || rawName).trim().toUpperCase()
       : ''
+    const displayName =
+      isBranch &&
+      parentStoreName &&
+      !rawName.toLowerCase().startsWith(parentStoreName.toLowerCase())
+        ? rawName.toLowerCase().includes('filial')
+          ? `${parentStoreName} - ${rawName}`
+          : `${parentStoreName} - Filial ${rawName}`
+        : rawName
 
     const { data: existing } = await supabase
       .from('stores')
@@ -800,7 +810,7 @@ ${trimmed}`
       const { data: updated, error: updErr } = await supabase
         .from('stores')
         .update({
-          name: unitSpec.name,
+          name: displayName,
           is_branch: isBranch,
           parent_store_id: parentStoreId,
           branch_code: isBranch ? branchCode : null,
@@ -825,7 +835,7 @@ ${trimmed}`
     const { data: created, error: createErr } = await supabase
       .from('stores')
       .insert({
-        name: unitSpec.name,
+        name: displayName,
         slug,
         document: unitSpec.document || null,
         email: unitSpec.email || null,

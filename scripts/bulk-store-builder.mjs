@@ -395,10 +395,22 @@ async function ensureUserAndAdminProfile(client, adminSpec) {
   return { userId, email, fullName };
 }
 
-async function upsertStoreUnit(client, unitSpec, parentStoreId = null) {
+async function upsertStoreUnit(client, unitSpec, parentStoreId = null, parentStoreName = null) {
   const isBranch = Boolean(parentStoreId || unitSpec.isBranch);
-  const slug = slugify(unitSpec.slug || (parentStoreId ? `filial-${unitSpec.name}` : unitSpec.name));
-  const branchCode = unitSpec.branchCode ? String(unitSpec.branchCode).trim().toUpperCase() : isBranch ? String(unitSpec.name).trim().toUpperCase() : null;
+  const rawName = String(unitSpec.name || '').trim();
+  const slug = slugify(unitSpec.slug || (parentStoreId ? `filial-${rawName}` : rawName));
+  const branchCode = unitSpec.branchCode
+    ? String(unitSpec.branchCode).trim().toUpperCase()
+    : isBranch
+      ? rawName.toUpperCase()
+      : null;
+
+  const displayName =
+    isBranch && parentStoreName && !rawName.toLowerCase().startsWith(parentStoreName.toLowerCase())
+      ? rawName.toLowerCase().includes('filial')
+        ? `${parentStoreName} - ${rawName}`
+        : `${parentStoreName} - Filial ${rawName}`
+      : rawName;
 
   const existing = await client.query(
     `SELECT id FROM public.stores WHERE slug = $1 LIMIT 1`,
@@ -424,7 +436,7 @@ async function upsertStoreUnit(client, unitSpec, parentStoreId = null) {
            updated_at = NOW()
        WHERE id = $10`,
       [
-        unitSpec.name,
+        displayName,
         unitSpec.document || null,
         unitSpec.email || null,
         unitSpec.phone || null,
@@ -444,7 +456,7 @@ async function upsertStoreUnit(client, unitSpec, parentStoreId = null) {
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
       RETURNING id`,
       [
-        unitSpec.name,
+        displayName,
         slug,
         unitSpec.document || null,
         unitSpec.email || null,
@@ -461,7 +473,7 @@ async function upsertStoreUnit(client, unitSpec, parentStoreId = null) {
 
   return {
     id: storeId,
-    name: unitSpec.name,
+    name: displayName,
     slug,
     isBranch,
     parentStoreId,
@@ -935,7 +947,7 @@ export async function runBulkStoreBuilder(options = {}) {
     // 4. Criar/Atualizar e Popular todas as Filiais vinculadas à Matriz
     const branchSummaries = [];
     for (const branchSpec of spec.branches || []) {
-      const branchStore = await upsertStoreUnit(client, branchSpec, hqStore.id);
+      const branchStore = await upsertStoreUnit(client, branchSpec, hqStore.id, hqStore.name);
       const bSummary = await populateStoreCatalogAndInventory({
         client,
         store: branchStore,
