@@ -5,7 +5,7 @@ type: Contract
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-03
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 source:
@@ -75,6 +75,7 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 | `set_batch_disposition` / `clear_batch_disposition` | `inventoryService.ts` |
 | `generate_stock_alerts` | `notificationService.ts` |
 | `global_admin_delete` | `globalAdminService.ts` |
+| `global_admin_hard_delete_store` | `storeService.ts` (`deleteStorePermanently`) |
 | `global_admin_delete_platform_user` | `userService.ts` |
 | `get_ai_report` | Agentes externos / IA via REST (`GET`/`POST /rest/v1/rpc/get_ai_report`) e Explorador de Escopos em `GlobalApiKeyHbacPanel.tsx` |
 | `assign_user_permission_group` | `saasBillingService.ts` |

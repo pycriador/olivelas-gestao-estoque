@@ -5,7 +5,7 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-03
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 source:
@@ -16,7 +16,7 @@ standard: Documentation Standard v1.0 (adapted)
 # Documentação Olivelas (pt-BR)
 
 > Status: DRAFT  
-> Fonte: código e SQL deste repositório, inventariados e sincronizados até 2026-11-03 (migrations `01` a `28`).
+> Fonte: código e SQL deste repositório, inventariados e sincronizados até 2026-11-07 (migrations `01` a `29`).
 
 ## Como ler (progressive disclosure)
 
@@ -49,6 +49,7 @@ Contexto (overview, ai-context)
 | [test-evidence.md](test-evidence.md) | Evidence | Caderno Executivo de Testes com 50 prints (Desktop & Mobile) |
 | [test-evidence.html](test-evidence.html) | Evidence | Dashboard Interativo de Evidências, Filtros e Relatório de APIs |
 | [test-automation/](../../test-automation/ROTEIRO_AUTOMACAO_TESTES_E2E.md) | Operation / QA | Roteiro Completo de Automação de Testes E2E, Runner e Resultados |
+| [bulk-store-creator](../../.agents/skills/bulk-store-creator/SKILL.md) | Skill / Automation | Skill e CLI (`scripts/bulk-store-builder.mjs`) para Criação de Rede de Lojas em Lote (Matriz, Filiais, Produtos, Fotos e Estoque) |
 | [api-ai-integration.md](api-ai-integration.md) | Reference | Endpoints REST, tokens HBAC e relatórios para IA externa |
 | [guides/ui-desktop.md](guides/ui-desktop.md) | Reference | Como replicar a lógica de interface **desktop** |
 | [guides/ui-mobile.md](guides/ui-mobile.md) | Reference | Como replicar a lógica de interface **mobile** |

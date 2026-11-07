@@ -5,7 +5,7 @@ type: Security
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-03
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 source:

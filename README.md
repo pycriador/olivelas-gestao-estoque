@@ -46,8 +46,9 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
   - Fluxo estrito de **Aprovador de Baixa de Estoque (`STOCK_APPROVER`)** validado no PostgreSQL (`can_user_approve_writeoff`): operadores sem alçada enviam solicitações para a fila pendente (`stock_writeoff_requests`), e somente aprovadores autorizados (respeitando seu limite financeiro `max_writeoff_value`) podem aprovar ou rejeitar a baixa (`review_stock_writeoff_request`).
 - **Controle de Lotes, FEFO & Validades (`/expiration`, `/batches`):**
   - Rastreamento por lote (`stock_batches`), alertas antecipados (30d/15d/7d/vencidos), avisos inteligentes da IA ao Administrador da loja, tratativas operacionais (`set_batch_disposition`) e sugestão automática de venda priorizando o lote mais próximo do vencimento.
-- **Hierarquia Matriz → Filiais & Remessa Sem Venda (`/stores`, `/inventory`, `/global-admin?tab=stores`):**
-  - Exibição hierárquica onde as **Filiais (`└─ Filial`)** ficam agrupadas abaixo de sua respectiva **Matriz** (`parent_store_id`).
+- **Hierarquia Matriz → Filiais, Seletor em Árvore & Criação de Lojas em Lote com IA (`/stores`, `/inventory`, `/global-admin?tab=stores`, `/ai-copilot`):**
+  - Exibição hierárquica em árvore onde as **Filiais (`└─ Filial`)** ficam agrupadas abaixo de sua respectiva **Matriz** (`parent_store_id`), tanto nas tabelas de gestão quanto no seletor de unidade no topo da barra lateral (`AppLayout`), com busca instantânea e nomenclatura composta padronizada (`{Matriz} - Filial {Código}`, ex.: `Primor - Filial P1`).
+  - **Criação de Rede de Lojas em Lote (CLI + Skill do Agente + Modal Web com IA da Loja):** provisionamento automatizado e idempotente de Loja Matriz, Filiais subordinadas, Administradores (`STORE_ADMIN`), Fornecedores, Categorias, Produtos, Fotos sem direitos autorais (Unsplash CC0 salvas no Supabase Storage) e Saldos/Lotes com validade FEFO via script CLI (`npm run store:bulk` / `npm run store:primor`), Skill `.agents/skills/bulk-store-creator/SKILL.md` ou botão **"Criação em Lote (IA)"** na interface web (`BulkStoreAiBuilderModal`).
   - Transferência atômica de produtos da Matriz para a Filial **sem necessidade de registrar uma venda** (`execute_stock_transfer_to_branch`), sincronizando automaticamente categoria, produto mestre e lote com validade na filial destino para venda imediata no PDV da filial.
 - **PDV Frente de Caixa com Pesagem Fracionada `KG`/`g` & Edição de Pedidos (`/sales`, `/orders`):**
   - Checkout rápido com atalhos de teclado, código de barras, modal interativo de pesagem para itens em `KG`/gramas (`WeightInputModal` por peso ou valor em `R$`), associação automática de `"Cliente Genérico"` quando nenhum cliente é informado, cadastro rápido de cliente (`CustomerQuickCreateModal`), sugestões de cross-sell por IA e reabertura de pedidos existentes para edição no PDV (`/sales?editOrder=:id`) preservando o número do pedido original.
@@ -102,6 +103,9 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
 
 ```text
 olivelas-gestao-estoque/
+├── .agents/
+│   └── skills/
+│       └── bulk-store-creator/     # Skill de Criação de Rede de Lojas em Lote (Matriz, Filiais, Produtos, Fotos e Estoque)
 ├── .github/
 │   └── workflows/
 │       └── deploy.yml              # Pipeline CI/CD GitHub Actions -> GitHub Pages
@@ -109,10 +113,14 @@ olivelas-gestao-estoque/
 │   └── pt-BR/                      # Documentação viva de engenharia, arquitetura, contratos, segurança e QA
 ├── public/
 │   └── 404.html                    # Script de resolução de subpaths SPA para GitHub Pages
+├── scripts/
+│   ├── bulk-store-builder.mjs      # CLI & Orquestrador IA para criação em massa de Matriz, Filiais, Produtos e Estoque
+│   └── specs/
+│       └── primor.json             # Especificação completa da rede Matriz Primor + Filiais P1 a P5
 ├── src/
 │   ├── components/
-│   │   ├── admin/                  # GlobalBackupPanel, GlobalDbExplorerPanel, GlobalApiKeyHbacPanel, GlobalSaasBillingPanel, UserPermissionsAndPricingModal
-│   │   ├── ai/                     # AiModuleInsightCard (IA embarcada nas telas), AiStoreCopilotDrawer (Chatbot flutuante global)
+│   │   ├── admin/                  # GlobalBackupPanel, GlobalDbExplorerPanel, GlobalApiKeyHbacPanel, GlobalSaasBillingPanel, BulkStoreAiBuilderModal, UserPermissionsAndPricingModal
+│   │   ├── ai/                     # AiModuleInsightCard (IA embarcada nas telas), AiStoreCopilotDrawer (Chatbot no header), AiMarkdownContent
 │   │   ├── commercial/             # InteractivePlanBuilderSection (Configurador Interativo de Planos + Adicionais Avulsos + Módulos de IA + Pré-Cadastro)
 │   │   ├── common/                 # ThemeToggle, LanguageSelector, CommandK, EmptyState, ResponsiveTable, PageHeader
 │   │   ├── inventory/              # StockWriteoffModal, BulkStockWriteoffModal, StockBranchTransferModal, StockImportModal, ProductStockDetailsModal
@@ -127,12 +135,12 @@ olivelas-gestao-estoque/
 │   ├── lib/supabase/               # Client singleton com tipagem do banco
 │   ├── pages/                      # Dashboard, Copiloto IA (/ai-copilot), Lojas, Produtos, Estoque, Validades, PDV, Pedidos, Clientes, Compras, Relatórios, Global Admin, Central de IA (/global-admin/ai), Novos Contratos e Páginas Dedicadas
 │   ├── routes/                     # AppRoutes, ProtectedRoute, PermissionGate
-│   ├── services/                   # Camada de serviços (aiOrchestrator, auth, store, product, inventory, order, customer, savedView, report, permissionGroup, contract, apiKey, apiIntegrator, backup, etc.)
+│   ├── services/                   # Camada de serviços (aiOrchestrator, bulkStoreBuilder, auth, store, product, inventory, order, customer, savedView, report, permissionGroup, contract, apiKey, apiIntegrator, backup, etc.)
 │   ├── stores/                     # authStore, cartStore, themeStore
 │   ├── types/                      # database.types.ts, ai.types.ts, permissionGroup.types.ts, auth, store, product, inventory, customer, report, contract, apiKey, backup
 │   └── utils/                      # formatters, currency, barcode, dates, export, importParser, productUtils, errorHandler
 ├── supabase/
-│   ├── migrations/                 # 28 migrations versionadas e incrementais SQL (20260925..01 a 20261103..28)
+│   ├── migrations/                 # 29 migrations versionadas e incrementais SQL (20260925..01 a 20261103..29)
 │   └── seed/                       # Roles & Permissões iniciais
 ├── test-automation/                # Roteiro E2E, casos de teste JSON e runner automatizado
 ├── .env.example
@@ -194,6 +202,16 @@ Cada loja ou filial cadastrada possui uma URL exclusiva (`/store/{slug}`) acess�
 5. **Verificação de TypeScript e Build:**
    ```bash
    npm run build
+   ```
+
+6. **Criação de Rede de Lojas em Lote (Matriz + Filiais + Produtos + Estoque via CLI ou IA):**
+   ```bash
+   # Executar a partir de um arquivo de especificação JSON (ex.: Rede Primor + Filiais P1 a P5)
+   npm run store:primor
+
+   # Ou informar qualquer especificação JSON ou prompt em linguagem natural
+   npm run store:bulk -- --spec scripts/specs/primor.json
+   npm run store:bulk -- --prompt "Criar matriz Primor com filiais P1 a P5, fornecedores Cozinha A e Cozinha B..."
    ```
 
 ---

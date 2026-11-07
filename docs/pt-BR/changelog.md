@@ -5,12 +5,19 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-03
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 ---
 
 # Changelog da documentação
+
+## 2026-11-07
+
+- **Padronização de Nomenclatura de Filiais no Banco (`{Matriz} - Filial {Código}`), Sincronização Completa do `package-lock.json` e Atualização Geral da Documentação & `README.md`** (`scripts/bulk-store-builder.mjs`, `src/services/bulkStoreBuilderService.ts`, `package-lock.json`, `README.md`, `docs/pt-BR/README.md`, `docs/pt-BR/ai-context.md`, `docs/pt-BR/overview.md`, `docs/pt-BR/architecture.md`, `docs/pt-BR/ui-map.md`, `docs/pt-BR/contracts.md`, `docs/pt-BR/frontend-inventory.md`, `docs/pt-BR/backend-inventory.md`, `docs/pt-BR/security.md`, `docs/pt-BR/operations.md`, `docs/pt-BR/changelog.md`):
+  - **Padronização no Banco (`public.stores`) e nos Criadores em Lote**: as filiais da rede Primor foram atualizadas no banco para `Primor - Filial P1` até `Primor - Filial P5` (`branch_code: P1..P5`), e tanto o CLI (`scripts/bulk-store-builder.mjs`) quanto o serviço web (`src/services/bulkStoreBuilderService.ts`) passaram a gravar automaticamente o nome composto `{Matriz} - Filial {Nome}` quando a filial é informada apenas pelo código curto.
+  - **Sincronização do `package-lock.json` para o CI/CD (`npm ci`)**: sincronizado o lockfile com o pacote `pg` para execução limpa do workflow `.github/workflows/deploy.yml` no GitHub Pages.
+  - **Atualização Geral da Árvore de Documentação e `README.md`**: consolidados todos os documentos de arquitetura, inventário frontend/backend, contratos, mapa de UI, operações e `README.md` principal.
 
 ## 2026-11-04
 

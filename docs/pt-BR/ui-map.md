@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-10-29
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 source:
@@ -48,6 +48,12 @@ Raiz: `h-dvh max-h-dvh flex flex-col md:flex-row overflow-hidden`.
 Command palette (`GlobalCommandK`) está sempre montada no layout.
 
 Tema da loja: `applyStoreTheme` quando há `storeId` ≠ `'all'`.
+
+### Seletor Hierárquico de Lojas e Filiais (`AppLayout`)
+
+No topo da barra lateral (`AppLayout.tsx`), o seletor de unidade ativa exibe:
+- **Botão da Unidade Ativa**: ícone `Building2` (Matriz) ou `GitBranch` (Filial), título hierárquico formatado (`formatStoreHierarchyName` — ex.: `Primor` para a Matriz e `Primor - Filial P1` para a Filial), badge indicando `Matriz • N filiais` ou `Filial • P1` e o papel do usuário.
+- **Dropdown em Árvore (`Matriz -> └─ Filial`)**: agrupa cada Loja Matriz seguida por suas Filiais vinculadas indentadas (`└─`), ordenadas numericamente (`P1, P2, P3, P4, P5`), com campo de busca rápida (`Buscar matriz ou filial...`) e contador de unidades e redes.
 
 ### Estrutura do Menu Lateral (`AppLayout`)
 

@@ -5,7 +5,7 @@ type: Operation
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-09-27
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 source:
@@ -41,7 +41,7 @@ Aplicar SQL: usar o fluxo do projeto Supabase (Dashboard SQL ou CLI). Este repo 
 Workflow `.github/workflows/deploy.yml`:
 
 - Trigger: push `main`/`master` ou `workflow_dispatch`.
-- Job `build-and-test`: Node 20, `npm ci`, `npx tsc --noEmit`, `npm run lint || true` (lint **não** falha o job), `npm run build`.
+- Job `build-and-test`: Node 22, `npm ci`, `npx tsc --noEmit`, `npm run lint || true` (lint **não** falha o job), `npm run build`.
 - Falha o build se `VITE_SUPABASE_URL` vazio/placeholder ou key placeholder.
 - `VITE_BASE_PATH: "/${{ github.event.repository.name }}/"`.
 - Artifact `dist/` → `actions/deploy-pages@v4`.

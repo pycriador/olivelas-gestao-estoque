@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-03
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 source:
@@ -55,7 +55,7 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 | SPA estática | `dist/` após `npm run build` | UI |
 | Projeto Supabase | migrations em `supabase/migrations/` | Auth, DB, Storage, RPCs, Realtime, HBAC |
 
-`FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261103000028`.
+`FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261103000029`.
 
 ## Componentes de responsabilidade (não cada arquivo)
 
@@ -87,10 +87,12 @@ src/
   lib/            supabase/client.ts, storeThemes.ts
   pages/          36 páginas (incluindo Copilot IA da Loja, Central de IA no Global Admin, Novos Contratos & Gerenciador de Contratos e rotas dedicadas de edição do Global Admin e Equipe)
   routes/         AppRoutes, ProtectedRoute, PermissionGate
-  services/       25 services de domínio (incluindo aiOrchestratorService.ts)
+  services/       26 services de domínio (incluindo aiOrchestratorService.ts e bulkStoreBuilderService.ts)
   stores/         authStore, cartStore, themeStore
   types/          database.types.ts e tipos de domínio
   utils/          formatters, currency, barcode, dates, export, importParser, productUtils, errorHandler
+scripts/          bulk-store-builder.mjs, specs/primor.json
+.agents/skills/   bulk-store-creator/SKILL.md
 ```
 
 Alias `@` → `./src` (`vite.config.ts`).

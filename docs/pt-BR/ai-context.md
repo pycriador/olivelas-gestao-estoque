@@ -5,7 +5,7 @@ type: Context
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-03
+updated: 2026-11-07
 language: pt-BR
 classification: Confirmed
 related:
@@ -53,7 +53,9 @@ SPA React (Vite) de gestão SaaS multi-loja e multi-filial de estoque, PDV, BI, 
   - **5 Módulos Comerciais de IA (Acréscimo nas Lojas)**: `MOD_AI_COPILOT_CHAT` (R$ 49,90/mês), `MOD_AI_SALES_CRM` (R$ 39,90/mês), `MOD_AI_INVENTORY_EXPIRATION` (R$ 34,90/mês), `MOD_AI_PURCHASING_TRENDS` (R$ 34,90/mês) e `MOD_AI_BI_INSIGHTS` (R$ 44,90/mês), na categoria `INTELIGENCIA_ARTIFICIAL`, somando-se automaticamente ao valor mensal acordado nos planos das lojas (`/global-admin/users/:userId/permissions` e Landing Page).
   - **Context Prompt Injection, Escudo Anti-Injection, Fallback em Cascata e Personas (`public.ai_personas`, `public.ai_store_configs`)**: injeção dinâmica de métricas verificadas da loja (`StoreAiContextSnapshot`), bloqueio de jailbreak/extração de segredos, personas configuráveis (`STRATEGIC_CFO`, `COMMERCIAL_GROWTH`, `INVENTORY_AUDITOR`, `PRACTICAL_COPILOT`) e fallback multicamada (`Modelo Principal Gemini -> Modelo Fast -> Provedor Backup -> Motor Analítico Determinístico Local`).
   - **Copiloto Chatbot & Cards de IA em Todos os Módulos**: página `/ai-copilot` (`AiCopilotPage`), gaveta flutuante global (`AiStoreCopilotDrawer`) e componente `<AiModuleInsightCard />` integrado em `/dashboard`, `/expiration`, `/customers`, `/sales`, `/purchases`, `/inventory` e `/reports`.
-- Hierarquia Matriz → Filiais: lojas filiais possuem `is_branch = true` e `parent_store_id` apontando para a Matriz. Transferência de lotes sem venda usa a RPC `execute_stock_transfer_to_branch`.
+- Hierarquia Matriz → Filiais e Nomenclatura Composta (`formatStoreHierarchyName`, `AppLayout.tsx`, `StoresPage.tsx`): lojas filiais possuem `is_branch = true` e `parent_store_id` apontando para a Matriz. No banco e na interface, filiais com códigos curtos (`P1`, `P2`, etc.) são padronizadas com o nome da Matriz (`Primor - Filial P1` / `Primor • Filial P1`) e exibidas agrupadas em árvore (`Matriz -> └─ Filial`) no seletor do topo da barra lateral (com busca rápida), nas páginas de lojas e nos filtros de `/dashboard` e `/reports`. Transferência de lotes sem venda usa a RPC `execute_stock_transfer_to_branch`.
+- Criação de Rede de Lojas em Lote (`scripts/bulk-store-builder.mjs`, `.agents/skills/bulk-store-creator/SKILL.md`, `src/services/bulkStoreBuilderService.ts`, `src/components/admin/BulkStoreAiBuilderModal.tsx`): provisionamento automatizado e idempotente de Loja Matriz, Filiais vinculadas, Administradores `STORE_ADMIN`, Fornecedores, Categorias, Produtos ativos no catálogo online, Fotos sem direitos autorais no bucket `products` e Saldos/Lotes com validade FEFO via especificação JSON (`scripts/specs/primor.json`) ou prompt em linguagem natural interpretado pela IA da Loja.
+- Exclusão Definitiva de Lojas e Filiais (`global_admin_hard_delete_store`, migration `20261103000029_global_admin_hard_delete_store.sql`): permite ao Global Admin remover permanentemente lojas ou filiais e suas dependências em ordem segura.
 - Alçada de Baixa de Estoque: baixas manuais (`LOSS` ou `ADJUSTMENT` negativo) exigem validação por `can_user_approve_writeoff`; operadores sem alçada abrem solicitações em `stock_writeoff_requests` revisadas via `review_stock_writeoff_request`.
 - Visões Salvas por Loja/Filial: filtros de status (múltipla seleção) e período em `/customers` são persistidos no banco por `store_id` na tabela `public.store_saved_views` (`savedViewService.ts`).
 - Reset Obrigatório de PIN & Política de Complexidade (`/team/:employeeId`): `store_users.require_pin_reset` e `store_users.pin_requirements` (JSONB) com validação e troca via RPC `complete_employee_pin_reset`.
