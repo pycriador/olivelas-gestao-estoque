@@ -27,6 +27,7 @@ import { GlobalApiKeyHbacPanel } from '@/components/admin/GlobalApiKeyHbacPanel'
 import { BulkStoreAiBuilderModal } from '@/components/admin/BulkStoreAiBuilderModal'
 import { DEFAULT_PERMISSION_MODULES } from '@/constants/screenDependencies'
 import { formatCurrency } from '@/utils/currency'
+import { getPosCustomerPolicy } from '@/utils/posCustomerConfig'
 import {
   Store,
   Search,
@@ -1201,6 +1202,29 @@ export function GlobalAdminDashboardPage() {
                                     label: 'Acessar Painel Operacional da Loja',
                                     icon: <Eye className="h-3.5 w-3.5 text-emerald-500" />,
                                     onSelect: () => handleEnterStoreContext(st),
+                                  },
+                                  {
+                                    key: 'toggle-generic-customer-pos',
+                                    label: getPosCustomerPolicy(st.theme_config, st.id)
+                                      .genericCustomerReleasedByAdmin
+                                      ? 'Bloquear Cliente Genérico no PDV (Exigir Cadastro)'
+                                      : 'Liberar Cliente Genérico no PDV (1 por loja)',
+                                    icon: <Users className="h-3.5 w-3.5 text-primary" />,
+                                    onSelect: async () => {
+                                      const current = getPosCustomerPolicy(st.theme_config, st.id)
+                                      const nextReleased = !current.genericCustomerReleasedByAdmin
+                                      await storeService.updateStorePosCustomerPolicy(st.id, {
+                                        genericCustomerReleasedByAdmin: nextReleased,
+                                        posCustomerMode: nextReleased ? 'ALLOW_GENERIC' : 'REQUIRED',
+                                      })
+                                      queryClient.invalidateQueries({ queryKey: ['all-stores-admin'] })
+                                      queryClient.invalidateQueries({ queryKey: ['store-settings', st.id] })
+                                      setSuccessMessage(
+                                        nextReleased
+                                          ? `Cliente Genérico liberado no PDV para a loja "${st.name}"!`
+                                          : `Cliente Genérico bloqueado (cadastro obrigatório ativo) para a loja "${st.name}".`
+                                      )
+                                    },
                                   },
                                   {
                                     key: 'store-licensing',

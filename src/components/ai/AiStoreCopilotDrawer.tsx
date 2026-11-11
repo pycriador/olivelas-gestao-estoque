@@ -82,6 +82,32 @@ export const AiStoreCopilotDrawer: React.FC = () => {
   )
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [viewportRect, setViewportRect] = useState<{
+    height: number
+    offsetTop: number
+  } | null>(null)
+
+  useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const updateVv = () => {
+      setViewportRect({
+        height: Math.round(vv.height),
+        offsetTop: Math.round(vv.offsetTop),
+      })
+    }
+
+    updateVv()
+    vv.addEventListener('resize', updateVv)
+    vv.addEventListener('scroll', updateVv)
+    return () => {
+      vv.removeEventListener('resize', updateVv)
+      vv.removeEventListener('scroll', updateVv)
+      setViewportRect(null)
+    }
+  }, [isOpen])
 
   const loadSession = useCallback(async () => {
     const sid = toDeterministicUuid(`drawer-${storeId || 'global'}`)
@@ -204,30 +230,45 @@ export const AiStoreCopilotDrawer: React.FC = () => {
 
   return (
     <>
-      {/* Botão na Barra Superior (ao lado do seletor de idioma) */}
+      {/* Botão na Barra Superior (ao lado do seletor de idioma): apenas ícone de estrelinha no mobile */}
       <button
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label="Abrir Chatbot Copiloto de IA da Loja"
         title="Abrir Copiloto IA da Loja"
-        className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary px-2.5 py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95 shrink-0 cursor-pointer"
+        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-violet-600 to-primary p-1.5 sm:px-2.5 sm:py-1.5 text-xs font-bold text-white shadow-xs transition hover:opacity-95 shrink-0 cursor-pointer"
       >
-        <Sparkles className="h-3.5 w-3.5 shrink-0" />
+        <Sparkles className="h-4 w-4 sm:h-3.5 sm:w-3.5 shrink-0" />
         <span className="hidden sm:inline">Copiloto IA da Loja</span>
-        <span className="sm:hidden">Copiloto IA</span>
       </button>
 
       {/* Drawer / Modal Tela Cheia do Chatbot renderizado no body via Portal */}
       {isOpen &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className="fixed inset-0 z-[90] flex items-end sm:items-stretch justify-end bg-black/50 backdrop-blur-xs">
+          <div
+            style={
+              viewportRect
+                ? {
+                    top: `${viewportRect.offsetTop}px`,
+                    height: `${viewportRect.height}px`,
+                    bottom: 'auto',
+                  }
+                : undefined
+            }
+            className="fixed inset-x-0 top-0 bottom-0 z-[90] flex items-start sm:items-stretch justify-end pt-2 px-2 pb-2 sm:p-0 bg-black/50 backdrop-blur-xs"
+          >
             <div
+              style={
+                viewportRect && !isFullScreen
+                  ? { maxHeight: `${Math.max(240, viewportRect.height - 16)}px` }
+                  : undefined
+              }
               className={cn(
-                'flex w-full flex-col border-t sm:border-t-0 sm:border-l border-border bg-surface shadow-2xl transition-all duration-150 overflow-hidden',
+                'flex w-full flex-col border sm:border-y-0 sm:border-r-0 sm:border-l border-border bg-surface shadow-2xl transition-all duration-150 overflow-hidden',
                 isFullScreen
-                  ? 'h-dvh max-w-none rounded-none'
-                  : 'h-[82dvh] sm:h-full max-w-lg rounded-t-2xl sm:rounded-none'
+                  ? 'h-full max-w-none rounded-none border-0'
+                  : 'h-full max-h-[85dvh] sm:max-h-none sm:h-full max-w-lg rounded-2xl sm:rounded-none'
               )}
             >
             {/* Header */}

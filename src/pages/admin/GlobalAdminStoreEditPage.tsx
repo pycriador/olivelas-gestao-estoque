@@ -33,8 +33,9 @@ import { storeService } from '@/services/storeService'
 import { userService } from '@/services/userService'
 import { permissionGroupService } from '@/services/permissionGroupService'
 import { formatCurrency } from '@/utils/currency'
+import { getPosCustomerPolicy } from '@/utils/posCustomerConfig'
 import { ROLE_METADATA } from '@/constants/granularPermissions'
-import type { Store } from '@/types/store.types'
+import type { PosCustomerMode, Store } from '@/types/store.types'
 import type { PlatformUser, StoreMember } from '@/types/user.types'
 import type { PlatformBillingRules } from '@/types/permissionGroup.types'
 
@@ -82,6 +83,10 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
   // Licensing Override
   const [customFreeLimit, setCustomFreeLimit] = useState<string>('')
   const [customExtraPrice, setCustomExtraPrice] = useState<string>('')
+
+  // POS (/sales) Customer Governance & Generic Customer Release
+  const [genericCustomerReleasedByAdmin, setGenericCustomerReleasedByAdmin] = useState(false)
+  const [posCustomerMode, setPosCustomerMode] = useState<PosCustomerMode>('REQUIRED')
 
   // Related data
   const [allStores, setAllStores] = useState<Store[]>([])
@@ -164,6 +169,9 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
 
         setCustomFreeLimit(effLimit)
         setCustomExtraPrice(effPrice)
+        const resolvedPosPolicy = getPosCustomerPolicy(store.theme_config, store.id)
+        setGenericCustomerReleasedByAdmin(resolvedPosPolicy.genericCustomerReleasedByAdmin)
+        setPosCustomerMode(resolvedPosPolicy.posCustomerMode)
         setMembers(storeMembers)
       }
     } catch (err: any) {
@@ -276,6 +284,11 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
           })
         }
 
+        await storeService.updateStorePosCustomerPolicy(created.id, {
+          genericCustomerReleasedByAdmin,
+          posCustomerMode: genericCustomerReleasedByAdmin ? posCustomerMode : 'REQUIRED',
+        })
+
         toast.success(
           isBranch
             ? `Filial "${created.name}" cadastrada com sucesso!`
@@ -310,6 +323,12 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
           extraEmployeePrice:
             customExtraPrice.trim() !== '' ? Number(customExtraPrice) : null,
         })
+
+        await storeService.updateStorePosCustomerPolicy(storeId, {
+          genericCustomerReleasedByAdmin,
+          posCustomerMode: genericCustomerReleasedByAdmin ? posCustomerMode : 'REQUIRED',
+        })
+        queryClient.invalidateQueries({ queryKey: ['store-settings', storeId] })
 
         toast.success('Dados da loja, filiação e licenciamento atualizados com sucesso!')
         await loadData()
@@ -941,6 +960,74 @@ export const GlobalAdminStoreEditPage: React.FC = () => {
                 <p className="text-[11px] text-muted-foreground">
                   Deixe em branco para usar a regra global do Financeiro ({billingRules?.defaultFreeEmployeesPerStore ?? 10} funcionários grátis por loja).
                 </p>
+              </Card>
+
+              {/* 4. Política de Cliente no PDV (/sales) & Liberação de Cliente Genérico */}
+              <Card className="space-y-3.5 p-6">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-primary" />
+                    <h2 className="text-base font-bold text-foreground">
+                      4. Cliente no PDV (/sales)
+                    </h2>
+                  </div>
+                  <Badge variant={genericCustomerReleasedByAdmin ? 'success' : 'outline'}>
+                    {genericCustomerReleasedByAdmin ? 'Genérico Liberado' : 'Cadastro Obrigatório'}
+                  </Badge>
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Todas as lojas têm acesso a <strong>1 Cliente Genérico</strong> padrão, mas seu uso em{' '}
+                  <code>/sales</code> só fica disponível após liberação nesta área administrativa.
+                </p>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl border border-border bg-muted/25 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={genericCustomerReleasedByAdmin}
+                    onChange={(e) => {
+                      const checked = e.target.checked
+                      setGenericCustomerReleasedByAdmin(checked)
+                      if (!checked) {
+                        setPosCustomerMode('REQUIRED')
+                      } else if (posCustomerMode === 'REQUIRED') {
+                        setPosCustomerMode('ALLOW_GENERIC')
+                      }
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  />
+                  <div className="text-xs">
+                    <span className="font-bold text-foreground block">
+                      Liberar Cliente Genérico para esta loja
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">
+                      Permite que a loja escolha entre exigir cadastro de cliente ou usar o seu 1 Cliente Genérico no PDV.
+                    </span>
+                  </div>
+                </label>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-foreground block">
+                    Modo Ativo no PDV da Loja
+                  </label>
+                  <select
+                    value={genericCustomerReleasedByAdmin ? posCustomerMode : 'REQUIRED'}
+                    disabled={!genericCustomerReleasedByAdmin}
+                    onChange={(e) =>
+                      setPosCustomerMode(
+                        e.target.value === 'ALLOW_GENERIC' ? 'ALLOW_GENERIC' : 'REQUIRED'
+                      )
+                    }
+                    className="flex h-9 w-full rounded-lg border border-input bg-background px-3 text-xs text-foreground disabled:opacity-50"
+                  >
+                    <option value="REQUIRED">
+                      Cadastro de Cliente Obrigatório (exige selecionar/cadastrar cliente)
+                    </option>
+                    <option value="ALLOW_GENERIC">
+                      Permitir Cliente Genérico (usa o 1 Cliente Genérico da loja)
+                    </option>
+                  </select>
+                </div>
               </Card>
             </div>
           </form>

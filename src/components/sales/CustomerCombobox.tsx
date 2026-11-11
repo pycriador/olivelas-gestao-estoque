@@ -3,12 +3,15 @@ import { useQuery } from '@tanstack/react-query'
 import { Users, Check, X, Loader2 } from 'lucide-react'
 
 import { customerService } from '@/services/customerService'
+import { isGenericCustomerRecord } from '@/utils/posCustomerConfig'
 import type { Customer } from '@/types/customer.types'
 
 interface CustomerComboboxProps {
   storeId: string
   value: string
   onChange: (customerId: string) => void
+  allowGenericCustomer?: boolean
+  onSelectGenericCustomer?: () => void
   disabled?: boolean
   className?: string
 }
@@ -41,6 +44,8 @@ export function CustomerCombobox({
   storeId,
   value,
   onChange,
+  allowGenericCustomer = false,
+  onSelectGenericCustomer,
   disabled = false,
   className = '',
 }: CustomerComboboxProps) {
@@ -82,15 +87,15 @@ export function CustomerCombobox({
     }
   }, [isOpen])
 
-  // Amostra: os 5 clientes mais recentes. So e buscada quando o campo
+  // Amostra: os clientes mais recentes da loja ativa. So e buscada quando o campo
   // esta aberto e sem busca ativa, para nao custar uma query no mount.
   const {
     data: recent = [],
     isFetching: loadingRecent,
   } = useQuery({
-    queryKey: ['customers-recent'],
-    queryFn: () => customerService.getRecentCustomers(RECENT_SAMPLE_SIZE),
-    enabled: isOpen && !debouncedTerm,
+    queryKey: ['customers-recent', storeId],
+    queryFn: () => customerService.getRecentCustomers(RECENT_SAMPLE_SIZE, storeId),
+    enabled: isOpen && !debouncedTerm && Boolean(storeId),
     staleTime: 60 * 1000,
   })
 
@@ -110,14 +115,15 @@ export function CustomerCombobox({
 
   const suggestions = React.useMemo(() => {
     const term = debouncedTerm.toLowerCase()
-    if (isSearching) {
-      // Remove clientes ja escolhidos para nao sujar a lista.
-      return matches.filter((c) => c.id !== value)
+    const baseList = isSearching
+      ? matches.filter((c) => c.id !== value)
+      : recent.filter((c) => (term ? c.name.toLowerCase().includes(term) : true))
+
+    if (!allowGenericCustomer) {
+      return baseList.filter((c) => !isGenericCustomerRecord(c))
     }
-    return recent.filter((c) =>
-      term ? c.name.toLowerCase().includes(term) : true
-    )
-  }, [isSearching, matches, recent, debouncedTerm, value])
+    return baseList
+  }, [isSearching, matches, recent, debouncedTerm, value, allowGenericCustomer])
 
   // Busca os dados do cliente selecionado caso value mude externamente (ex: cadastrado via modal rápido)
   const { data: selectedCustomerData } = useQuery({
@@ -183,7 +189,11 @@ export function CustomerCombobox({
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
           disabled={disabled}
-          placeholder="Cliente Genérico (padrão se não informado)"
+          placeholder={
+            allowGenericCustomer
+              ? 'Cliente Genérico (padrão se não informado)'
+              : 'Selecione ou cadastre o cliente (Obrigatório)...'
+          }
           autoComplete="off"
           role="combobox"
           aria-expanded={isOpen}
@@ -229,9 +239,13 @@ export function CustomerCombobox({
 
             {!isLoading && suggestions.length === 0 && (
               <div className="px-3 py-3 text-[11px] text-muted-foreground">
-                {isSearching
-                  ? 'Nenhum cadastro encontrado. O pedido usará Cliente Genérico.'
-                  : 'Nenhum cliente cadastrado ainda. O pedido criará Cliente Genérico.'}
+                {allowGenericCustomer
+                  ? isSearching
+                    ? 'Nenhum cadastro encontrado. O pedido usará Cliente Genérico.'
+                    : 'Nenhum cliente cadastrado ainda. O pedido usará Cliente Genérico.'
+                  : isSearching
+                    ? 'Nenhum cliente encontrado. Clique em "+ Novo" para cadastrar.'
+                    : 'Nenhum cliente identificado cadastrado. Clique em "+ Novo" para cadastrar.'}
               </div>
             )}
 
@@ -261,16 +275,22 @@ export function CustomerCombobox({
             ))}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              handleClear()
-              setIsOpen(false)
-            }}
-            className="w-full text-left px-3 py-2 border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors text-[11px] text-muted-foreground cursor-pointer"
-          >
-            Cliente Genérico (padrão sem identificação)
-          </button>
+          {allowGenericCustomer && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onSelectGenericCustomer) {
+                  onSelectGenericCustomer()
+                } else {
+                  handleClear()
+                }
+                setIsOpen(false)
+              }}
+              className="w-full text-left px-3 py-2 border-t border-border bg-muted/30 hover:bg-muted/60 transition-colors text-[11px] text-primary font-semibold cursor-pointer"
+            >
+              Usar Cliente Genérico da Loja (1 cadastro padrão)
+            </button>
+          )}
         </div>
       )}
     </div>

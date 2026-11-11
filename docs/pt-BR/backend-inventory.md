@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-07
+updated: 2026-11-11
 language: pt-BR
 classification: Confirmed
 source:
@@ -46,6 +46,7 @@ Ordem incremental observada (arquivos datados):
 27. `20261030000027_landing_leads_and_contracts.sql`
 28. `20261103000028_ai_platform_and_modules.sql`
 29. `20261103000029_global_admin_hard_delete_store.sql`
+30. `20261111000030_public_catalog_orders_and_realtime_tracking.sql`
 
 Mais `FULL_DATABASE_SETUP.sql` (snapshot; ver [architecture.md](architecture.md)).
 
@@ -119,6 +120,8 @@ Usadas pelo frontend (`supabase.rpc`):
 | RPC | Service |
 | --- | --- |
 | `create_order_with_stock` | `orderService.createOrder` |
+| `create_public_catalog_order` | `orderService.createPublicCatalogOrder` (cria pedido online a partir de `/store/:slug` com baixa atômica de estoque, vínculo/cadastro de cliente pelo WhatsApp e notificação em tempo real para `/orders`) |
+| `get_public_order_tracking` | `orderService.getPublicOrderTracking` (retorna detalhes do pedido, itens e `theme_config` da loja para a página pública de acompanhamento em tempo real `/store/:slug/order/:orderId`) |
 | `restore_sale_stock` | `orderService.cancelOrder` |
 | `receive_purchase_order_stock` | `purchasingService.receivePurchaseOrder` |
 | `apply_stock_movement` | `inventoryService.applyMovement` (endurecida na migration 23 com validação estrita `can_user_approve_writeoff` e alçada `max_writeoff_value`) |

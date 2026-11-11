@@ -20,10 +20,11 @@ export interface Order {
   created_at: string
   updated_at: string
   
-  // Relations
+  // Relations & Snapshots
   customer_name?: string
   customer_phone?: string
   customer_email?: string
+  delivery_address?: string | null
   items?: OrderItem[]
   payments?: Payment[]
 }
@@ -54,4 +55,17 @@ export interface Payment {
   transaction_id: string | null
   provider: string | null
   created_at: string
+}
+
+export interface OrderStatusHistoryEntry {
+  id: string
+  orderId: string
+  fromStatus: OrderStatus | null
+  toStatus: OrderStatus
+  userId: string | null
+  userName: string
+  userEmail: string | null
+  reason?: string | null
+  action: string
+  createdAt: string
 }

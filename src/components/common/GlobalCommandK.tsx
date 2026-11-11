@@ -80,18 +80,14 @@ export function GlobalCommandK() {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-start justify-center sm:pt-20 p-0 sm:p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-3 px-2.5 sm:pt-20 sm:p-4 animate-in fade-in duration-150">
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
         onClick={() => setIsOpen(false)}
         aria-hidden="true"
       />
 
-      <div className="relative w-full sm:max-w-2xl rounded-t-[1.75rem] sm:rounded-2xl bg-surface border-t sm:border border-border shadow-2xl overflow-hidden z-10 flex flex-col max-h-[85vh] sm:max-h-[80vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-150">
-        {/* Mobile handle */}
-        <div className="pt-3 pb-1 sm:hidden flex justify-center items-center">
-          <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full" />
-        </div>
+      <div className="relative w-full sm:max-w-2xl rounded-2xl bg-surface border border-border shadow-2xl overflow-hidden z-10 flex flex-col max-h-[82dvh] sm:max-h-[80vh] animate-in zoom-in-95 duration-150">
 
         {/* Input Header */}
         <div className="flex items-center px-4 sm:px-5 py-3.5 border-b border-border bg-surface-elevated">

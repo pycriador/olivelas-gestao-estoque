@@ -4,14 +4,16 @@ import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { customerService } from '@/services/customerService'
+import { isGenericCustomerRecord } from '@/utils/posCustomerConfig'
 import { parseApiError } from '@/utils/errorHandler'
-import { UserPlus, Check } from 'lucide-react'
+import { UserPlus, Check, Users } from 'lucide-react'
 import type { Customer } from '@/types/customer.types'
 
 interface CustomerQuickCreateModalProps {
   isOpen: boolean
   onClose: () => void
   storeId: string
+  allowGenericCustomer?: boolean
   onSuccess: (customer: Customer) => void
 }
 
@@ -19,6 +21,7 @@ export function CustomerQuickCreateModal({
   isOpen,
   onClose,
   storeId,
+  allowGenericCustomer = false,
   onSuccess,
 }: CustomerQuickCreateModalProps) {
   const queryClient = useQueryClient()
@@ -62,15 +65,37 @@ export function CustomerQuickCreateModal({
     },
   })
 
+  const genericMutation = useMutation({
+    mutationFn: () => customerService.getOrCreateGenericCustomer(storeId),
+    onSuccess: (genericCustomer) => {
+      queryClient.invalidateQueries({ queryKey: ['customers', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['customers-recent', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['customers-search', storeId] })
+      onSuccess(genericCustomer)
+      onClose()
+    },
+    onError: (err) => {
+      setErrorMsg(parseApiError(err))
+    },
+  })
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!formData.name.trim()) {
+    const cleanName = formData.name.trim()
+    if (!cleanName) {
       setErrorMsg('Informe o nome do cliente.')
       return
     }
 
+    if (!allowGenericCustomer && isGenericCustomerRecord({ name: cleanName })) {
+      setErrorMsg(
+        'O uso de Cliente Genérico não está liberado para esta loja. Informe o nome real do cliente.'
+      )
+      return
+    }
+
     createMutation.mutate({
-      name: formData.name.trim(),
+      name: cleanName,
       document: formData.document.trim() || undefined,
       phone: formData.phone.trim() || undefined,
       email: formData.email.trim() || undefined,
@@ -98,6 +123,30 @@ export function CustomerQuickCreateModal({
         {errorMsg && (
           <div className="p-2.5 text-xs text-danger bg-danger/10 border border-danger/20 rounded-xl">
             {errorMsg}
+          </div>
+        )}
+
+        {allowGenericCustomer && (
+          <div className="p-2.5 rounded-xl border border-primary/30 bg-primary/5 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5 text-primary shrink-0" />
+                Cliente Genérico da Loja (1 unidade liberada)
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Vincule a venda ao cadastro genérico padrão desta loja sem precisar digitar dados.
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              isLoading={genericMutation.isPending}
+              onClick={() => genericMutation.mutate()}
+              className="h-8 text-xs font-semibold border-primary/40 text-primary hover:bg-primary/10 shrink-0"
+            >
+              Usar Cliente Genérico
+            </Button>
           </div>
         )}
 

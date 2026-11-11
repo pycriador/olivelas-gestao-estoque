@@ -230,7 +230,7 @@ export function WeightInputModal({
       description={`${product.name} — Preço: ${formatCurrency(unitPrice)}/${isWeighed ? 'kg' : unitLower}`}
       maxWidth="md"
     >
-      <form onSubmit={handleSubmit} className="space-y-3 pt-0.5">
+      <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-3 pt-0.5">
         {errorMsg && (
           <div className="p-2 text-xs text-danger bg-danger/10 border border-danger/20 rounded-lg">
             {errorMsg}
@@ -238,8 +238,8 @@ export function WeightInputModal({
         )}
 
         {/* Compact Calculated Value Preview Banner */}
-        <div className="p-2.5 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between">
-          <div className="space-y-0.5">
+        <div className="p-2 sm:p-2.5 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between gap-2">
+          <div className="space-y-0.5 min-w-0">
             <span className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
               {isWeighed ? (
                 <Scale className="h-3 w-3 text-primary" />
@@ -248,17 +248,17 @@ export function WeightInputModal({
               )}{' '}
               Total a Pagar
             </span>
-            <div className="text-xl font-bold font-mono text-primary leading-none">
+            <div className="text-lg sm:text-xl font-bold font-mono text-primary leading-none">
               {formatCurrency(totalCalculated)}
             </div>
-            <div className="text-[10px] text-muted-foreground font-mono mt-0.5">
+            <div className="text-[10px] text-muted-foreground font-mono mt-0.5 truncate">
               {isWeighed
                 ? `${currentGrams}g (${currentKg} kg) × ${formatCurrency(unitPrice)}/kg`
                 : `${currentUnits} ${unitLower} × ${formatCurrency(unitPrice)}/${unitLower}`}
             </div>
           </div>
 
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <Badge variant="default" className="text-xs px-2 py-0.5 font-mono font-bold">
               {formattedConfirmBadge}
             </Badge>
@@ -524,20 +524,20 @@ export function WeightInputModal({
         </div>
 
         {/* Modal Action Buttons */}
-        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2 pt-2.5 border-t border-border">
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
           <Button
             type="button"
             variant="outline"
-            className="w-full sm:w-auto h-9 text-xs"
+            className="h-9 px-3 text-xs shrink-0"
             onClick={onClose}
           >
             Cancelar
           </Button>
           <Button
             type="submit"
-            className="w-full sm:w-auto h-9 text-xs font-semibold shadow-xs"
+            className="flex-1 sm:flex-none h-9 text-xs font-semibold shadow-xs"
           >
-            <Check className="h-3.5 w-3.5 mr-1" /> Confirmar {formattedConfirmBadge} ({formatCurrency(totalCalculated)})
+            <Check className="h-3.5 w-3.5 mr-1 shrink-0" /> Confirmar {formattedConfirmBadge} ({formatCurrency(totalCalculated)})
           </Button>
         </div>
       </form>

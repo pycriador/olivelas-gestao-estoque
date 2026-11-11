@@ -52,6 +52,117 @@ export function getStoreThemeId(config: unknown): string | null {
     : null
 }
 
+export function getCatalogThemeId(config: unknown): string {
+  if (!config || typeof config !== 'object' || Array.isArray(config)) return DEFAULT_STORE_THEME
+  const rec = config as Record<string, unknown>
+  const catalogTheme = rec.catalogTheme
+  if (typeof catalogTheme === 'string' && STORE_THEMES.some((theme) => theme.id === catalogTheme)) {
+    return catalogTheme
+  }
+  const appTheme = rec.appTheme
+  if (typeof appTheme === 'string' && STORE_THEMES.some((theme) => theme.id === appTheme)) {
+    return appTheme
+  }
+  return DEFAULT_STORE_THEME
+}
+
+export function toggleStoreThemeMode(themeId: string): string {
+  if (themeId.endsWith('-light')) {
+    const candidate = `${themeId.slice(0, -6)}-dark`
+    if (STORE_THEMES.some((t) => t.id === candidate)) return candidate
+  } else if (themeId.endsWith('-dark')) {
+    const candidate = `${themeId.slice(0, -5)}-light`
+    if (STORE_THEMES.some((t) => t.id === candidate)) return candidate
+  }
+  return themeId === 'ocean-dark' ? 'ocean-light' : 'ocean-dark'
+}
+
+export const CATALOG_PAGE_SIZE_OPTIONS = [6, 8, 12, 16, 24, 36, 48, 96] as const
+
+export interface ResolvedCatalogCustomization {
+  catalogTheme: string
+  primaryColor: string
+  accentColor: string
+  headerBgColor: string
+  catalogPageSize: number
+  catalogGridColumns: 3 | 4
+  catalogSubtitle: string
+  showPrices: boolean
+  showStockBadge: boolean
+  allowVisitorThemeToggle: boolean
+  openingHours: string
+  instagramUrl: string
+}
+
+export function getCatalogCustomization(config: unknown): ResolvedCatalogCustomization {
+  const rec =
+    config && typeof config === 'object' && !Array.isArray(config)
+      ? (config as Record<string, unknown>)
+      : {}
+
+  const rawPageSize = Number(rec.catalogPageSize)
+  const catalogPageSize =
+    Number.isFinite(rawPageSize) && rawPageSize >= 4 && rawPageSize <= 120 ? rawPageSize : 24
+
+  const catalogGridColumns: 3 | 4 = Number(rec.catalogGridColumns) === 3 ? 3 : 4
+
+  return {
+    catalogTheme: getCatalogThemeId(config),
+    primaryColor: typeof rec.primaryColor === 'string' ? rec.primaryColor.trim() : '',
+    accentColor: typeof rec.accentColor === 'string' ? rec.accentColor.trim() : '',
+    headerBgColor: typeof rec.headerBgColor === 'string' ? rec.headerBgColor.trim() : '',
+    catalogPageSize,
+    catalogGridColumns,
+    catalogSubtitle:
+      typeof rec.catalogSubtitle === 'string' && rec.catalogSubtitle.trim()
+        ? rec.catalogSubtitle.trim()
+        : 'Catálogo Oficial',
+    showPrices: rec.showPrices !== false,
+    showStockBadge: Boolean(rec.showStockBadge),
+    allowVisitorThemeToggle: rec.allowVisitorThemeToggle !== false,
+    openingHours: typeof rec.openingHours === 'string' ? rec.openingHours.trim() : '',
+    instagramUrl: typeof rec.instagramUrl === 'string' ? rec.instagramUrl.trim() : '',
+  }
+}
+
+export function hexToHslComponents(hex: string): { h: number; s: number; l: number } | null {
+  const cleaned = hex.trim().replace(/^#/, '')
+  if (!/^[0-9a-fA-F]{6}$/.test(cleaned)) return null
+
+  const r = parseInt(cleaned.slice(0, 2), 16) / 255
+  const g = parseInt(cleaned.slice(2, 4), 16) / 255
+  const b = parseInt(cleaned.slice(4, 6), 16) / 255
+
+  const max = Math.max(r, g, b)
+  const min = Math.min(r, g, b)
+  let h = 0
+  let s = 0
+  const l = (max + min) / 2
+
+  if (max !== min) {
+    const d = max - min
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    switch (max) {
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0)
+        break
+      case g:
+        h = (b - r) / d + 2
+        break
+      case b:
+        h = (r - g) / d + 4
+        break
+    }
+    h /= 6
+  }
+
+  return {
+    h: Math.round(h * 360),
+    s: Math.round(s * 100),
+    l: Math.round(l * 100),
+  }
+}
+
 function getThemeTokens(theme: StoreThemeOption): Record<string, string> {
   const { hue, mode } = theme
   const dark = mode === 'dark'
@@ -96,7 +207,15 @@ function getThemeTokens(theme: StoreThemeOption): Record<string, string> {
   }
 }
 
-export function applyStoreTheme(themeId: string | null) {
+export interface CustomThemeOverrides {
+  primaryColor?: string | null
+  accentColor?: string | null
+}
+
+export function applyStoreTheme(
+  themeId: string | null,
+  customOverrides?: CustomThemeOverrides
+) {
   if (typeof document === 'undefined') return
 
   const root = document.documentElement
@@ -113,7 +232,32 @@ export function applyStoreTheme(themeId: string | null) {
   root.dataset.storeTheme = theme.id
   root.classList.toggle('dark', theme.mode === 'dark')
   root.classList.toggle('light', theme.mode === 'light')
-  Object.entries(getThemeTokens(theme)).forEach(([name, value]) => {
+  const tokens = { ...getThemeTokens(theme) }
+
+  if (customOverrides?.primaryColor) {
+    const hsl = hexToHslComponents(customOverrides.primaryColor)
+    if (hsl) {
+      const primaryToken = `${hsl.h} ${hsl.s}% ${hsl.l}%`
+      const hoverLightness = theme.mode === 'dark' ? Math.min(90, hsl.l + 6) : Math.max(15, hsl.l - 7)
+      tokens.primary = primaryToken
+      tokens['primary-hover'] = `${hsl.h} ${hsl.s}% ${hoverLightness}%`
+      tokens['primary-foreground'] = hsl.l > 65 ? `${hsl.h} 30% 10%` : '0 0% 100%'
+      tokens.ring = primaryToken
+      tokens['sidebar-primary'] = primaryToken
+      tokens['sidebar-ring'] = primaryToken
+    }
+  }
+
+  if (customOverrides?.accentColor) {
+    const hsl = hexToHslComponents(customOverrides.accentColor)
+    if (hsl) {
+      const accentLightness = theme.mode === 'dark' ? Math.min(32, Math.max(16, hsl.l)) : Math.max(85, Math.min(95, hsl.l))
+      tokens.accent = `${hsl.h} ${Math.min(60, hsl.s)}% ${accentLightness}%`
+      tokens.secondary = `${hsl.h} ${Math.min(50, hsl.s)}% ${accentLightness}%`
+    }
+  }
+
+  Object.entries(tokens).forEach(([name, value]) => {
     root.style.setProperty(`--${name}`, value)
   })
 }

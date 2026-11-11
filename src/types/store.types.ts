@@ -1,4 +1,30 @@
-import type { Json } from './database.types'
+import type { Json, OrderStatus } from './database.types'
+
+export type OrderStatusAliasesMap = Partial<Record<OrderStatus, string>>
+
+export type PosCustomerMode = 'REQUIRED' | 'ALLOW_GENERIC'
+
+export interface StoreThemeConfig {
+  appTheme?: string
+  catalogTheme?: string
+  primaryColor?: string
+  accentColor?: string
+  headerBgColor?: string
+  catalogPageSize?: number
+  catalogGridColumns?: 3 | 4
+  catalogSubtitle?: string
+  showPrices?: boolean
+  showStockBadge?: boolean
+  allowVisitorThemeToggle?: boolean
+  whatsappOrderMessage?: string
+  catalogBanner?: string
+  instagramUrl?: string
+  facebookUrl?: string
+  openingHours?: string
+  orderStatusAliases?: OrderStatusAliasesMap
+  genericCustomerReleasedByAdmin?: boolean
+  posCustomerMode?: PosCustomerMode
+}
 
 export interface Store {
   id: string
@@ -24,17 +50,7 @@ export interface Store {
   free_employees_limit?: number | null
   extra_employee_price?: number | null
   is_active: boolean
-  theme_config: {
-    appTheme?: string
-    primaryColor?: string
-    accentColor?: string
-    showPrices?: boolean
-    whatsappOrderMessage?: string
-    catalogBanner?: string
-    instagramUrl?: string
-    facebookUrl?: string
-    openingHours?: string
-  } | Json | null
+  theme_config: StoreThemeConfig | Json | null
   created_at: string
   updated_at: string
 }

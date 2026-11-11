@@ -5,7 +5,7 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-07
+updated: 2026-11-11
 language: pt-BR
 classification: Confirmed
 source:
@@ -16,7 +16,7 @@ standard: Documentation Standard v1.0 (adapted)
 # Documentação Olivelas (pt-BR)
 
 > Status: DRAFT  
-> Fonte: código e SQL deste repositório, inventariados e sincronizados até 2026-11-07 (migrations `01` a `29`).
+> Fonte: código e SQL deste repositório, inventariados e sincronizados até 2026-11-11 (migrations `01` a `30`).
 
 ## Como ler (progressive disclosure)
 

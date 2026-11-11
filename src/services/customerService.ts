@@ -466,10 +466,10 @@ export const customerService = {
   },
 
   /**
-   * Clientes mais recentes da plataforma, do mais novo para o mais antigo.
+   * Clientes mais recentes da loja ativa, do mais novo para o mais antigo.
    */
-  async getRecentCustomers(limit = 5): Promise<Customer[]> {
-    const { data, error } = await supabase
+  async getRecentCustomers(limit = 5, storeId?: string): Promise<Customer[]> {
+    let query = supabase
       .from('customers')
       .select('*')
       .is('deleted_at', null)
@@ -477,16 +477,34 @@ export const customerService = {
       .order('created_at', { ascending: false })
       .limit(limit)
 
+    if (storeId && storeId !== 'all') {
+      query = query.eq('store_id', storeId)
+    }
+
+    const { data, error } = await query
+
     if (error) throw error
     return (data || []) as Customer[]
   },
 
   async createCustomer(storeId: string, customerData: Partial<Customer>): Promise<Customer> {
+    const trimmedName = (customerData.name || '').trim()
+    if (
+      trimmedName.toLowerCase() === 'cliente genérico' ||
+      trimmedName.toLowerCase() === 'cliente generico' ||
+      trimmedName.toLowerCase() === 'consumidor final'
+    ) {
+      const existingGeneric = await this.getGenericCustomer(storeId)
+      if (existingGeneric) {
+        return existingGeneric
+      }
+    }
+
     const { data, error } = await supabase
       .from('customers')
       .insert({
         store_id: storeId,
-        name: customerData.name!,
+        name: trimmedName || customerData.name!,
         document: customerData.document || null,
         email: customerData.email || null,
         phone: customerData.phone || null,
@@ -556,22 +574,33 @@ export const customerService = {
   },
 
   /**
-   * Obtém ou cria automaticamente o "Cliente Genérico" da loja ativa.
-   * Usado no PDV (/sales) quando o operador não informa um cliente específico,
-   * garantindo que todo pedido possua um cadastro de cliente vinculado.
+   * Busca o Cliente Genérico já existente da loja (sem criar caso não exista).
    */
-  async getOrCreateGenericCustomer(storeId: string): Promise<Customer> {
+  async getGenericCustomer(storeId: string): Promise<Customer | null> {
+    if (!storeId || storeId === 'all') return null
     const { data: existing, error: searchErr } = await supabase
       .from('customers')
       .select('*')
       .eq('store_id', storeId)
       .is('deleted_at', null)
-      .in('name', ['Cliente Genérico', 'Consumidor Final'])
+      .in('name', ['Cliente Genérico', 'Cliente Generico', 'Consumidor Final'])
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
 
-    if (!searchErr && existing) {
+    if (searchErr || !existing) return null
+    return existing as Customer
+  },
+
+  /**
+   * Obtém ou cria automaticamente o "Cliente Genérico" único da loja ativa.
+   * Todas as lojas têm acesso a pelo menos 1 cliente genérico, cujo uso no PDV (/sales)
+   * é liberado mediante configuração na área administrativa da ferramenta.
+   */
+  async getOrCreateGenericCustomer(storeId: string): Promise<Customer> {
+    const existing = await this.getGenericCustomer(storeId)
+
+    if (existing) {
       if (existing.status !== 'ACTIVE') {
         const { data: activated } = await supabase
           .from('customers')
@@ -588,10 +617,18 @@ export const customerService = {
       return existing as Customer
     }
 
-    return this.createCustomer(storeId, {
-      name: 'Cliente Genérico',
-      notes: 'Cadastro genérico padrão para registro de pedidos sem cliente identificado no PDV',
-      status: 'ACTIVE',
-    })
+    const { data, error } = await supabase
+      .from('customers')
+      .insert({
+        store_id: storeId,
+        name: 'Cliente Genérico',
+        notes: 'Cadastro genérico padrão da loja para vendas sem cliente identificado no PDV',
+        status: 'ACTIVE',
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+    return data as Customer
   },
 }

@@ -23,6 +23,7 @@ export type OrderStatus =
   | 'READY'
   | 'SHIPPED'
   | 'DELIVERED'
+  | 'COMPLETED'
   | 'CANCELLED'
 
 export type OrderChannel =

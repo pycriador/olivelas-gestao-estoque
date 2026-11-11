@@ -11,6 +11,7 @@ import { FeaturesPage } from '@/pages/FeaturesPage'
 import { PricingPage } from '@/pages/PricingPage'
 import { ContactPage } from '@/pages/ContactPage'
 import { CatalogPublicPage } from '@/pages/CatalogPublicPage'
+import { OrderTrackingPublicPage } from '@/pages/OrderTrackingPublicPage'
 import { EvidencePage } from '@/pages/EvidencePage'
 
 // Auth Pages
@@ -64,8 +65,10 @@ export function AppRoutes() {
         <Route path="/test-evidence" element={<EvidencePage />} />
       </Route>
 
-      {/* 2. Public Store Catalog with WhatsApp Checkout */}
+      {/* 2. Public Store Catalog with Online Order & Realtime Tracking */}
       <Route path="/store/:slug" element={<CatalogPublicPage />} />
+      <Route path="/store/:slug/order/:orderId" element={<OrderTrackingPublicPage />} />
+      <Route path="/order-status/:orderId" element={<OrderTrackingPublicPage />} />
 
       {/* 3. Authentication Routes */}
       <Route element={<AuthLayout />}>

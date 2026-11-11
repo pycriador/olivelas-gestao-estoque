@@ -5,7 +5,7 @@ type: Architecture
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-07
+updated: 2026-11-11
 language: pt-BR
 classification: Confirmed
 source:
@@ -27,11 +27,13 @@ source:
 | `/pricing` | `PricingPage` |
 | `/contact` | `ContactPage` |
 
-### Catálogo (sem layout shell de marketing)
+### Catálogo & Acompanhamento de Pedido em Tempo Real (sem layout shell de marketing)
 
 | Path | Page |
 | --- | --- |
 | `/store/:slug` | `CatalogPublicPage` |
+| `/store/:slug/order/:orderId` | `OrderTrackingPublicPage` |
+| `/order-status/:orderId` | `OrderTrackingPublicPage` |
 
 ### Auth (`AuthLayout`)
 
@@ -67,8 +69,8 @@ source:
 | `/categories` | `CategoriesPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
 | `/inventory` | `InventoryPage` | Saldos, valorização a custo/venda, baixa em lote, lotes e movimentações; `PermissionGate` (`moduleCode="MOD_INVENTORY"`) |
 | `/expiration` | `ExpirationPage` | `PermissionGate` (`moduleCode="MOD_EXPIRATION"`) |
-| `/sales` | `SalesPage` | PDV; `PermissionGate` (`moduleCode="MOD_POS_SALES"`) |
-| `/orders` | `OrdersPage` | `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
+| `/sales` | `SalesPage` | PDV com regra configurável de **Cadastro de Cliente Obrigatório** vs. **Cliente Genérico** (1 por loja, liberado mediante configuração na área administrativa), recarregamento automático do banco ao acessar/editar pedido, botão **"Atualizar do Banco"** (Desktop e Mobile) + envio rápido de status/rastreio em tempo real no WhatsApp do cliente após a venda; `PermissionGate` (`moduleCode="MOD_POS_SALES"`) |
+| `/orders` | `OrdersPage` | Gestão de pedidos com `DropdownMenu` para mudança de status (incluindo `COMPLETED` / "Finalizado", além dos status de entrega e `CANCELLED`) e ações da linha, **Histórico de Atualizações de Status por Usuário** (`OrderStatusHistoryEntry`), personalização de apelidos de status por loja, recarregamento automático ao entrar na tela, botão **"Atualizar do Banco"** (Desktop e Mobile), disparo de mensagem de status para o WhatsApp do cliente e link da página de acompanhamento em tempo real; `PermissionGate` (`moduleCode="MOD_CATALOG_WA"`) |
 | `/customers` | `CustomersPage` | Gestão de clientes com histórico completo de pedidos por cliente, links profundos (`?customerId=...&orderId=...`), filtro multi-seleção de status, visões salvas no banco por loja/filial e exportação detalhada dos itens visíveis; `PermissionGate` (`moduleCode="MOD_CUSTOMERS"`) |
 | `/suppliers` | `SuppliersPage` | `PermissionGate` (`moduleCode="MOD_SUPPLIERS"`) |
 | `/purchases` | `PurchasingPage` | Ordens de compra com cálculo de markup e margem; `PermissionGate` (`moduleCode="MOD_PURCHASING"`) |
@@ -80,7 +82,7 @@ source:
 | `/team/:employeeId` | `StoreEmployeeEditPage` | Edição de funcionário da loja ativa (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/team/stores/:storeId/employees/:employeeId` | `StoreEmployeeEditPage` | Edição de funcionário com identificação explícita de loja e funcionário na URL (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/integrations` | `ApiIntegrationsPage` | API Studio & Conector de Serviços estilo Postman (De → Para, Dry-Run, Upsert e cURL); `PermissionGate` (`moduleCode="MOD_API_INTEGRATIONS"`) |
-| `/settings` | `SettingsPage` | `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/settings` | `SettingsPage` | Dados comerciais, tema do painel e personalização completa da vitrine pública (`/store/:slug`): upload/URL de logo e banner de capa, tema padrão da vitrine, cores personalizadas (`primaryColor`, `accentColor`, `headerBgColor`), quantidade padrão de itens por página (`catalogPageSize`), colunas (`3` ou `4`), subtítulo e horário de funcionamento; `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `*` | `NotFoundPage` | fora dos layouts acima |
 
 ## Navegação do `AppLayout`
@@ -119,7 +121,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 | `ApiIntegrationsPage` | API Studio estilo Postman (`grid-cols-1 lg:grid-cols-12`): Request Builder HTTP, Importar/Exportar cURL, Templates Prontos, Mapeador Visual De → Para com Auto-Map, Simulação Dry-Run e Sincronização em lote com Clientes, Categorias, Produtos, Fornecedores e Estoque |
 | `PurchasingPage` | ordens de compra com cálculo de custo unitário, markup, preço de venda sugerido e lucro previsto |
 | Maioria cadastros | `ResponsiveTable` e/ou tabela + `Modal` CRUD; rodapé de modal `flex-col-reverse sm:flex-row` |
-| `CatalogPublicPage` | grade de produtos, modal de carrinho, WhatsApp |
+| `CatalogPublicPage` | vitrine pública personalizável (`/store/:slug`): cabeçalho com logo, subtítulo, botão de alternância Claro/Escuro e cor customizável, banner de capa (`banner_url`), grade de produtos (`3` ou `4` colunas no desktop) com paginação configurável (`catalogPageSize`: `6`, `8`, `12`, `16`, `24`, `36`, `48`, `96`), modal de carrinho e checkout online integrado a `/orders` + redirecionamento para acompanhamento em tempo real (`/store/:slug/order/:orderId`) |
 
 ## Componentes
 
@@ -127,7 +129,7 @@ Labels vêm de `t.nav.*` (`src/i18n/locales/pt-BR.ts` e equivalentes EN/ES).
 
 `button.tsx`, `input.tsx`, `card.tsx`, `badge.tsx`, `modal.tsx`, `confirm-modal.tsx`, `dropdown-menu.tsx`, `pagination.tsx`, `SortableHeader.tsx`.
 
-`modal.tsx`: em viewport estreita, alinhamento `items-end` e cantos superiores arredondados (`rounded-t-[1.75rem]`); handle visível `sm:hidden`; footer com `safe-area-inset-bottom`.
+`modal.tsx`: em viewport estreita (mobile), posicionamento superior (`items-start pt-2 px-2.5`) sincronizado com `window.visualViewport` (`height` e `offsetTop`) e `scrollIntoView` automático em inputs focados, garantindo que os campos de preenchimento fiquem sempre visíveis acima do teclado virtual.
 
 ### `components/common`
 
@@ -180,7 +182,7 @@ Tema **da loja**: `stores.theme_config.appTheme` + `applyStoreTheme` em `AppLayo
 | `productImageService` | listagem, upload biblioteca/produto, attach, primary, reorder, remove |
 | `storageService` | `uploadProductImage`, `deleteProductImage`, `uploadStoreLogo` |
 | `inventoryService` | saldos, valorização financeira, movimentos, lotes, `applyMovement` (RPC com validação estrita de aprovador de baixa), solicitações de baixa (`listWriteoffRequests`, `createWriteoffRequest`, `reviewWriteoffRequest`), remessas para filiais sem venda (`listStockTransfers`, `executeStockTransferToBranch`), centros de custo, motivos de perda, import, disposições de lote, baixa em lote (`writeoffBulkStock`), remoção de estoque zerado |
-| `orderService` | `listOrders`, `createOrder` (RPC com resolução automática de `Cliente Genérico` e substituição resiliente em edições), `cancelOrder` (RPC `restore_sale_stock`), `updateOrderStatus` |
+| `orderService` | `listOrders`, `createOrder` (RPC com validação de política de cliente, resolução automática de `Cliente Genérico`, substituição resiliente em edições e trilha de status por usuário), `cancelOrder` (RPC `restore_sale_stock` com auditoria por usuário), `updateOrderStatus` (com auditoria de transição `from_status -> to_status` e usuário responsável), `getOrderStatusHistory`, `getOrder`, `createPublicCatalogOrder`, `getPublicOrderTracking` |
 | `customerService` | list/get/create/update/`softDeleteCustomer`, `getOrCreateGenericCustomer`, enriquecimento de clientes com histórico completo de pedidos (`orders`, `order_items`, `payments`), filtragem multi-status (`customerStatuses`, `orderStatuses`), período (`dateFrom`, `dateTo`), deep-link por `customerId`/`orderId` e `getOrderDetailsByIdOrNumber` |
 | `savedViewService` | `listViews`, `saveView`, `setDefaultView`, `deleteView` — persistência de visões de filtros salvas no banco de dados (`store_saved_views` + fallback `stores.theme_config.saved_views`) isoladas individualmente por loja ou filial (`store_id`) |
 | `supplierService` | list/create/update/`softDeleteSupplier` |

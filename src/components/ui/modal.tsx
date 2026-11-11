@@ -27,8 +27,13 @@ export function Modal({
   maxWidth = 'lg',
   showCloseButton = true,
   preventBackdropClose = false,
-  asDrawerOnMobile = true,
 }: ModalProps) {
+  const [viewportRect, setViewportRect] = React.useState<{
+    height: number
+    offsetTop: number
+  } | null>(null)
+  const bodyScrollRef = React.useRef<HTMLDivElement>(null)
+
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -48,6 +53,44 @@ export function Modal({
     }
   }, [isOpen, onClose])
 
+  // Sincroniza a altura visível com window.visualViewport no mobile
+  // para que o modal fique sempre na parte superior visível (acima do teclado virtual)
+  React.useEffect(() => {
+    if (!isOpen || typeof window === 'undefined') return
+
+    const vv = window.visualViewport
+    if (!vv) return
+
+    const updateVisualViewport = () => {
+      setViewportRect({
+        height: Math.round(vv.height),
+        offsetTop: Math.round(vv.offsetTop),
+      })
+    }
+
+    updateVisualViewport()
+    vv.addEventListener('resize', updateVisualViewport)
+    vv.addEventListener('scroll', updateVisualViewport)
+
+    return () => {
+      vv.removeEventListener('resize', updateVisualViewport)
+      vv.removeEventListener('scroll', updateVisualViewport)
+      setViewportRect(null)
+    }
+  }, [isOpen])
+
+  // Ao focar qualquer input/textarea no mobile, garante que ele fique visível acima do teclado
+  const handleFocusCapture = React.useCallback((e: React.FocusEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement | null
+    if (!target) return
+    const tag = target.tagName
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+      window.setTimeout(() => {
+        target.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      }, 120)
+    }
+  }, [])
+
   if (!isOpen) return null
 
   const maxWMap = {
@@ -62,16 +105,30 @@ export function Modal({
     full: 'sm:max-w-[95vw] lg:max-w-6xl',
   }
 
+  const dynamicOverlayStyle: React.CSSProperties | undefined = viewportRect
+    ? {
+        top: `${viewportRect.offsetTop}px`,
+        height: `${viewportRect.height}px`,
+        bottom: 'auto',
+      }
+    : undefined
+
+  const dynamicCardMaxHeight: React.CSSProperties | undefined = viewportRect
+    ? {
+        maxHeight: `${Math.max(220, viewportRect.height - 16)}px`,
+      }
+    : undefined
+
   return (
     <div
       role="dialog"
       aria-modal="true"
+      style={dynamicOverlayStyle}
       className={cn(
-        'fixed inset-0 z-50 flex',
-        asDrawerOnMobile
-          ? 'items-end sm:items-center justify-center sm:p-4 lg:p-6'
-          : 'items-center justify-center p-4 sm:p-6',
-        'animate-in fade-in duration-200'
+        'fixed inset-x-0 top-0 bottom-0 z-50 flex',
+        // No mobile: posicionado no topo da área visível (items-start) para nunca ficar atrás do teclado virtual
+        'items-start sm:items-center justify-center pt-2 px-2.5 pb-2 sm:p-4 lg:p-6',
+        'animate-in fade-in duration-150'
       )}
     >
       {/* Backdrop */}
@@ -83,37 +140,28 @@ export function Modal({
         aria-hidden="true"
       />
 
-      {/* Modal Card / Responsive Sheet */}
+      {/* Modal Card posicionado mais para cima no mobile */}
       <div
+        style={dynamicCardMaxHeight}
+        onFocusCapture={handleFocusCapture}
         className={cn(
-          'relative w-full z-10 flex flex-col bg-surface border-t sm:border border-border shadow-2xl overflow-hidden',
-          // Mobile: bottom drawer styling
-          asDrawerOnMobile
-            ? 'rounded-t-[1.75rem] sm:rounded-2xl max-h-[92vh] sm:max-h-[88vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200'
-            : 'rounded-2xl max-h-[90vh] animate-in zoom-in-95 duration-200',
-          // Desktop responsive widths
+          'relative w-full z-10 flex flex-col bg-surface border border-border shadow-2xl overflow-hidden',
+          'rounded-2xl max-h-[88dvh] sm:max-h-[88vh] animate-in zoom-in-95 duration-150',
           maxWMap[maxWidth],
           className
         )}
       >
-        {/* Mobile Drag Indicator Handle */}
-        {asDrawerOnMobile && (
-          <div className="pt-3 pb-1 sm:hidden flex justify-center items-center">
-            <div className="w-12 h-1.5 bg-muted-foreground/30 rounded-full cursor-grab active:cursor-grabbing hover:bg-muted-foreground/50 transition-colors" />
-          </div>
-        )}
-
-        {/* Modal Header */}
+        {/* Modal Header compacto no mobile */}
         {(title || showCloseButton) && (
-          <div className="flex items-start sm:items-center justify-between px-5 sm:px-6 py-4 border-b border-border/80 bg-surface/90 backdrop-blur-xs sticky top-0 z-20">
-            <div className="flex-1 pr-3">
+          <div className="flex items-start sm:items-center justify-between px-4 sm:px-6 py-2.5 sm:py-4 border-b border-border/80 bg-surface/95 backdrop-blur-xs sticky top-0 z-20 shrink-0">
+            <div className="flex-1 pr-2 min-w-0">
               {title && (
-                <h2 className="text-lg sm:text-xl font-bold tracking-tight text-foreground leading-tight">
+                <h2 className="text-sm sm:text-xl font-bold tracking-tight text-foreground leading-tight truncate">
                   {title}
                 </h2>
               )}
               {description && (
-                <p className="text-xs sm:text-sm text-muted-foreground mt-1 leading-relaxed">
+                <p className="text-[11px] sm:text-sm text-muted-foreground mt-0.5 leading-snug line-clamp-2">
                   {description}
                 </p>
               )}
@@ -124,22 +172,25 @@ export function Modal({
                 type="button"
                 onClick={onClose}
                 aria-label="Fechar"
-                className="rounded-xl p-2 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all touch-manipulation -mr-1"
+                className="rounded-xl p-1.5 sm:p-2 text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 transition-all touch-manipulation -mr-1 shrink-0"
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             )}
           </div>
         )}
 
         {/* Modal Scrollable Body */}
-        <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-4 overscroll-contain focus:outline-none custom-scrollbar">
+        <div
+          ref={bodyScrollRef}
+          className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-3 sm:py-4 overscroll-contain focus:outline-none custom-scrollbar"
+        >
           {children}
         </div>
 
         {/* Optional Dedicated Sticky Footer */}
         {footer && (
-          <div className="px-5 sm:px-6 py-3.5 border-t border-border/80 bg-surface-elevated/80 backdrop-blur-xs sticky bottom-0 z-20 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-3.5">
+          <div className="px-4 sm:px-6 py-2.5 sm:py-3.5 border-t border-border/80 bg-surface-elevated/90 backdrop-blur-xs sticky bottom-0 z-20 flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2 shrink-0">
             {footer}
           </div>
         )}

@@ -1,6 +1,9 @@
 import { supabase } from '@/lib/supabase/client'
 import { auditService } from '@/services/auditService'
-import type { Store } from '@/types/store.types'
+import { customerService } from '@/services/customerService'
+import { saveLocalStatusAliases } from '@/utils/orderStatusConfig'
+import { saveLocalPosCustomerPolicy, type PosCustomerPolicyInput } from '@/utils/posCustomerConfig'
+import type { OrderStatusAliasesMap, Store } from '@/types/store.types'
 
 export interface StoreListParams {
   search?: string
@@ -193,6 +196,14 @@ export const storeService = {
       console.error('Error linking user to store:', userRelError)
     }
 
+    // 3. Garante que a loja já nasça com acesso ao seu 1 Cliente Genérico cadastrado
+    // (cujo uso no PDV /sales depende de liberação na área administrativa)
+    try {
+      await customerService.getOrCreateGenericCustomer(store.id)
+    } catch {
+      // ignora caso RLS bloqueie na criação inicial
+    }
+
     auditService.logAction({
       storeId: store.id,
       action: store.is_branch ? 'BRANCH_CREATED' : 'STORE_CREATED',
@@ -232,6 +243,182 @@ export const storeService = {
     })
 
     return data as Store
+  },
+
+  async uploadStoreAsset(
+    storeId: string,
+    file: File,
+    kind: 'logo' | 'banner'
+  ): Promise<string> {
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '')
+    const storagePath = `${storeId}/${kind}-${Date.now()}.${ext || 'png'}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('stores')
+      .upload(storagePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+      })
+
+    if (!uploadError) {
+      const { data: urlData } = supabase.storage.from('stores').getPublicUrl(storagePath)
+      if (urlData?.publicUrl) {
+        return urlData.publicUrl
+      }
+    }
+
+    // Fallback para Data URL otimizada via Canvas caso o bucket stores não esteja ativo no ambiente
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onerror = () => reject(new Error('Falha ao ler arquivo de imagem.'))
+      reader.onload = () => {
+        const result = String(reader.result || '')
+        if (typeof document === 'undefined') {
+          resolve(result)
+          return
+        }
+        const img = new Image()
+        img.onerror = () => resolve(result)
+        img.onload = () => {
+          const maxWidth = kind === 'logo' ? 320 : 1200
+          const maxHeight = kind === 'logo' ? 320 : 480
+          let { width, height } = img
+          if (width > maxWidth || height > maxHeight) {
+            const ratio = Math.min(maxWidth / width, maxHeight / height)
+            width = Math.max(1, Math.round(width * ratio))
+            height = Math.max(1, Math.round(height * ratio))
+          }
+          const canvas = document.createElement('canvas')
+          canvas.width = width
+          canvas.height = height
+          const ctx = canvas.getContext('2d')
+          if (!ctx) {
+            resolve(result)
+            return
+          }
+          ctx.drawImage(img, 0, 0, width, height)
+          const compressed = canvas.toDataURL('image/webp', 0.86)
+          resolve(compressed.startsWith('data:image/') ? compressed : result)
+        }
+        img.src = result
+      }
+      reader.readAsDataURL(file)
+    })
+  },
+
+  async updateStoreOrderStatusAliases(
+    storeId: string,
+    aliases: OrderStatusAliasesMap
+  ): Promise<Store | null> {
+    saveLocalStatusAliases(storeId, aliases)
+
+    const currentStore = await this.getStoreById(storeId)
+    if (!currentStore) return null
+
+    const existingConfig =
+      currentStore.theme_config &&
+      typeof currentStore.theme_config === 'object' &&
+      !Array.isArray(currentStore.theme_config)
+        ? { ...(currentStore.theme_config as Record<string, unknown>) }
+        : {}
+
+    const nextThemeConfig = {
+      ...existingConfig,
+      orderStatusAliases: aliases,
+    }
+
+    const { data, error } = await supabase
+      .from('stores')
+      .update({
+        theme_config: nextThemeConfig,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', storeId)
+      .select()
+      .maybeSingle()
+
+    if (error) {
+      // Se o operador atual não tiver role STORE_ADMIN para UPDATE em stores,
+      // mantém os apelidos salvos localmente sem quebrar a operação
+      console.warn('Apelidos de status salvos localmente; aviso ao gravar em stores:', error.message)
+      return {
+        ...currentStore,
+        theme_config: nextThemeConfig,
+      } as Store
+    }
+
+    auditService.logAction({
+      storeId,
+      action: 'ORDER_STATUS_ALIASES_UPDATED',
+      entity: 'stores',
+      entityId: storeId,
+      afterData: { orderStatusAliases: aliases },
+    })
+
+    return (data || currentStore) as Store
+  },
+
+  async updateStorePosCustomerPolicy(
+    storeId: string,
+    policy: PosCustomerPolicyInput
+  ): Promise<Store | null> {
+    saveLocalPosCustomerPolicy(storeId, policy)
+
+    // Todas as lojas têm acesso a pelo menos 1 Cliente Genérico; garante que ele exista no banco
+    if (policy.genericCustomerReleasedByAdmin) {
+      try {
+        await customerService.getOrCreateGenericCustomer(storeId)
+      } catch {
+        // ignora erro secundário de criação do cliente genérico
+      }
+    }
+
+    const currentStore = await this.getStoreById(storeId)
+    if (!currentStore) return null
+
+    const existingConfig =
+      currentStore.theme_config &&
+      typeof currentStore.theme_config === 'object' &&
+      !Array.isArray(currentStore.theme_config)
+        ? { ...(currentStore.theme_config as Record<string, unknown>) }
+        : {}
+
+    const nextThemeConfig = {
+      ...existingConfig,
+      genericCustomerReleasedByAdmin: Boolean(policy.genericCustomerReleasedByAdmin),
+      posCustomerMode: policy.posCustomerMode,
+    }
+
+    const { data, error } = await supabase
+      .from('stores')
+      .update({
+        theme_config: nextThemeConfig,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', storeId)
+      .select()
+      .maybeSingle()
+
+    if (error) {
+      console.warn('Política de cliente do PDV salva localmente; aviso ao gravar em stores:', error.message)
+      return {
+        ...currentStore,
+        theme_config: nextThemeConfig,
+      } as Store
+    }
+
+    auditService.logAction({
+      storeId,
+      action: 'POS_CUSTOMER_POLICY_UPDATED',
+      entity: 'stores',
+      entityId: storeId,
+      afterData: {
+        genericCustomerReleasedByAdmin: policy.genericCustomerReleasedByAdmin,
+        posCustomerMode: policy.posCustomerMode,
+      },
+    })
+
+    return (data || currentStore) as Store
   },
 
   async softDeleteStore(id: string): Promise<void> {

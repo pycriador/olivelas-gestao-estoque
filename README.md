@@ -50,8 +50,10 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
   - Exibição hierárquica em árvore onde as **Filiais (`└─ Filial`)** ficam agrupadas abaixo de sua respectiva **Matriz** (`parent_store_id`), tanto nas tabelas de gestão quanto no seletor de unidade no topo da barra lateral (`AppLayout`), com busca instantânea e nomenclatura composta padronizada (`{Matriz} - Filial {Código}`, ex.: `Primor - Filial P1`).
   - **Criação de Rede de Lojas em Lote (CLI + Skill do Agente + Modal Web com IA da Loja):** provisionamento automatizado e idempotente de Loja Matriz, Filiais subordinadas, Administradores (`STORE_ADMIN`), Fornecedores, Categorias, Produtos, Fotos sem direitos autorais (Unsplash CC0 salvas no Supabase Storage) e Saldos/Lotes com validade FEFO via script CLI (`npm run store:bulk` / `npm run store:primor`), Skill `.agents/skills/bulk-store-creator/SKILL.md` ou botão **"Criação em Lote (IA)"** na interface web (`BulkStoreAiBuilderModal`).
   - Transferência atômica de produtos da Matriz para a Filial **sem necessidade de registrar uma venda** (`execute_stock_transfer_to_branch`), sincronizando automaticamente categoria, produto mestre e lote com validade na filial destino para venda imediata no PDV da filial.
-- **PDV Frente de Caixa com Pesagem Fracionada `KG`/`g` & Edição de Pedidos (`/sales`, `/orders`):**
-  - Checkout rápido com atalhos de teclado, código de barras, modal interativo de pesagem para itens em `KG`/gramas (`WeightInputModal` por peso ou valor em `R$`), associação automática de `"Cliente Genérico"` quando nenhum cliente é informado, cadastro rápido de cliente (`CustomerQuickCreateModal`), sugestões de cross-sell por IA e reabertura de pedidos existentes para edição no PDV (`/sales?editOrder=:id`) preservando o número do pedido original.
+- **PDV Frente de Caixa com Pesagem Fracionada `KG`/`g`, Regra Configurável de Cliente & Gestão de Pedidos (`/sales`, `/orders`):**
+  - Checkout rápido com atalhos de teclado, código de barras, modal interativo de pesagem para itens em `KG`/gramas (`WeightInputModal` por peso ou valor em `R$` posicionado no topo do `visualViewport` no mobile para nunca ficar coberto pelo teclado virtual), sugestões de cross-sell por IA e reabertura de pedidos existentes para edição no PDV (`/sales?editOrder=:id`) preservando o número do pedido original.
+  - **Cadastro de Cliente Obrigatório vs. Cliente Genérico (`posCustomerConfig.ts`):** todas as lojas têm acesso a 1 único `"Cliente Genérico"`, liberado mediante configuração na área administrativa (`/global-admin/stores/:storeId/edit`, `/global-admin?tab=stores` e `/settings#pos-customer-rules`), permitindo que a loja escolha entre exigir cliente identificado ou permitir o Cliente Genérico no PDV.
+  - **Gestão de Pedidos (`/orders`) com Apelidos de Status, Status `"Finalizado"` (`COMPLETED`), Histórico por Usuário & Atualização Forçada do Banco:** menu dropdown para mudança de status (incluindo `COMPLETED` / *"Finalizado"*, além dos status de entrega e `CANCELLED`), personalização de apelidos para os status do sistema por loja (`stores.theme_config.orderStatusAliases`), **Histórico de Atualizações de Status por Usuário** (`audit_logs` + linha do tempo com nome/e-mail do operador e data/hora), envio de status via WhatsApp ao cliente, recarregamento automático ao acessar `/orders` ou carregar pedido no PDV e botão **"Atualizar do Banco"** (Desktop e Mobile) para recarga imediata direto do banco de dados.
 - **CRM de Clientes com Pedidos na URL, Multi-Status, Recomendações IA, Visões Salvas no Banco & Exportação Detalhada (`/customers`):**
   - Listagem de todos os pedidos realizados por cada cliente com data e hora exatas (`DD/MM/YYYY HH:mm`) e **link clicável direto para o pedido na URL (`/customers?customerId=...&orderId=...`)**, que filtra a tela e abre o detalhamento completo do pedido daquela pessoa.
   - **Seleção múltipla de status** (ex.: acompanhar pedidos `PENDING` + `PROCESSING`, ou `DELIVERED`, ou `CANCELLED`) combinada com filtro de datas.
@@ -73,8 +75,8 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
 - **Integrador de APIs Estilo Postman (`/integrations`) & Tokens HBAC (`/global-admin?tab=api-hbac`):**
   - Request Builder completo com vinculação visual de dados (*Service Binding*) para sincronizar Clientes, Categorias, Produtos, Fornecedores e Estoque.
   - Tokens HBAC (`olv_live_...`) com 23 escopos granulares e RPC `get_ai_report` para agentes de IA externos.
-- **Catálogo Digital Público com WhatsApp (`/store/:slug`):**
-  - Vitrine responsiva por loja com suporte a produtos unitários e pesáveis (`KG`/gramas), carrinho interativo e envio formatado do pedido para o WhatsApp oficial da loja.
+- **Catálogo Digital Público Personalizável Integrado com `/orders` & Acompanhamento em Tempo Real (`/store/:slug` e `/store/:slug/order/:orderId`):**
+  - Vitrine responsiva por loja com personalização completa em `/settings` (upload/URL de logo e banner de capa, tema padrão da vitrine, cores da interface, botão Claro/Escuro para o visitante, quantidade padrão de itens por página e 3/4 colunas), suporte a produtos unitários e pesáveis (`KG`/gramas), checkout integrado diretamente com `/orders` (`create_public_catalog_order`) com baixa atômica de estoque e redirecionamento automático para a página exclusiva de acompanhamento em tempo real (`/store/:slug/order/:orderId`) até o pedido ficar como **Finalizado** (`COMPLETED`).
 - **Central de Backups Multi-Loja & DB Explorer (`/global-admin`):**
   - Dumps SQL relacionais com `INSERT INTO`, pacotes `.ZIP` de imagens com `manifest.json`, datasets `.JSON` e explorador CRUD dinâmico de banco de dados.
 
@@ -94,7 +96,7 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
   - **Supabase Auth:** Email/senha e Google OAuth, controle de sessão resiliente (`credentials: 'omit'` no fetch para evitar rejeição de cookies Cloudflare `__cf_bm` em domínios cruzados).
   - **Supabase Storage:** Buckets organizados e protegidos por loja (`products/{store_id}/...`, `stores`, `avatars`).
   - **Supabase Realtime:** Atualização automática de saldos de estoque, pedidos e alertas.
-  - **Stored Procedures (RPC):** Operações atômicas protegidas contra condições de corrida (`create_order_with_stock`, `restore_sale_stock`, `receive_purchase_order_stock`, `apply_stock_movement`, `can_user_approve_writeoff`, `review_stock_writeoff_request`, `execute_stock_transfer_to_branch`, `upsert_store_employee`, `complete_employee_pin_reset`, `assign_user_permission_group`, `record_subscription_payment`, `submit_commercial_proposal`, `upsert_ai_provider_config`, `list_ai_provider_configs_safe`, `resolve_ai_execution_runtime`, `get_ai_report`).
+  - **Stored Procedures (RPC):** Operações atômicas protegidas contra condições de corrida (`create_order_with_stock`, `create_public_catalog_order`, `get_public_order_tracking`, `restore_sale_stock`, `receive_purchase_order_stock`, `apply_stock_movement`, `can_user_approve_writeoff`, `review_stock_writeoff_request`, `execute_stock_transfer_to_branch`, `upsert_store_employee`, `complete_employee_pin_reset`, `assign_user_permission_group`, `record_subscription_payment`, `submit_commercial_proposal`, `upsert_ai_provider_config`, `list_ai_provider_configs_safe`, `resolve_ai_execution_runtime`, `get_ai_report`).
 - **CI/CD:** GitHub Actions com lint, typecheck e deploy automatizado para o GitHub Pages.
 
 ---
@@ -140,7 +142,7 @@ olivelas-gestao-estoque/
 │   ├── types/                      # database.types.ts, ai.types.ts, permissionGroup.types.ts, auth, store, product, inventory, customer, report, contract, apiKey, backup
 │   └── utils/                      # formatters, currency, barcode, dates, export, importParser, productUtils, errorHandler
 ├── supabase/
-│   ├── migrations/                 # 29 migrations versionadas e incrementais SQL (20260925..01 a 20261103..29)
+│   ├── migrations/                 # 30 migrations versionadas e incrementais SQL (20260925..01 a 20261111..30)
 │   └── seed/                       # Roles & Permissões iniciais
 ├── test-automation/                # Roteiro E2E, casos de teste JSON e runner automatizado
 ├── .env.example
@@ -165,12 +167,12 @@ olivelas-gestao-estoque/
 
 ---
 
-## 📱 5. Catálogo Digital Público com WhatsApp
+## 📱 5. Catálogo Digital Público Integrado com `/orders` & Status em Tempo Real
 
 Cada loja ou filial cadastrada possui uma URL exclusiva (`/store/{slug}`) acessível publicamente:
-- Vitrine de produtos publicados com fotos, preços e categorias.
-- Suporte completo a produtos vendidos por unidade (`UN`) ou pesáveis/fracionados (`KG` / gramas) com calculadora interativa de peso e valor.
-- Carrinho de compras interativo e envio formatado do pedido para o WhatsApp oficial da loja com resumo de itens, pesos, total e dados de entrega.
+- **Personalização Completa da Vitrine (`/settings`):** logo (`logo_url`), banner de capa (`banner_url`), tema padrão (`catalogTheme`), cores da interface (`primaryColor`, `accentColor`, `headerBgColor`), alternância Claro/Escuro para o visitante, quantidade padrão de itens por página (`6` a `96`) e grade de `3` ou `4` colunas.
+- **Suporte a Produtos por Unidade e por Peso (`KG`/gramas):** calculadora interativa de peso e valor com modais otimizados para o topo da tela no mobile (acima do teclado virtual).
+- **Pedido Online Integrado com `/orders` + Acompanhamento em Tempo Real (`/store/{slug}/order/{orderId}`):** ao finalizar o pedido, o estoque é baixado atomicamente, o pedido cai em `/orders` na plataforma interna e o cliente é redirecionado para sua URL exclusiva em tempo real (via Supabase Realtime) até o pedido ficar como **Finalizado** (`COMPLETED`).
 
 ---
 

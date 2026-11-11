@@ -84,7 +84,8 @@ const ORDER_STATUS_META: Record<
   PROCESSING: { label: 'Em Separação', group: 'OPEN', badgeVariant: 'warning' },
   READY: { label: 'Pronto p/ Retirada', group: 'OPEN', badgeVariant: 'default' },
   SHIPPED: { label: 'Enviado / Em Rota', group: 'OPEN', badgeVariant: 'default' },
-  DELIVERED: { label: 'Fechado / Entregue', group: 'CLOSED', badgeVariant: 'success' },
+  DELIVERED: { label: 'Entregue', group: 'CLOSED', badgeVariant: 'default' },
+  COMPLETED: { label: 'Finalizado', group: 'CLOSED', badgeVariant: 'success' },
   CANCELLED: { label: 'Cancelado', group: 'CANCELLED', badgeVariant: 'danger' },
 }
 
@@ -95,6 +96,7 @@ const ALL_ORDER_STATUSES: OrderStatus[] = [
   'READY',
   'SHIPPED',
   'DELIVERED',
+  'COMPLETED',
   'CANCELLED',
 ]
 
@@ -106,7 +108,7 @@ const OPEN_ORDER_STATUSES: OrderStatus[] = [
   'SHIPPED',
 ]
 
-const CLOSED_ORDER_STATUSES: OrderStatus[] = ['DELIVERED']
+const CLOSED_ORDER_STATUSES: OrderStatus[] = ['DELIVERED', 'COMPLETED']
 const CANCELLED_ORDER_STATUSES: OrderStatus[] = ['CANCELLED']
 
 const CHANNEL_LABELS: Record<string, string> = {

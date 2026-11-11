@@ -1,11 +1,23 @@
 import * as React from 'react'
-import { useLocation, useSearchParams, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useSearchParams, useNavigate } from 'react-router-dom'
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { productService } from '@/services/productService'
 import { orderService } from '@/services/orderService'
+import { customerService } from '@/services/customerService'
+import { storeService } from '@/services/storeService'
 import { useTenant } from '@/hooks/useTenant'
+import { useAuth } from '@/hooks/useAuth'
 import { formatCurrency } from '@/utils/currency'
 import { parseApiError } from '@/utils/errorHandler'
+import {
+  buildOperatorToCustomerWhatsAppUrl,
+  buildOrderTrackingUrl,
+  getOrderStatusLabel,
+} from '@/utils/orderStatusConfig'
+import {
+  getPosCustomerPolicy,
+  isGenericCustomerRecord,
+} from '@/utils/posCustomerConfig'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -34,6 +46,9 @@ import {
   EyeOff,
   Scale,
   Edit3,
+  MessageCircle,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 import { WeightInputModal } from '@/components/sales/WeightInputModal'
 import { isWeighedProduct, formatProductWeight } from '@/utils/productUtils'
@@ -92,11 +107,73 @@ function savePosFilters(next: SavedPosFilters) {
 }
 
 export function SalesPage() {
-  const { storeId, hasActiveStore } = useTenant()
+  const { storeId, storeName, storeSlug, role, hasActiveStore } = useTenant()
+  const { isGlobalAdmin } = useAuth()
+  const isStoreOrGlobalAdmin = isGlobalAdmin || role === 'STORE_ADMIN'
   const queryClient = useQueryClient()
   const location = useLocation()
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
+
+  const { data: storeProfile } = useQuery({
+    queryKey: ['store-settings', storeId],
+    queryFn: () => storeService.getStoreById(storeId),
+    enabled: Boolean(hasActiveStore && storeId && storeId !== 'all'),
+  })
+
+  const posCustomerPolicy = React.useMemo(
+    () => getPosCustomerPolicy(storeProfile?.theme_config, storeId),
+    [storeProfile?.theme_config, storeId]
+  )
+  const canUseGenericCustomer = posCustomerPolicy.canUseGenericCustomer
+
+  const [isLoadingGenericCustomer, setIsLoadingGenericCustomer] = React.useState(false)
+
+  const handleUseGenericCustomer = async () => {
+    if (!canUseGenericCustomer || !storeId) return
+    setIsLoadingGenericCustomer(true)
+    setErrorMsg(null)
+    try {
+      const genericCust = await customerService.getOrCreateGenericCustomer(storeId)
+      queryClient.invalidateQueries({ queryKey: ['customers', storeId] })
+      queryClient.invalidateQueries({ queryKey: ['customers-recent', storeId] })
+      queryClient.setQueryData(['customer-by-id', genericCust.id], genericCust)
+      setSelectedCustomerId(genericCust.id)
+      toast.success('Cliente Genérico da loja selecionado!')
+    } catch (err) {
+      setErrorMsg(parseApiError(err))
+    } finally {
+      setIsLoadingGenericCustomer(false)
+    }
+  }
+
+  const handleToggleStorePosCustomerMode = async (nextMode: 'REQUIRED' | 'ALLOW_GENERIC') => {
+    if (!storeId || !posCustomerPolicy.genericCustomerReleasedByAdmin) return
+    try {
+      const updated = await storeService.updateStorePosCustomerPolicy(storeId, {
+        genericCustomerReleasedByAdmin: posCustomerPolicy.genericCustomerReleasedByAdmin,
+        posCustomerMode: nextMode,
+      })
+      if (updated) {
+        queryClient.setQueryData(['store-settings', storeId], updated)
+      }
+      queryClient.invalidateQueries({ queryKey: ['store-settings', storeId] })
+      if (nextMode === 'REQUIRED') {
+        // Se o cliente atualmente selecionado for o genérico, limpa a seleção
+        if (selectedCustomerId) {
+          const cust = await customerService.getCustomer(selectedCustomerId).catch(() => null)
+          if (isGenericCustomerRecord(cust)) {
+            setSelectedCustomerId('')
+          }
+        }
+        toast.success('Regra atualizada: Cadastro de cliente agora é obrigatório no PDV.')
+      } else {
+        toast.success('Regra atualizada: Uso do Cliente Genérico habilitado no PDV.')
+      }
+    } catch (err) {
+      toast.error(parseApiError(err))
+    }
+  }
 
   const [isMobileView, setIsMobileView] = React.useState<boolean>(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1024 : false
@@ -230,6 +307,14 @@ export function SalesPage() {
   const [notes, setNotes] = React.useState('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [successOrderNumber, setSuccessOrderNumber] = React.useState<string | null>(null)
+  const [lastCompletedOrder, setLastCompletedOrder] = React.useState<{
+    id: string
+    orderNumber: string
+    status: string
+    totalAmount: number
+    customerPhone?: string
+    customerName?: string
+  } | null>(null)
   const [weighedProduct, setWeighedProduct] = React.useState<Product | null>(null)
   const [weighedInitialQty, setWeighedInitialQty] = React.useState<number>(0.15)
 
@@ -242,10 +327,12 @@ export function SalesPage() {
   const editOrderIdParam = searchParams.get('editOrder')
 
   // Se veio parâmetro editOrder pela URL sem state, busca o pedido via getOrder
-  const { data: fetchedEditOrder } = useQuery({
+  const { data: fetchedEditOrder, refetch: refetchEditOrder } = useQuery({
     queryKey: ['order-for-edit', editOrderIdParam],
     queryFn: () => orderService.getOrder(editOrderIdParam!),
     enabled: Boolean(editOrderIdParam) && !(location.state as any)?.editOrder,
+    staleTime: 0,
+    refetchOnMount: 'always',
   })
 
   // Carrega os dados do pedido a ser editado
@@ -357,10 +444,13 @@ export function SalesPage() {
   // troca de pagina valide contra o banco - o operador precisa ver o saldo
   // real, nao um cache de 5 minutos. `keepPreviousData` evita a tela
   // piscar enquanto a proxima pagina carrega.
+  const [isForceRefreshingPos, setIsForceRefreshingPos] = React.useState(false)
+
   const {
     data: productsData,
     isLoading: loadingProducts,
     isFetching: fetchingProducts,
+    refetch: refetchPosProducts,
   } = useQuery({
     queryKey: [
       'products-pos',
@@ -378,8 +468,67 @@ export function SalesPage() {
     enabled: Boolean(hasActiveStore),
     placeholderData: keepPreviousData,
     staleTime: 0,
-    refetchOnMount: true,
+    refetchOnMount: 'always',
   })
+
+  const handleForceRefreshFromDb = async () => {
+    if (!hasActiveStore || !storeId || isForceRefreshingPos) return
+    setIsForceRefreshingPos(true)
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] }),
+        queryClient.invalidateQueries({ queryKey: ['categories', storeId] }),
+        queryClient.invalidateQueries({ queryKey: ['store-settings', storeId] }),
+        queryClient.invalidateQueries({ queryKey: ['customers', storeId] }),
+        queryClient.invalidateQueries({ queryKey: ['customers-recent', storeId] }),
+      ])
+      await refetchPosProducts({ cancelRefetch: true })
+
+      // Recarrega preços e saldos reais de cada produto no carrinho diretamente do banco
+      if (cart.length > 0) {
+        const cartProductIds = cart.map((c) => c.product.id).filter(Boolean)
+        const freshCartProducts = await productService
+          .getProductsByIds(storeId, cartProductIds)
+          .catch(() => [])
+        if (freshCartProducts.length > 0) {
+          const freshMap = new Map(freshCartProducts.map((p) => [p.id, p]))
+          setCart((prevCart) =>
+            prevCart.map((line) => {
+              const fresh = freshMap.get(line.product.id)
+              if (!fresh) return line
+              const updatedPrice =
+                typeof fresh.selling_price === 'number' && fresh.selling_price > 0
+                  ? Number(fresh.selling_price)
+                  : line.unitPrice
+              const effectiveStock = editingOrderInfo
+                ? Math.max(Number(fresh.stock_quantity ?? 0), line.quantity)
+                : Number(fresh.stock_quantity ?? 0)
+              return {
+                ...line,
+                product: {
+                  ...fresh,
+                  stock_quantity: effectiveStock,
+                },
+                unitPrice: updatedPrice,
+              }
+            })
+          )
+        }
+      }
+
+      // Se um pedido estiver carregado no PDV para edição, recarrega seus dados do banco se existir
+      const activeEditId = editingOrderInfo?.id || editOrderIdParam
+      if (activeEditId) {
+        await refetchEditOrder({ cancelRefetch: true }).catch(() => null)
+      }
+
+      toast.success('Catálogo, saldos de estoque e dados do PDV recarregados do banco de dados!')
+    } catch (err) {
+      toast.error(parseApiError(err))
+    } finally {
+      setIsForceRefreshingPos(false)
+    }
+  }
 
   const productRows = productsData?.data
   const products = React.useMemo(() => productRows || [], [productRows])
@@ -503,6 +652,7 @@ export function SalesPage() {
       return orderService.createOrder({
         storeId,
         customerId: selectedCustomerId || undefined,
+        allowGenericCustomer: canUseGenericCustomer,
         channel: 'IN_STORE',
         items: cart.map((i) => ({
           productId: i.product.id,
@@ -529,6 +679,7 @@ export function SalesPage() {
       queryClient.invalidateQueries({ queryKey: ['products-pos', storeId] })
 
       const wasEditing = Boolean(editingOrderInfo || editOrderIdParam)
+      const customerIdBeforeClear = selectedCustomerId
       clearCart()
       setEditingOrderInfo(null)
       setLoadedEditOrderId(null)
@@ -539,14 +690,55 @@ export function SalesPage() {
         navigate('/orders')
       } else {
         setSuccessOrderNumber(order.order_number)
+        setLastCompletedOrder({
+          id: order.id,
+          orderNumber: order.order_number,
+          status: order.status || 'PENDING',
+          totalAmount: Number(order.total_amount || 0),
+        })
+        if (customerIdBeforeClear) {
+          customerService
+            .getCustomer(customerIdBeforeClear)
+            .then((cust) => {
+              if (cust) {
+                setLastCompletedOrder((prev) =>
+                  prev && prev.id === order.id
+                    ? {
+                        ...prev,
+                        customerName: cust.name,
+                        customerPhone: cust.whatsapp || cust.phone || undefined,
+                      }
+                    : prev
+                )
+              }
+            })
+            .catch(() => {})
+        }
       }
     },
     onError: (err) => setErrorMsg(parseApiError(err)),
   })
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0 || saleMutation.isPending) return
     setErrorMsg(null)
+
+    if (!canUseGenericCustomer) {
+      if (!selectedCustomerId) {
+        setErrorMsg(
+          'O cadastro ou seleção de um cliente identificado é obrigatório para finalizar a venda nesta loja. Selecione um cliente ou clique em "+ Novo".'
+        )
+        return
+      }
+      const chosenCust = await customerService.getCustomer(selectedCustomerId).catch(() => null)
+      if (isGenericCustomerRecord(chosenCust)) {
+        setSelectedCustomerId('')
+        setErrorMsg(
+          'Esta loja exige o cadastro de um cliente identificado no PDV (Cliente Genérico não permitido). Selecione ou cadastre o cliente.'
+        )
+        return
+      }
+    }
 
     // Guarda de cliente: o saldo pode ter mudado desde que o item entrou
     // no carrinho (outro PDV, recebimento, baixa). O RPC do banco tambem
@@ -576,21 +768,83 @@ export function SalesPage() {
     <div className={compactMobile ? 'space-y-2' : 'space-y-2.5'}>
       {/* Customer Selector & Quick Create Action */}
       <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <label className="text-[10px] font-semibold text-muted-foreground uppercase flex items-center gap-1">
             <Users className="h-3 w-3" /> Cliente <span className="text-primary">*</span>
           </label>
-          <span className="text-[10px] text-muted-foreground truncate">
-            Obrigatório (Genérico se vazio)
-          </span>
+
+          {posCustomerPolicy.genericCustomerReleasedByAdmin && isStoreOrGlobalAdmin ? (
+            <div className="inline-flex items-center rounded-md border border-border overflow-hidden text-[10px]">
+              <button
+                type="button"
+                onClick={() => handleToggleStorePosCustomerMode('REQUIRED')}
+                className={`px-1.5 py-0.5 font-semibold transition-colors cursor-pointer ${
+                  posCustomerPolicy.posCustomerMode === 'REQUIRED'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:text-foreground'
+                }`}
+                title="Exigir cadastro/seleção de cliente identificado"
+              >
+                Obrigatório
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleStorePosCustomerMode('ALLOW_GENERIC')}
+                className={`px-1.5 py-0.5 font-semibold transition-colors cursor-pointer ${
+                  posCustomerPolicy.posCustomerMode === 'ALLOW_GENERIC'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:text-foreground'
+                }`}
+                title="Permitir uso do Cliente Genérico da loja"
+              >
+                Cliente Genérico
+              </button>
+            </div>
+          ) : (
+            <span className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
+              {canUseGenericCustomer ? (
+                'Opcional (Cliente Genérico liberado)'
+              ) : (
+                <>
+                  <span className="text-amber-600 dark:text-amber-400 font-semibold">
+                    Cadastro Obrigatório
+                  </span>
+                  {isStoreOrGlobalAdmin && !posCustomerPolicy.genericCustomerReleasedByAdmin && (
+                    <Link
+                      to="/settings#pos-customer-rules"
+                      className="text-primary hover:underline ml-0.5"
+                      title="Liberar Cliente Genérico na área administrativa"
+                    >
+                      (Configurar)
+                    </Link>
+                  )}
+                </>
+              )}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <CustomerCombobox
             storeId={storeId}
             value={selectedCustomerId}
             onChange={setSelectedCustomerId}
+            allowGenericCustomer={canUseGenericCustomer}
+            onSelectGenericCustomer={handleUseGenericCustomer}
             className="flex-1 min-w-0"
           />
+          {canUseGenericCustomer && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              isLoading={isLoadingGenericCustomer}
+              onClick={handleUseGenericCustomer}
+              className="h-7 px-2 text-[11px] font-semibold shrink-0 border-border hover:bg-muted text-foreground"
+              title="Selecionar ou criar o 1 Cliente Genérico desta loja"
+            >
+              Genérico
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
@@ -683,20 +937,38 @@ export function SalesPage() {
                 Editando pedido <b>{editingOrderInfo.orderNumber}</b>. Altere os produtos, quantidades ou cliente e finalize a venda.
               </span>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleDiscardEdit}
-              className="h-7 text-xs border-border text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
-            >
-              Descartar Edição
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleForceRefreshFromDb}
+                disabled={isForceRefreshingPos || fetchingProducts}
+                className="h-7 text-xs gap-1 border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 font-semibold cursor-pointer"
+                title="Recarregar dados e saldos diretamente do banco de dados"
+              >
+                <RefreshCw
+                  className={`h-3 w-3 ${
+                    isForceRefreshingPos || fetchingProducts ? 'animate-spin' : ''
+                  }`}
+                />
+                Atualizar do Banco
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleDiscardEdit}
+                className="h-7 text-xs border-border text-muted-foreground hover:text-foreground shrink-0 cursor-pointer"
+              >
+                Descartar Edição
+              </Button>
+            </div>
           </div>
         )}
 
         {successOrderNumber && (
-          <div className="p-2.5 sm:p-3 rounded-xl bg-success/15 border border-success/30 flex items-center justify-between animate-in zoom-in-95 flex-shrink-0">
+          <div className="p-2.5 sm:p-3 rounded-xl bg-success/15 border border-success/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in zoom-in-95 flex-shrink-0">
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
               <div>
@@ -704,18 +976,62 @@ export function SalesPage() {
                   Venda #{successOrderNumber} Concluída com Sucesso!
                 </h3>
                 <p className="text-[11px] text-muted-foreground">
-                  Estoque atualizado e comprovante registrado.
+                  Estoque atualizado e página de acompanhamento em tempo real gerada.
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs"
-              onClick={() => setSuccessOrderNumber(null)}
-            >
-              Nova Venda
-            </Button>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {lastCompletedOrder && (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1 cursor-pointer"
+                    onClick={() => {
+                      const statusAlias = getOrderStatusLabel(
+                        lastCompletedOrder.status as any,
+                        undefined,
+                        storeId
+                      )
+                      const url = buildOperatorToCustomerWhatsAppUrl({
+                        customerPhone: lastCompletedOrder.customerPhone,
+                        customerName: lastCompletedOrder.customerName,
+                        storeName,
+                        storeSlug,
+                        orderId: lastCompletedOrder.id,
+                        orderNumber: lastCompletedOrder.orderNumber,
+                        status: (lastCompletedOrder.status as any) || 'PENDING',
+                        statusLabel: statusAlias,
+                        totalAmount: lastCompletedOrder.totalAmount,
+                      })
+                      window.open(url, '_blank')
+                    }}
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    Enviar Status no WhatsApp
+                  </Button>
+                  <a
+                    href={buildOrderTrackingUrl(lastCompletedOrder.id, storeSlug)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 h-7 px-2.5 rounded-lg border border-border bg-background hover:bg-muted text-xs font-semibold text-foreground"
+                  >
+                    Página Tempo Real <ExternalLink className="h-3 w-3" />
+                  </a>
+                </>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => {
+                  setSuccessOrderNumber(null)
+                  setLastCompletedOrder(null)
+                }}
+              >
+                Nova Venda
+              </Button>
+            </div>
           </div>
         )}
 
@@ -764,9 +1080,21 @@ export function SalesPage() {
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-normal">
                     {totalProducts} {totalProducts === 1 ? 'produto' : 'produtos'}
                   </Badge>
-                  {fetchingProducts && !loadingProducts && (
-                    <span className="text-[10px] text-muted-foreground">validando...</span>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleForceRefreshFromDb}
+                    disabled={isForceRefreshingPos || fetchingProducts}
+                    title="Recarregar produtos, saldos de estoque e dados diretamente do banco de dados (Desktop e Mobile)"
+                    aria-label="Atualização forçada do banco de dados no PDV"
+                    className="inline-flex items-center gap-1 h-7 px-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      className={`h-3 w-3 ${
+                        isForceRefreshingPos || fetchingProducts ? 'animate-spin' : ''
+                      }`}
+                    />
+                    <span>Atualizar do Banco</span>
+                  </button>
                   {(search || categoryFilter || stockView !== 'in') && (
                     <button
                       type="button"
@@ -1128,6 +1456,7 @@ export function SalesPage() {
         isOpen={isCustomerModalOpen}
         onClose={() => setIsCustomerModalOpen(false)}
         storeId={storeId}
+        allowGenericCustomer={canUseGenericCustomer}
         onSuccess={(customer) => {
           setSelectedCustomerId(customer.id)
         }}
