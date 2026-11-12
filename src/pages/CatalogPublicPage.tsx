@@ -10,7 +10,9 @@ import { isWeighedProduct, formatProductWeight } from '@/utils/productUtils'
 import { parseApiError } from '@/utils/errorHandler'
 import {
   buildOrderTrackingUrl,
+  formatPublicCatalogWhatsAppMessage,
   getCustomerPublicOrderHistory,
+  getResolvedWhatsAppOrderTemplate,
   normalizeWhatsAppPhone,
   saveCustomerPublicOrderHistory,
 } from '@/utils/orderStatusConfig'
@@ -44,6 +46,7 @@ import {
   ExternalLink,
   Sun,
   Moon,
+  FileText,
 } from 'lucide-react'
 import type { Product } from '@/types/product.types'
 import type { PaymentMethod } from '@/types/database.types'
@@ -82,6 +85,7 @@ export function CatalogPublicPage() {
   const [customerName, setCustomerName] = React.useState('')
   const [customerPhone, setCustomerPhone] = React.useState('')
   const [customerAddress, setCustomerAddress] = React.useState('')
+  const [customerNotes, setCustomerNotes] = React.useState('')
   const [paymentMethod, setPaymentMethod] = React.useState<PaymentMethod>('PIX')
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null)
   const [isSubmittingOrder, setIsSubmittingOrder] = React.useState(false)
@@ -258,6 +262,7 @@ export function CatalogPublicPage() {
         customerPhone: customerPhone.trim(),
         deliveryAddress: customerAddress.trim() || undefined,
         paymentMethod,
+        notes: customerNotes.trim() || undefined,
         items: itemsSnapshot,
       })
 
@@ -274,32 +279,41 @@ export function CatalogPublicPage() {
       const trackingUrl = buildOrderTrackingUrl(createdOrder.id, store.slug)
 
       if (alsoOpenWhatsApp && storePhone) {
-        const itemsText = cartItems
-          .map((i) => {
-            const isWeighed = isWeighedProduct(i.product)
-            const unitPrice = Number(i.product.selling_price)
-            const lineTotal = i.quantity * unitPrice
-            if (isWeighed) {
-              const weightLabel = formatProductWeight(i.quantity)
-              return `• ${i.product.name} (${weightLabel}) - ${formatCurrency(lineTotal)} (${formatCurrency(unitPrice)}/kg)`
-            }
-            return `• ${i.quantity}x ${i.product.name} - ${formatCurrency(lineTotal)}`
-          })
-          .join('\n')
-
-        const message = `*NOVO PEDIDO ONLINE #${createdOrder.order_number}*\n*Loja:* ${
-          store.name
-        }\n\n*Cliente:* ${customerName.trim()}\n*WhatsApp:* ${customerPhone.trim()}\n*Endereço:* ${
-          customerAddress.trim() || 'Retirada / A combinar'
-        }\n*Pagamento:* ${paymentMethod}\n\n*Itens do Pedido:*\n${itemsText}\n\n*TOTAL: ${formatCurrency(
-          createdOrder.total_amount
-        )}*\n\n🔗 *Acompanhar status em tempo real:*\n${trackingUrl}`
+        const customTemplate = getResolvedWhatsAppOrderTemplate(
+          store.theme_config,
+          store.id,
+          store.slug
+        )
+        const message = formatPublicCatalogWhatsAppMessage({
+          template: customTemplate,
+          orderNumber: createdOrder.order_number,
+          storeName: store.name,
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          customerAddress: customerAddress.trim() || null,
+          paymentMethod,
+          notes: customerNotes.trim() || null,
+          trackingUrl,
+          totalAmount: createdOrder.total_amount,
+          subtotalAmount: cartTotal,
+          createdAt: createdOrder.created_at,
+          items: cartItems.map((i) => ({
+            name: i.product.name,
+            quantity: i.quantity,
+            unitPrice: Number(i.product.selling_price),
+            isWeighed: isWeighedProduct(i.product),
+            weightLabel: isWeighedProduct(i.product)
+              ? formatProductWeight(i.quantity)
+              : `${i.quantity} un`,
+          })),
+        })
 
         const encoded = encodeURIComponent(message)
         window.open(`https://wa.me/${storePhone}?text=${encoded}`, '_blank')
       }
 
       clearCart()
+      setCustomerNotes('')
       setIsCartOpen(false)
       queryClient.invalidateQueries({ queryKey: ['public-products', store.id] })
       toast.success(`Pedido #${createdOrder.order_number} enviado para a loja!`)
@@ -894,6 +908,24 @@ export function CatalogPublicPage() {
                     ))}
                   </div>
                 </div>
+
+                <div className="space-y-1">
+                  <label
+                    htmlFor="public-cart-notes"
+                    className="text-[11px] uppercase font-bold text-muted-foreground flex items-center gap-1"
+                  >
+                    <FileText className="h-3 w-3 text-primary" />
+                    Observações do Pedido (Opcional)
+                  </label>
+                  <textarea
+                    id="public-cart-notes"
+                    rows={2}
+                    placeholder="Ex: Preferência por frutas mais maduras, troco para R$ 50,00, tocar interfone..."
+                    value={customerNotes}
+                    onChange={(e) => setCustomerNotes(e.target.value)}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-y"
+                  />
+                </div>
               </div>
 
               {/* Total & Online Order Submission Buttons */}
@@ -911,23 +943,23 @@ export function CatalogPublicPage() {
                 <Button
                   type="button"
                   isLoading={isSubmittingOrder}
-                  className="w-full h-11 text-xs sm:text-sm font-bold shadow-md active:scale-[0.99] transition-all gap-2 cursor-pointer"
-                  onClick={() => handleOnlineOrderSubmit(false)}
+                  className="w-full h-11 text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-md active:scale-[0.99] transition-all gap-2 cursor-pointer"
+                  onClick={() => handleOnlineOrderSubmit(true)}
                 >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Finalizar Pedido Online (Acompanhar em Tempo Real)
+                  <MessageCircle className="h-4 w-4" />
+                  Enviar Pedido por WhatsApp & Acompanhar em Tempo Real
+                  <ExternalLink className="h-3.5 w-3.5" />
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
                   disabled={isSubmittingOrder}
-                  className="w-full h-10 text-xs font-bold border-emerald-600/40 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-700 dark:text-emerald-400 gap-2 cursor-pointer"
-                  onClick={() => handleOnlineOrderSubmit(true)}
+                  className="w-full h-10 text-xs font-bold border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary gap-2 cursor-pointer"
+                  onClick={() => handleOnlineOrderSubmit(false)}
                 >
-                  <MessageCircle className="h-4 w-4" />
-                  Finalizar Pedido e Também Enviar no WhatsApp da Loja
-                  <ExternalLink className="h-3 w-3" />
+                  <CheckCircle2 className="h-4 w-4" />
+                  Finalizar Pedido Apenas na Plataforma (Sem Abrir WhatsApp)
                 </Button>
               </div>
             </div>

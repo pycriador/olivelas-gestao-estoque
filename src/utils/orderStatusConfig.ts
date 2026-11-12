@@ -368,3 +368,323 @@ export function getLocalOrderStatusHistory(orderId?: string | null): OrderStatus
     return []
   }
 }
+
+export const DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE = `*NOVO PEDIDO ONLINE #{{numero_pedido}}*
+*Loja:* {{nome_loja}}
+*Data/Hora:* {{data_hora}}
+
+*Cliente:* {{nome_cliente}}
+*WhatsApp:* {{telefone_cliente}}
+*Endereço:* {{endereco_cliente}}
+*Pagamento:* {{forma_pagamento}}
+*Observações:* {{observacoes}}
+
+*Itens do Pedido ({{quantidade_itens}}):*
+{{produtos}}
+
+*Resumo de Preços:*
+{{precos}}
+
+*TOTAL DO PEDIDO: {{total}}*
+
+🔗 *Acompanhar status em tempo real:*
+{{link_rastreio}}`
+
+export interface WhatsAppTemplateTagDefinition {
+  tag: string
+  label: string
+  description: string
+  category: 'carrinho' | 'cliente' | 'pedido'
+  example: string
+}
+
+export const PUBLIC_WHATSAPP_TEMPLATE_TAGS: WhatsAppTemplateTagDefinition[] = [
+  {
+    tag: '{{produtos}}',
+    label: 'Produtos + Qtd + Preços',
+    description: 'Lista completa dos produtos do carrinho com quantidade/peso e valor de cada linha.',
+    category: 'carrinho',
+    example: '• 2x Tomate Italiano - R$ 15,80\n• Maçã Gala (500g) - R$ 6,45 (R$ 12,90/kg)',
+  },
+  {
+    tag: '{{precos}}',
+    label: 'Detalhamento de Preços',
+    description: 'Tabela detalhada com preço unitário/kg e subtotal de cada item do carrinho.',
+    category: 'carrinho',
+    example: '• Tomate Italiano: 2 × R$ 7,90 = R$ 15,80\n• Maçã Gala: 500g × R$ 12,90/kg = R$ 6,45',
+  },
+  {
+    tag: '{{produtos_simples}}',
+    label: 'Produtos (Sem Preços)',
+    description: 'Lista apenas com o nome e a quantidade/peso de cada produto.',
+    category: 'carrinho',
+    example: '• 2x Tomate Italiano\n• Maçã Gala (500g)',
+  },
+  {
+    tag: '{{total}}',
+    label: 'Valor Total',
+    description: 'Valor total final do carrinho formatado em Reais (R$).',
+    category: 'carrinho',
+    example: 'R$ 22,25',
+  },
+  {
+    tag: '{{subtotal}}',
+    label: 'Subtotal',
+    description: 'Soma dos itens do carrinho antes de descontos ou taxas.',
+    category: 'carrinho',
+    example: 'R$ 22,25',
+  },
+  {
+    tag: '{{quantidade_itens}}',
+    label: 'Qtd. de Itens',
+    description: 'Quantidade de produtos distintos no carrinho.',
+    category: 'carrinho',
+    example: '2 itens',
+  },
+  {
+    tag: '{{observacoes}}',
+    label: 'Observações do Pedido',
+    description: 'Observações digitadas pelo cliente no carrinho público antes de enviar.',
+    category: 'cliente',
+    example: 'Escolher tomates mais maduros, troco para R$ 50,00',
+  },
+  {
+    tag: '{{nome_cliente}}',
+    label: 'Nome do Cliente',
+    description: 'Nome informado pelo cliente no carrinho.',
+    category: 'cliente',
+    example: 'Maria Oliveira',
+  },
+  {
+    tag: '{{telefone_cliente}}',
+    label: 'WhatsApp do Cliente',
+    description: 'Telefone/WhatsApp informado pelo cliente.',
+    category: 'cliente',
+    example: '(11) 99876-5432',
+  },
+  {
+    tag: '{{endereco_cliente}}',
+    label: 'Endereço / Retirada',
+    description: 'Endereço de entrega preenchido ou indicação de retirada na loja.',
+    category: 'cliente',
+    example: 'Rua das Palmeiras, 120 - Centro',
+  },
+  {
+    tag: '{{forma_pagamento}}',
+    label: 'Forma de Pagamento',
+    description: 'Meio de pagamento selecionado (PIX, Cartão ou Dinheiro).',
+    category: 'pedido',
+    example: 'PIX',
+  },
+  {
+    tag: '{{numero_pedido}}',
+    label: 'Nº do Pedido',
+    description: 'Código único do pedido gerado na plataforma.',
+    category: 'pedido',
+    example: 'PED-849201',
+  },
+  {
+    tag: '{{link_rastreio}}',
+    label: 'Link Status Tempo Real',
+    description: 'URL exclusiva para o cliente acompanhar o status do pedido em tempo real.',
+    category: 'pedido',
+    example: 'https://pycriador.github.io/olivelas-gestao-estoque/store/gnz-hortifruti/order/...',
+  },
+  {
+    tag: '{{nome_loja}}',
+    label: 'Nome da Loja',
+    description: 'Nome oficial da loja ou filial.',
+    category: 'pedido',
+    example: 'GNZ Hortifruti',
+  },
+  {
+    tag: '{{data_hora}}',
+    label: 'Data e Hora',
+    description: 'Data e horário em que o pedido foi enviado.',
+    category: 'pedido',
+    example: '11/11/2026 21:05',
+  },
+]
+
+const LOCAL_STORAGE_WA_TEMPLATE_PREFIX = 'olivelas_whatsapp_order_template_'
+
+export function saveLocalWhatsAppOrderTemplate(
+  storeId: string | null | undefined,
+  storeSlug: string | null | undefined,
+  template: string
+): void {
+  if (typeof window === 'undefined') return
+  try {
+    if (storeId) {
+      window.localStorage.setItem(`${LOCAL_STORAGE_WA_TEMPLATE_PREFIX}${storeId}`, template)
+    }
+    if (storeSlug) {
+      window.localStorage.setItem(`${LOCAL_STORAGE_WA_TEMPLATE_PREFIX}slug_${storeSlug}`, template)
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function getResolvedWhatsAppOrderTemplate(
+  themeConfig?: unknown,
+  storeId?: string | null,
+  storeSlug?: string | null
+): string {
+  if (themeConfig && typeof themeConfig === 'object' && !Array.isArray(themeConfig)) {
+    const configured = (themeConfig as Record<string, unknown>).whatsappOrderMessage
+    if (typeof configured === 'string' && configured.trim().length > 0) {
+      return configured
+    }
+  }
+  if (typeof window !== 'undefined') {
+    try {
+      if (storeId) {
+        const byId = window.localStorage.getItem(`${LOCAL_STORAGE_WA_TEMPLATE_PREFIX}${storeId}`)
+        if (byId && byId.trim().length > 0) return byId
+      }
+      if (storeSlug) {
+        const bySlug = window.localStorage.getItem(
+          `${LOCAL_STORAGE_WA_TEMPLATE_PREFIX}slug_${storeSlug}`
+        )
+        if (bySlug && bySlug.trim().length > 0) return bySlug
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+  return DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE
+}
+
+export interface PublicCartWhatsAppFormatParams {
+  template?: string | null
+  orderNumber: string
+  storeName: string
+  customerName: string
+  customerPhone: string
+  customerAddress?: string | null
+  paymentMethod: string
+  notes?: string | null
+  trackingUrl: string
+  totalAmount: number
+  subtotalAmount?: number
+  createdAt?: string
+  items: Array<{
+    name: string
+    quantity: number
+    unitPrice: number
+    isWeighed?: boolean
+    weightLabel?: string
+  }>
+}
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  PIX: 'PIX',
+  CREDIT_CARD: 'Cartão de Crédito/Débito',
+  DEBIT_CARD: 'Cartão de Débito',
+  CASH: 'Dinheiro',
+}
+
+export function formatPublicCatalogWhatsAppMessage(
+  params: PublicCartWhatsAppFormatParams
+): string {
+  const activeTemplate =
+    params.template && params.template.trim().length > 0
+      ? params.template
+      : DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE
+
+  const produtosText = params.items
+    .map((i) => {
+      const lineTotal = i.quantity * i.unitPrice
+      if (i.isWeighed) {
+        const wLabel = i.weightLabel || `${i.quantity} kg`
+        return `• ${i.name} (${wLabel}) - ${formatCurrency(lineTotal)} (${formatCurrency(
+          i.unitPrice
+        )}/kg)`
+      }
+      return `• ${i.quantity}x ${i.name} - ${formatCurrency(lineTotal)}`
+    })
+    .join('\n')
+
+  const precosText = params.items
+    .map((i) => {
+      const lineTotal = i.quantity * i.unitPrice
+      if (i.isWeighed) {
+        const wLabel = i.weightLabel || `${i.quantity} kg`
+        return `• ${i.name}: ${wLabel} × ${formatCurrency(i.unitPrice)}/kg = ${formatCurrency(
+          lineTotal
+        )}`
+      }
+      return `• ${i.name}: ${i.quantity} un × ${formatCurrency(i.unitPrice)} = ${formatCurrency(
+        lineTotal
+      )}`
+    })
+    .join('\n')
+
+  const produtosSimplesText = params.items
+    .map((i) => {
+      if (i.isWeighed) {
+        const wLabel = i.weightLabel || `${i.quantity} kg`
+        return `• ${i.name} (${wLabel})`
+      }
+      return `• ${i.quantity}x ${i.name}`
+    })
+    .join('\n')
+
+  const totalFormatted = formatCurrency(params.totalAmount)
+  const subtotalFormatted = formatCurrency(params.subtotalAmount ?? params.totalAmount)
+  const itemCountLabel = `${params.items.length} ${
+    params.items.length === 1 ? 'item' : 'itens'
+  }`
+  const notesValue = params.notes?.trim() ? params.notes.trim() : 'Sem observações'
+  const addressValue = params.customerAddress?.trim()
+    ? params.customerAddress.trim()
+    : 'Retirada na loja / A combinar'
+  const paymentLabel = PAYMENT_METHOD_LABELS[params.paymentMethod] || params.paymentMethod
+  const dateObj = params.createdAt ? new Date(params.createdAt) : new Date()
+  const dateTimeFormatted = dateObj.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+
+  const replacements: Record<string, string> = {
+    produtos: produtosText,
+    itens_pedido: produtosText,
+    itens: produtosText,
+    precos: precosText,
+    tabela_precos: precosText,
+    produtos_simples: produtosSimplesText,
+    total: totalFormatted,
+    valor_total: totalFormatted,
+    subtotal: subtotalFormatted,
+    quantidade_itens: itemCountLabel,
+    qtd_itens: String(params.items.length),
+    observacoes: notesValue,
+    obs: notesValue,
+    nome_cliente: params.customerName.trim() || 'Cliente',
+    cliente: params.customerName.trim() || 'Cliente',
+    telefone_cliente: params.customerPhone.trim() || 'Não informado',
+    whatsapp_cliente: params.customerPhone.trim() || 'Não informado',
+    endereco_cliente: addressValue,
+    endereco: addressValue,
+    forma_pagamento: paymentLabel,
+    pagamento: paymentLabel,
+    numero_pedido: params.orderNumber,
+    pedido: params.orderNumber,
+    link_rastreio: params.trackingUrl,
+    url_rastreio: params.trackingUrl,
+    nome_loja: params.storeName,
+    loja: params.storeName,
+    data_hora: dateTimeFormatted,
+  }
+
+  return activeTemplate.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (fullMatch, rawKey) => {
+    const key = String(rawKey).toLowerCase()
+    return Object.prototype.hasOwnProperty.call(replacements, key)
+      ? replacements[key]
+      : fullMatch
+  })
+}

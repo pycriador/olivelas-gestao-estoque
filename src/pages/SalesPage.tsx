@@ -811,7 +811,7 @@ export function SalesPage() {
                   </span>
                   {isStoreOrGlobalAdmin && !posCustomerPolicy.genericCustomerReleasedByAdmin && (
                     <Link
-                      to="/settings#pos-customer-rules"
+                      to="/settings?tab=pos"
                       className="text-primary hover:underline ml-0.5"
                       title="Liberar Cliente Genérico na área administrativa"
                     >

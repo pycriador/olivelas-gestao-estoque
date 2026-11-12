@@ -92,6 +92,7 @@ export interface ResolvedCatalogCustomization {
   allowVisitorThemeToggle: boolean
   openingHours: string
   instagramUrl: string
+  whatsappOrderMessage: string
 }
 
 export function getCatalogCustomization(config: unknown): ResolvedCatalogCustomization {
@@ -122,6 +123,8 @@ export function getCatalogCustomization(config: unknown): ResolvedCatalogCustomi
     allowVisitorThemeToggle: rec.allowVisitorThemeToggle !== false,
     openingHours: typeof rec.openingHours === 'string' ? rec.openingHours.trim() : '',
     instagramUrl: typeof rec.instagramUrl === 'string' ? rec.instagramUrl.trim() : '',
+    whatsappOrderMessage:
+      typeof rec.whatsappOrderMessage === 'string' ? rec.whatsappOrderMessage : '',
   }
 }
 
