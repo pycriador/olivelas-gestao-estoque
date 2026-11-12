@@ -60,6 +60,14 @@ const QUICK_STORE_QUESTIONS = [
   },
 ]
 
+const OPEN_AI_COPILOT_EVENT = 'olivelas:open-ai-copilot-drawer'
+
+export function openAiStoreCopilotDrawer() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(OPEN_AI_COPILOT_EVENT))
+  }
+}
+
 export const AiStoreCopilotDrawer: React.FC = () => {
   const navigate = useNavigate()
   const { storeId, storeName } = useTenant()
@@ -70,6 +78,13 @@ export const AiStoreCopilotDrawer: React.FC = () => {
     isGlobalAdmin || hasModule('MOD_AI_COPILOT_CHAT')
 
   const [isOpen, setIsOpen] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleExternalOpen = () => setIsOpen(true)
+    window.addEventListener(OPEN_AI_COPILOT_EVENT, handleExternalOpen)
+    return () => window.removeEventListener(OPEN_AI_COPILOT_EVENT, handleExternalOpen)
+  }, [])
   const [isFullScreen, setIsFullScreen] = useState(false)
   const [personas, setPersonas] = useState<AiPersona[]>(DEFAULT_AI_PERSONAS)
   const [selectedPersonaCode, setSelectedPersonaCode] =

@@ -3,6 +3,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppRoutes } from '@/routes/AppRoutes'
 import { useAuthStore } from '@/stores/authStore'
+import { DomAutoTranslator } from '@/i18n/domTranslator'
 import { Toaster } from 'sonner'
 
 const queryClient = new QueryClient({
@@ -28,6 +29,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <DomAutoTranslator />
         <AppRoutes />
         <Toaster position="top-right" richColors />
       </BrowserRouter>

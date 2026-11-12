@@ -56,8 +56,10 @@ export const ptBR = {
   },
   nav: {
     dashboard: 'Dashboard',
+    aiCopilot: 'Copiloto IA da Loja',
     globalAdmin: 'Painel Admin Global',
     groupGlobalAdmin: 'Admin Global',
+    globalAiCenter: 'Central de IA & Chaves API',
     globalStores: 'Lojas & Filiais (Matriz)',
     globalNewStore: 'Nova Loja / Filial',
     globalUsers: 'Usuários Admin Loja',
@@ -84,6 +86,7 @@ export const ptBR = {
     catalog: 'Catálogo Público',
     reports: 'Relatórios',
     notifications: 'Notificações',
+    themes: 'Temas',
     audit: 'Auditoria & Logs',
     integrations: 'Integrações API',
     settings: 'Configurações',

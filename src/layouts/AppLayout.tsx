@@ -54,7 +54,10 @@ import { useRealtimeSubscriptions } from '@/hooks/useRealtime'
 import { LanguageSelector } from '@/components/common/LanguageSelector'
 import { GlobalCommandK } from '@/components/common/GlobalCommandK'
 import { EmployeePinResetModal } from '@/components/auth/EmployeePinResetModal'
-import { AiStoreCopilotDrawer } from '@/components/ai/AiStoreCopilotDrawer'
+import {
+  AiStoreCopilotDrawer,
+  openAiStoreCopilotDrawer,
+} from '@/components/ai/AiStoreCopilotDrawer'
 import { Badge } from '@/components/ui/badge'
 import { applyStoreTheme, getStoreThemeId } from '@/lib/storeThemes'
 
@@ -266,7 +269,7 @@ export function AppLayout() {
 
   const topNavItems: NavItem[] = [
     { label: t.nav.dashboard, path: '/dashboard', icon: LayoutDashboard },
-    { label: 'Copiloto IA da Loja', path: '/ai-copilot', icon: Sparkles },
+    { label: t.nav.aiCopilot, path: '/ai-copilot', icon: Sparkles },
   ]
 
   // "Compras" fica so em Controle para nao duplicar o mesmo link.
@@ -278,7 +281,7 @@ export function AppLayout() {
             label: t.nav.groupGlobalAdmin,
             icon: Shield,
             items: [
-              { label: 'Central de IA & Chaves API', path: '/global-admin/ai', icon: Sparkles },
+              { label: t.nav.globalAiCenter, path: '/global-admin/ai', icon: Sparkles },
               { label: t.nav.globalStores, path: '/global-admin?tab=stores', icon: Building2 },
               { label: t.nav.globalNewStore, path: '/global-admin/stores/new', icon: GitBranch },
               { label: t.nav.globalUsers, path: '/global-admin?tab=users', icon: Users },
@@ -745,12 +748,48 @@ export function AppLayout() {
             >
               <span className="flex items-center gap-1.5">
                 <StoreIcon className="h-3.5 w-3.5" />
-                Catálogo Público
+                {t.nav.catalog}
               </span>
               <ExternalLink className="h-3 w-3" />
             </Link>
           </div>
         )}
+
+        {/* Mobile Sidebar Utilities: IA, Idiomas, Temas & Notificações */}
+        <div className="md:hidden p-3 border-t border-sidebar-border bg-sidebar-accent/20 space-y-2.5">
+          <button
+            type="button"
+            onClick={() => {
+              closeMobileNavigation()
+              openAiStoreCopilotDrawer()
+            }}
+            className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-primary px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 cursor-pointer"
+          >
+            <Sparkles className="h-4 w-4 shrink-0" />
+            <span>{t.nav.aiCopilot}</span>
+          </button>
+
+          <LanguageSelector fullWidth />
+
+          <div className="grid grid-cols-2 gap-2">
+            <Link
+              to="/settings?tab=theme"
+              onClick={closeMobileNavigation}
+              className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border border-border bg-surface hover:bg-muted text-xs font-semibold text-foreground transition-colors"
+            >
+              <Palette className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="truncate">{t.nav.themes}</span>
+            </Link>
+            <Link
+              to="/notifications"
+              onClick={closeMobileNavigation}
+              className="flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-xl border border-border bg-surface hover:bg-muted text-xs font-semibold text-foreground transition-colors"
+            >
+              <Bell className="h-3.5 w-3.5 text-primary shrink-0" />
+              <span className="truncate">{t.nav.notifications}</span>
+            </Link>
+          </div>
+        </div>
 
         {/* User Footer Profile */}
         <div className="p-3 border-t border-sidebar-border bg-sidebar-accent/30 flex items-center justify-between">
@@ -792,22 +831,22 @@ export function AppLayout() {
             <div id="page-header-slot" className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0" />
           </div>
 
-          {/* Right Header Utilities */}
-          <div className="flex items-center justify-end gap-1.5 sm:gap-2 shrink-0">
+          {/* Right Header Utilities (Desktop only; on Mobile these live inside the Sidebar) */}
+          <div className="hidden md:flex items-center justify-end gap-2 shrink-0">
             <AiStoreCopilotDrawer />
             <LanguageSelector />
             <Link
-              to="/settings#theme"
+              to="/settings?tab=theme"
               className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-              title="Escolher tema da loja"
-              aria-label="Escolher tema da loja"
+              title={t.nav.themes}
+              aria-label={t.nav.themes}
             >
               <Palette className="h-4 w-4" />
             </Link>
             <Link
               to="/notifications"
               className="p-1.5 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground relative transition-colors"
-              title="Notificações"
+              title={t.nav.notifications}
             >
               <Bell className="h-4 w-4" />
             </Link>
