@@ -5,7 +5,7 @@ type: Contract
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-07
+updated: 2026-11-12
 language: pt-BR
 classification: Confirmed
 source:
@@ -89,6 +89,8 @@ Assinaturas completas estão nas migrations; o front passa os argumentos usados 
 | `upsert_ai_provider_config` | `aiOrchestratorService.ts` (`GlobalAiSettingsPanel.tsx`) |
 | `list_ai_provider_configs_safe` | `aiOrchestratorService.ts` (`GlobalAiSettingsPanel.tsx`) |
 | `resolve_ai_execution_runtime` | `aiOrchestratorService.ts` |
+| `create_public_catalog_order` | `orderService.ts` (`CatalogPublicPage.tsx`) e `spa_portal/src/api/supabasePortalClient.ts` |
+| `get_public_order_tracking` | `orderService.ts` (`OrderTrackingPublicPage.tsx`) e `spa_portal/src/api/supabasePortalClient.ts` |
 
 `create_order_with_stock`: pedido + itens + pagamento + baixa com `FOR UPDATE` (comentário e corpo em `20260926000009_atomic_order_creation.sql`).
 

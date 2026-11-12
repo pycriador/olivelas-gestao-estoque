@@ -79,6 +79,10 @@ A plataforma **Olivelas** é uma solução SaaS multi-loja e multi-tenant conceb
   - Vitrine responsiva por loja com personalização completa organizada por abas na URL em `/settings` (`?tab=store`, `?tab=catalog`, `?tab=whatsapp`, `?tab=pos`, `?tab=theme`): upload/URL de logo e banner de capa, tema padrão da vitrine, cores da interface, botão Claro/Escuro para o visitante, quantidade padrão de itens por página (`6` a `96`) e 3/4 colunas.
   - **Observações no Carrinho & Mensagem WhatsApp 100% Personalizada com Tags (`/settings?tab=whatsapp`):** ao abrir o carrinho em `/store/:slug`, o cliente pode adicionar **Observações do Pedido** antes de enviar pelo WhatsApp, e a loja pode personalizar toda a mensagem enviada no WhatsApp usando tags dinâmicas do carrinho (`{{produtos}}`, `{{precos}}`, `{{produtos_simples}}`, `{{total}}`, `{{subtotal}}`, `{{quantidade_itens}}`, `{{observacoes}}`, `{{nome_cliente}}`, `{{telefone_cliente}}`, `{{endereco_cliente}}`, `{{forma_pagamento}}`, `{{numero_pedido}}`, `{{link_rastreio}}`, `{{nome_loja}}`, `{{data_hora}}`).
   - Suporte a produtos unitários e pesáveis (`KG`/gramas), checkout integrado diretamente com `/orders` (`create_public_catalog_order`) com baixa atômica de estoque e redirecionamento automático para a página exclusiva de acompanhamento em tempo real (`/store/:slug/order/:orderId`) até o pedido ficar como **Finalizado** (`COMPLETED`).
+- **Portal Público Portátil (`spa_portal/` — White-Label & Domínio Próprio por Loja):**
+  - SPA autônoma e independente do ERP administrativo (`spa_portal/`), projetada para criar versões ainda mais personalizadas de lojas públicas e hospedá-las em qualquer servidor estático ou domínio próprio do cliente.
+  - Conectada **exclusivamente aos dados daquela loja (`VITE_PORTAL_STORE_ID`)** através de uma **credencial HBAC única e expirável (`VITE_PORTAL_HBAC_TOKEN` / `X-HBAC-Token`)**: em caso de vazamento de dados ou encerramento contratual, basta desativar ou expirar o token em `/global-admin?tab=api-hbac` para bloquear o acesso instantaneamente (`HTTP 401/403`) e exibir a tela de proteção `CredentialErrorScreen`.
+  - Mantém 100% das funcionalidades do catálogo público (busca, categorias, faixa de preço, produtos pesáveis `KG`, carrinho, checkout atômico em `/orders`, mensagem WhatsApp com tags) e página de acompanhamento do pedido em tempo real (`#/order/:orderId` ou `?order=:orderId`) via Supabase Realtime.
 - **Central de Backups Multi-Loja & DB Explorer (`/global-admin`):**
   - Dumps SQL relacionais com `INSERT INTO`, pacotes `.ZIP` de imagens com `manifest.json`, datasets `.JSON` e explorador CRUD dinâmico de banco de dados.
 
@@ -146,6 +150,11 @@ olivelas-gestao-estoque/
 ├── supabase/
 │   ├── migrations/                 # 30 migrations versionadas e incrementais SQL (20260925..01 a 20261111..30)
 │   └── seed/                       # Roles & Permissões iniciais
+├── spa_portal/                     # SPA Portal Público Portátil (Catálogo + Rastreamento em Tempo Real com credencial única HBAC expirável por loja)
+│   ├── PLAN.md                     # Plano arquitetural, modelo de segurança HBAC e guia de customização White-Label
+│   ├── README.md                   # Passo a passo de configuração (.env), credencial única e deploy
+│   ├── presets/                    # Presets JSON de personalização avançada por cliente (ex.: gnz-hortifruti.preset.json)
+│   └── src/                        # Cliente Supabase isolado (supabasePortalClient.ts), CatalogView, OrderTrackingView, WeightSelectorModal e CredentialErrorScreen
 ├── test-automation/                # Roteiro E2E, casos de teste JSON e runner automatizado
 ├── .env.example
 ├── package.json

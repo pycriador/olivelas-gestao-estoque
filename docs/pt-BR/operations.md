@@ -5,7 +5,7 @@ type: Operation
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-07
+updated: 2026-11-12
 language: pt-BR
 classification: Confirmed
 source:
@@ -75,6 +75,14 @@ O repositório conta com automação completa para criação em massa de redes d
   - Por linguagem natural (usando a IA da Loja configurada em `public.ai_provider_configs`): `npm run store:bulk -- --prompt "Criar matriz Primor com filiais P1 a P5..."`.
 - **Skill do Agente (`.agents/skills/bulk-store-creator/SKILL.md`)**: instrui o agente a converter pedidos em linguagem natural em especificações JSON e executar o provisionamento em lote no Supabase.
 - **Interface Web (`BulkStoreAiBuilderModal.tsx` + `bulkStoreBuilderService.ts`)**: disponível em `/stores`, `/global-admin?tab=stores` e `/ai-copilot` através do botão **"Criação em Lote (IA)"**.
+
+## Portal Público Portátil (`spa_portal/`)
+
+A pasta `spa_portal/` contém uma SPA Vite + React independente para hospedar vitrines públicas altamente personalizadas em domínios externos de clientes:
+- Configurar `.env` a partir de `spa_portal/.env.example` com `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_PORTAL_STORE_ID` e `VITE_PORTAL_HBAC_TOKEN`.
+- Executar localmente: `cd spa_portal && npm install && npm run dev` (porta `5174`).
+- Gerar build estático: `cd spa_portal && npm run build` (`spa_portal/dist/`).
+- Em caso de vazamento da credencial da loja, desativar ou expirar o token correspondente em `/global-admin?tab=api-hbac`.
 
 ## Mudança de schema
 

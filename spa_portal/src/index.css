@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --portal-primary: #16a34a;
+  --portal-accent: #f59e0b;
+}

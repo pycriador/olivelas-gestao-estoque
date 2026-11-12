@@ -1,0 +1,22 @@
+{
+  "presetId": "gnz-hortifruti",
+  "storeId": "f8fdfd0e-a13a-44a6-ba98-53e61be300db",
+  "storeSlug": "gnz-hortifruti",
+  "branding": {
+    "customTitle": "GNZ Hortifruti • Seleção Fresca Direto da Roça",
+    "heroBadge": "Colheita do Dia • Pedido com Rastreio ao Vivo",
+    "heroSubtitle": "Frutas, verduras, legumes e mercearia selecionados a mão. Faça seu pedido online com baixa imediata no estoque e acompanhe cada etapa em tempo real.",
+    "deliveryBannerText": "Entrega expressa na região ou retirada rápida sem filas na loja",
+    "primaryColor": "#16a34a",
+    "accentColor": "#f59e0b",
+    "cardStyle": "modern",
+    "gridColumnsDesktop": 4,
+    "defaultPageSize": 24,
+    "showTrustBadges": true,
+    "trustBadges": [
+      "Estoque Validado em Tempo Real",
+      "Pesagem Justa por Grama/Quilo",
+      "Rastreamento Ao Vivo do Pedido"
+    ]
+  }
+}

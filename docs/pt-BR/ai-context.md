@@ -5,7 +5,7 @@ type: Context
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-07
+updated: 2026-11-12
 language: pt-BR
 classification: Confirmed
 related:
@@ -63,4 +63,5 @@ SPA React (Vite) de gestão SaaS multi-loja e multi-filial de estoque, PDV, BI, 
 - Isolamento: políticas RLS + helpers `is_global_admin`, `has_store_access`, `has_store_role` e `has_hbac_scope`.
 - Venda atômica: `orderService.createOrder` chama RPC `create_order_with_stock` (garantindo associação de `"Cliente Genérico"` quando nenhum cliente é informado). No catálogo público (`/store/:slug`), `orderService.createPublicCatalogOrder` chama a RPC `create_public_catalog_order` (migration `20261111000030_public_catalog_orders_and_realtime_tracking.sql`), integrando o pedido diretamente em `/orders` com baixa atômica de estoque e redirecionando o cliente para a página de acompanhamento em tempo real (`/store/:slug/order/:orderId` ou `/order-status/:orderId`).
 - Personalização de Status ("Apelidos") e Notificação via WhatsApp (`/orders`, `src/utils/orderStatusConfig.ts`, `storeService.updateStoreOrderStatusAliases`): cada loja pode definir apelidos personalizados para os status do sistema (`PENDING`, `CONFIRMED`, `PROCESSING`, `READY`, `SHIPPED`, `DELIVERED` -> padrão `"Finalizado"`, `CANCELLED`) salvos em `stores.theme_config.orderStatusAliases`, além de enviar mensagens via WhatsApp para o cliente ao criar ou alterar o status do pedido com o link de acompanhamento em tempo real.
+- Portal Público Portátil (`spa_portal/`, `spa_portal/PLAN.md`, `spa_portal/src/api/supabasePortalClient.ts`): versão independente e customizável da vitrine pública e do acompanhamento de pedidos em tempo real (`#/` e `#/order/:orderId` / `?order=:orderId`), conectada exclusivamente a um único `store_id` via credencial HBAC (`X-HBAC-Token` + `X-Store-ID`) expirável ou revogável imediatamente em `/global-admin?tab=api-hbac` em caso de vazamento de dados.
 - Build Pages: `VITE_BASE_PATH` no workflow `.github/workflows/deploy.yml`.

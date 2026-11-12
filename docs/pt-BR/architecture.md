@@ -52,7 +52,8 @@ Uma aplicação: `package.json` name `olivelas-gestao-estoque`. React 19, React 
 
 | Unidade | Onde | Papel |
 | --- | --- | --- |
-| SPA estática | `dist/` após `npm run build` | UI |
+| SPA estática principal | `dist/` após `npm run build` | ERP completo + Landing + Catálogo |
+| SPA Portal Público Portátil | `spa_portal/` (`spa_portal/dist/` após build) | Vitrine pública + Rastreio de pedidos isolado por loja via credencial HBAC expirável |
 | Projeto Supabase | migrations em `supabase/migrations/` | Auth, DB, Storage, RPCs, Realtime, HBAC |
 
 `FULL_DATABASE_SETUP.sql` é um arquivo agregado no mesmo diretório de migrations. **Não tratar como migration adicional** sem conferir o que já foi aplicado no projeto remoto (risco de duplicar objetos). Fonte canônica incremental: arquivos datados `20260925000001` … `20261103000029`.

@@ -5,12 +5,18 @@ type: Reference
 status: DRAFT
 owner: project-maintainers
 created: 2026-09-27
-updated: 2026-11-11
+updated: 2026-11-12
 language: pt-BR
 classification: Confirmed
 ---
 
 # Changelog da documentação
+
+## 2026-11-12
+
+- **Plano Arquitetural e Criação do Portal Público Portátil (`spa_portal/`) com Credencial Única HBAC Expirável por Loja, Catálogo Completo e Acompanhamento de Pedidos em Tempo Real** (`spa_portal/PLAN.md`, `spa_portal/README.md`, `spa_portal/package.json`, `spa_portal/.env.example`, `spa_portal/presets/gnz-hortifruti.preset.json`, `spa_portal/src/config/portal.config.ts`, `spa_portal/src/api/supabasePortalClient.ts`, `spa_portal/src/utils/portalFormatters.ts`, `spa_portal/src/components/CatalogView.tsx`, `spa_portal/src/components/OrderTrackingView.tsx`, `spa_portal/src/components/WeightSelectorModal.tsx`, `spa_portal/src/components/CredentialErrorScreen.tsx`, `spa_portal/src/App.tsx`, `README.md`, `docs/pt-BR/README.md`, `docs/pt-BR/ai-context.md`, `docs/pt-BR/architecture.md`, `docs/pt-BR/contracts.md`, `docs/pt-BR/operations.md`, `docs/pt-BR/changelog.md`):
+  - **Isolamento por Loja e Credencial Expirável (`supabasePortalClient.ts`)**: todas as requisições REST e RPC enviam automaticamente `X-HBAC-Token` (`VITE_PORTAL_HBAC_TOKEN`) e `X-Store-ID` (`VITE_PORTAL_STORE_ID`), validados no pré-request do PostgreSQL (`public.check_hbac_pre_request`) e por RLS (`public.has_hbac_scope`). Em caso de vazamento de dados, basta desativar ou expirar o token em `/global-admin?tab=api-hbac` para revogar o acesso imediatamente e exibir a tela de bloqueio `CredentialErrorScreen.tsx`.
+  - **Paridade Total com o Catálogo Público e Rastreamento ao Vivo (`CatalogView.tsx` e `OrderTrackingView.tsx`)**: vitrine customizável por cliente (`presets/`), busca insensível a acentos, filtros de categoria e preço, paginação, suporte a produtos pesáveis (`KG` via `WeightSelectorModal.tsx`), checkout integrado com baixa atômica de estoque (`create_public_catalog_order`), interpolação de templates de WhatsApp da loja e link de acompanhamento em tempo real (`#/order/:orderId` ou `?order=:orderId`) com apelidos personalizados de status (`orderStatusAliases`) e WebSocket Supabase Realtime (`postgres_changes` em `public.orders`).
 
 ## 2026-11-11
 
