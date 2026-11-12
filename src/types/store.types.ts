@@ -4,6 +4,15 @@ export type OrderStatusAliasesMap = Partial<Record<OrderStatus, string>>
 
 export type PosCustomerMode = 'REQUIRED' | 'ALLOW_GENERIC'
 
+export interface WhatsAppOrderTemplateItem {
+  id: string
+  name: string
+  description?: string
+  content: string
+  isPinned?: boolean
+  updatedAt: string
+}
+
 export interface StoreThemeConfig {
   appTheme?: string
   catalogTheme?: string
@@ -17,6 +26,8 @@ export interface StoreThemeConfig {
   showStockBadge?: boolean
   allowVisitorThemeToggle?: boolean
   whatsappOrderMessage?: string
+  whatsappOrderTemplates?: WhatsAppOrderTemplateItem[]
+  pinnedWhatsappTemplateId?: string
   catalogBanner?: string
   instagramUrl?: string
   facebookUrl?: string

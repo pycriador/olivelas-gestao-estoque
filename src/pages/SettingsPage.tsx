@@ -12,12 +12,15 @@ import {
 } from '@/utils/posCustomerConfig'
 import {
   DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
+  DEFAULT_WHATSAPP_TEMPLATE_PRESETS,
   formatPublicCatalogWhatsAppMessage,
   getResolvedWhatsAppOrderTemplate,
+  getStoreWhatsAppTemplates,
   PUBLIC_WHATSAPP_TEMPLATE_TAGS,
+  saveLocalStoreWhatsAppTemplates,
   saveLocalWhatsAppOrderTemplate,
 } from '@/utils/orderStatusConfig'
-import type { PosCustomerMode } from '@/types/store.types'
+import type { PosCustomerMode, WhatsAppOrderTemplateItem } from '@/types/store.types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -56,6 +59,10 @@ import {
   MessageCircle,
   Tag,
   Sparkles,
+  Pin,
+  Plus,
+  Edit3,
+  Copy,
 } from 'lucide-react'
 
 const PRESET_BRAND_COLORS = [
@@ -210,6 +217,16 @@ export function SettingsPage() {
     posCustomerMode: 'REQUIRED' as PosCustomerMode,
   })
 
+  const [whatsappTemplates, setWhatsappTemplates] = React.useState<WhatsAppOrderTemplateItem[]>(
+    () => DEFAULT_WHATSAPP_TEMPLATE_PRESETS.map((item) => ({ ...item }))
+  )
+  const [pinnedTemplateId, setPinnedTemplateId] = React.useState<string>(
+    DEFAULT_WHATSAPP_TEMPLATE_PRESETS[0].id
+  )
+  const [editingTemplateId, setEditingTemplateId] = React.useState<string>(
+    DEFAULT_WHATSAPP_TEMPLATE_PRESETS[0].id
+  )
+
   const [savedSuccess, setSavedSuccess] = React.useState(false)
   const [themeSavedSuccess, setThemeSavedSuccess] = React.useState(false)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -261,6 +278,11 @@ export function SettingsPage() {
           : {}
       const resolvedCatalog = getCatalogCustomization(store.theme_config)
       const resolvedPosPolicy = getPosCustomerPolicy(store.theme_config, store.id)
+      const resolvedTemplates = getStoreWhatsAppTemplates(
+        store.theme_config,
+        store.id,
+        store.slug
+      )
       const resolvedWhatsAppTemplate = getResolvedWhatsAppOrderTemplate(
         store.theme_config,
         store.id,
@@ -269,6 +291,14 @@ export function SettingsPage() {
       const hasExplicitCatalogTheme =
         typeof rawConfig.catalogTheme === 'string' &&
         STORE_THEMES.some((th) => th.id === rawConfig.catalogTheme)
+
+      setWhatsappTemplates(resolvedTemplates.templates)
+      setPinnedTemplateId(resolvedTemplates.pinnedTemplateId)
+      setEditingTemplateId((prev) =>
+        resolvedTemplates.templates.some((tpl) => tpl.id === prev)
+          ? prev
+          : resolvedTemplates.pinnedTemplateId
+      )
 
       setFormData({
         name: store.name || '',
@@ -303,29 +333,226 @@ export function SettingsPage() {
     }
   }, [store])
 
-  const handleInsertWhatsAppTag = (tag: string) => {
-    const textarea = whatsappTemplateTextareaRef.current
-    if (!textarea) {
+  const editingTemplate = React.useMemo(() => {
+    return (
+      whatsappTemplates.find((tpl) => tpl.id === editingTemplateId) ||
+      whatsappTemplates.find((tpl) => tpl.id === pinnedTemplateId) ||
+      whatsappTemplates[0] || {
+        id: 'tpl-default-complete',
+        name: 'Modelo Completo (Padrão)',
+        description: 'Template padrão da loja',
+        content: formData.whatsappOrderMessage || DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
+        isPinned: true,
+      }
+    )
+  }, [whatsappTemplates, editingTemplateId, pinnedTemplateId, formData.whatsappOrderMessage])
+
+  const persistWhatsAppTemplates = React.useCallback(
+    async (
+      nextTemplates: WhatsAppOrderTemplateItem[],
+      nextPinnedId: string,
+      successMessage?: string
+    ) => {
+      const normalized = nextTemplates.map((tpl) => ({
+        ...tpl,
+        isPinned: tpl.id === nextPinnedId,
+      }))
+      const pinnedTpl = normalized.find((tpl) => tpl.id === nextPinnedId) || normalized[0]
+      const pinnedContent =
+        pinnedTpl?.content?.trim() || DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE
+
+      setWhatsappTemplates(normalized)
+      setPinnedTemplateId(pinnedTpl?.id || nextPinnedId)
       setFormData((prev) => ({
         ...prev,
-        whatsappOrderMessage: `${prev.whatsappOrderMessage}${
-          prev.whatsappOrderMessage.endsWith(' ') || prev.whatsappOrderMessage.endsWith('\n')
-            ? ''
-            : ' '
-        }${tag}`,
+        whatsappOrderMessage: pinnedContent,
       }))
+
+      saveLocalStoreWhatsAppTemplates(
+        storeId,
+        formData.slug || store?.slug,
+        normalized,
+        pinnedTpl?.id || nextPinnedId
+      )
+
+      if (!storeId) return
+      try {
+        const existingConfig =
+          store?.theme_config &&
+          typeof store.theme_config === 'object' &&
+          !Array.isArray(store.theme_config)
+            ? { ...(store.theme_config as Record<string, unknown>) }
+            : {}
+
+        const updatedStore = await storeService.updateStore(storeId, {
+          theme_config: {
+            ...existingConfig,
+            whatsappOrderTemplates: normalized,
+            pinnedWhatsappTemplateId: pinnedTpl?.id || nextPinnedId,
+            whatsappOrderMessage: pinnedContent,
+          } as any,
+        })
+        queryClient.setQueryData(['store-settings', storeId], updatedStore)
+        queryClient.invalidateQueries({
+          queryKey: ['public-store', formData.slug || store?.slug],
+        })
+        if (successMessage) toast.success(successMessage)
+      } catch (err) {
+        if (successMessage) toast.success(successMessage)
+        console.warn('Falha secundária ao persistir templates no banco:', err)
+      }
+    },
+    [storeId, formData.slug, store, queryClient]
+  )
+
+  const handleUpdateEditingTemplate = React.useCallback(
+    (patch: Partial<Pick<WhatsAppOrderTemplateItem, 'name' | 'description' | 'content'>>) => {
+      const targetId = editingTemplate.id
+      setWhatsappTemplates((prev) => {
+        const next = prev.map((tpl) =>
+          tpl.id === targetId
+            ? {
+                ...tpl,
+                ...patch,
+                updatedAt: new Date().toISOString(),
+              }
+            : tpl
+        )
+        return next
+      })
+
+      if (patch.content !== undefined && targetId === pinnedTemplateId) {
+        setFormData((prev) => ({
+          ...prev,
+          whatsappOrderMessage: patch.content || DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
+        }))
+      }
+    },
+    [editingTemplate.id, pinnedTemplateId]
+  )
+
+  const handleCreateWhatsAppTemplate = () => {
+    const newId = `tpl-${Date.now()}`
+    const newTpl: WhatsAppOrderTemplateItem = {
+      id: newId,
+      name: `Novo Template #${whatsappTemplates.length + 1}`,
+      description: 'Template personalizado para pedidos da vitrine pública',
+      content: DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
+      isPinned: false,
+      updatedAt: new Date().toISOString(),
+    }
+    const nextList = [...whatsappTemplates, newTpl]
+    setEditingTemplateId(newId)
+    void persistWhatsAppTemplates(
+      nextList,
+      pinnedTemplateId,
+      'Novo template criado! Personalize o nome e o conteúdo abaixo.'
+    )
+    requestAnimationFrame(() => {
+      whatsappTemplateTextareaRef.current?.focus()
+    })
+  }
+
+  const handleDuplicateWhatsAppTemplate = (tpl: WhatsAppOrderTemplateItem) => {
+    const dupId = `tpl-${Date.now()}`
+    const dupTpl: WhatsAppOrderTemplateItem = {
+      id: dupId,
+      name: `${tpl.name} (Cópia)`,
+      description: tpl.description || 'Cópia de template personalizado',
+      content: tpl.content,
+      isPinned: false,
+      updatedAt: new Date().toISOString(),
+    }
+    const nextList = [...whatsappTemplates, dupTpl]
+    setEditingTemplateId(dupId)
+    void persistWhatsAppTemplates(
+      nextList,
+      pinnedTemplateId,
+      `Template "${tpl.name}" duplicado e aberto para edição!`
+    )
+  }
+
+  const handlePinWhatsAppTemplate = (tplId: string) => {
+    const target = whatsappTemplates.find((tpl) => tpl.id === tplId)
+    if (!target) return
+    setEditingTemplateId(tplId)
+    void persistWhatsAppTemplates(
+      whatsappTemplates,
+      tplId,
+      `Template "${target.name}" fixado como padrão na loja!`
+    )
+  }
+
+  const handleDeleteWhatsAppTemplate = (tplId: string) => {
+    const target = whatsappTemplates.find((tpl) => tpl.id === tplId)
+    if (!target) return
+
+    if (whatsappTemplates.length <= 1) {
+      const resetDefault: WhatsAppOrderTemplateItem = {
+        ...DEFAULT_WHATSAPP_TEMPLATE_PRESETS[0],
+        isPinned: true,
+        updatedAt: new Date().toISOString(),
+      }
+      setEditingTemplateId(resetDefault.id)
+      void persistWhatsAppTemplates(
+        [resetDefault],
+        resetDefault.id,
+        'O último template foi restaurado para o modelo padrão da loja.'
+      )
       return
     }
 
-    const start = textarea.selectionStart ?? formData.whatsappOrderMessage.length
-    const end = textarea.selectionEnd ?? formData.whatsappOrderMessage.length
-    const current = formData.whatsappOrderMessage
-    const nextValue = `${current.slice(0, start)}${tag}${current.slice(end)}`
+    const remaining = whatsappTemplates.filter((tpl) => tpl.id !== tplId)
+    const nextPinnedId =
+      pinnedTemplateId === tplId ? remaining[0].id : pinnedTemplateId
+    const nextEditingId =
+      editingTemplateId === tplId ? nextPinnedId : editingTemplateId
 
-    setFormData((prev) => ({
-      ...prev,
-      whatsappOrderMessage: nextValue,
-    }))
+    setEditingTemplateId(nextEditingId)
+    void persistWhatsAppTemplates(
+      remaining,
+      nextPinnedId,
+      `Template "${target.name}" removido da loja.`
+    )
+  }
+
+  const handleRestorePresetTemplates = () => {
+    const existingIds = new Set(whatsappTemplates.map((t) => t.id))
+    const missingPresets = DEFAULT_WHATSAPP_TEMPLATE_PRESETS.filter(
+      (preset) => !existingIds.has(preset.id)
+    ).map((preset) => ({ ...preset, isPinned: false }))
+
+    const nextList =
+      missingPresets.length > 0
+        ? [...whatsappTemplates, ...missingPresets]
+        : DEFAULT_WHATSAPP_TEMPLATE_PRESETS.map((item) => ({ ...item }))
+    const nextPinned =
+      missingPresets.length > 0 ? pinnedTemplateId : DEFAULT_WHATSAPP_TEMPLATE_PRESETS[0].id
+
+    setEditingTemplateId(nextPinned)
+    void persistWhatsAppTemplates(
+      nextList,
+      nextPinned,
+      'Modelos sugeridos restaurados na biblioteca da loja!'
+    )
+  }
+
+  const handleInsertWhatsAppTag = (tag: string) => {
+    const textarea = whatsappTemplateTextareaRef.current
+    const currentContent = editingTemplate.content || ''
+    if (!textarea) {
+      const nextContent = `${currentContent}${
+        currentContent.endsWith(' ') || currentContent.endsWith('\n') ? '' : ' '
+      }${tag}`
+      handleUpdateEditingTemplate({ content: nextContent })
+      return
+    }
+
+    const start = textarea.selectionStart ?? currentContent.length
+    const end = textarea.selectionEnd ?? currentContent.length
+    const nextValue = `${currentContent.slice(0, start)}${tag}${currentContent.slice(end)}`
+
+    handleUpdateEditingTemplate({ content: nextValue })
 
     requestAnimationFrame(() => {
       textarea.focus()
@@ -379,11 +606,26 @@ export function SettingsPage() {
         posCustomerMode: effectivePosMode,
       })
 
-      saveLocalWhatsAppOrderTemplate(
+      const normalizedTemplates = whatsappTemplates.map((tpl) => ({
+        ...tpl,
+        isPinned: tpl.id === pinnedTemplateId,
+      }))
+      const pinnedTpl =
+        normalizedTemplates.find((tpl) => tpl.id === pinnedTemplateId) ||
+        normalizedTemplates[0]
+      const pinnedMessageContent =
+        pinnedTpl?.content?.trim() ||
+        formData.whatsappOrderMessage.trim() ||
+        DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE
+
+      saveLocalStoreWhatsAppTemplates(
         storeId,
         formData.slug,
-        formData.whatsappOrderMessage.trim() || DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE
+        normalizedTemplates,
+        pinnedTpl?.id || pinnedTemplateId
       )
+
+      saveLocalWhatsAppOrderTemplate(storeId, formData.slug, pinnedMessageContent)
 
       if (formData.genericCustomerReleasedByAdmin) {
         try {
@@ -415,8 +657,9 @@ export function SettingsPage() {
         openingHours: formData.openingHours.trim() || undefined,
         instagramUrl: formData.instagramUrl.trim() || undefined,
         catalogBanner: formData.bannerUrl.trim() || undefined,
-        whatsappOrderMessage:
-          formData.whatsappOrderMessage.trim() || DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
+        whatsappOrderMessage: pinnedMessageContent,
+        whatsappOrderTemplates: normalizedTemplates,
+        pinnedWhatsappTemplateId: pinnedTpl?.id || pinnedTemplateId,
         genericCustomerReleasedByAdmin: formData.genericCustomerReleasedByAdmin,
         posCustomerMode: effectivePosMode,
       }
@@ -460,7 +703,7 @@ export function SettingsPage() {
   const whatsappPreviewText = React.useMemo(
     () =>
       formatPublicCatalogWhatsAppMessage({
-        template: formData.whatsappOrderMessage,
+        template: editingTemplate.content || formData.whatsappOrderMessage,
         orderNumber: 'PED-849201',
         storeName: formData.name || 'GNZ Hortifruti',
         customerName: 'Maria Oliveira',
@@ -487,7 +730,7 @@ export function SettingsPage() {
           },
         ],
       }),
-    [formData.whatsappOrderMessage, formData.name, catalogUrl]
+    [editingTemplate.content, formData.whatsappOrderMessage, formData.name, catalogUrl]
   )
 
   return (
@@ -1204,99 +1447,331 @@ export function SettingsPage() {
             className="border border-border shadow-xs bg-card animate-in fade-in duration-150"
           >
             <CardHeader className="py-2.5 px-4 border-b border-border/60 flex flex-row items-center justify-between gap-2 flex-wrap">
-              <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-emerald-600" />
-                Personalização da Mensagem de Pedido no WhatsApp (/store/{formData.slug || 'sua-loja'})
-              </CardTitle>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    whatsappOrderMessage: DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
-                  }))
-                }
-                className="h-7 text-[11px] gap-1.5 px-2.5 cursor-pointer"
-              >
-                <RotateCcw className="h-3 w-3" /> Restaurar Mensagem Padrão
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4 text-emerald-600" />
+                  Templates de Mensagem WhatsApp da Loja (/store/{formData.slug || 'sua-loja'})
+                </CardTitle>
+                <Badge variant="outline" className="text-[10px]">
+                  {whatsappTemplates.length}{' '}
+                  {whatsappTemplates.length === 1
+                    ? 'template cadastrado'
+                    : 'templates cadastrados'}
+                </Badge>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRestorePresetTemplates}
+                  className="h-7 text-[11px] gap-1.5 px-2.5 cursor-pointer"
+                >
+                  <RotateCcw className="h-3 w-3" /> Restaurar Sugeridos
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateWhatsAppTemplate}
+                  className="h-7 text-[11px] gap-1.5 px-3 cursor-pointer"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Novo Template
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-3.5 space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Personalize livremente o texto enviado pelo cliente no WhatsApp ao finalizar o carrinho público. Clique em qualquer <b>Tag do Carrinho</b> abaixo para inseri-la na posição do cursor.
+                Cadastre múltiplos templates de mensagem para o WhatsApp da loja. Você pode{' '}
+                <b>escolher, criar, editar, duplicar e deletar</b> templates livremente, e{' '}
+                <b>fixar na loja</b> qual modelo será usado automaticamente no carrinho público (
+                <code>/store/{formData.slug || 'sua-loja'}</code>).
               </p>
 
-              {/* Painel das Principais Tags Clicáveis */}
-              <div className="p-3 rounded-xl border border-border bg-muted/20 space-y-2.5">
+              {/* Galeria de Templates Cadastrados na Loja (Escolher, Fixar, Editar, Duplicar, Deletar) */}
+              <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-                    <Tag className="h-3.5 w-3.5 text-primary" />
-                    Principais Tags do Carrinho Público (Clique para inserir)
+                    <Pin className="h-3.5 w-3.5 text-emerald-600" />
+                    Templates Cadastrados na Loja (Escolha qual fixar como ativo)
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    As tags são substituídas automaticamente pelos dados reais do pedido
+                    O template <b>Fixado na Loja</b> é o utilizado pelos clientes ao enviar pedidos
                   </span>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5">
-                  {PUBLIC_WHATSAPP_TEMPLATE_TAGS.map((item) => (
-                    <button
-                      key={item.tag}
-                      type="button"
-                      onClick={() => handleInsertWhatsAppTag(item.tag)}
-                      title={`${item.description} (Exemplo: ${item.example})`}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/15 text-foreground text-[11px] transition-colors cursor-pointer group"
-                    >
-                      <code className="font-mono font-bold text-primary">{item.tag}</code>
-                      <span className="text-muted-foreground group-hover:text-foreground">
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                  {whatsappTemplates.map((tpl) => {
+                    const isPinned = tpl.id === pinnedTemplateId
+                    const isEditing = tpl.id === editingTemplate.id
+                    return (
+                      <div
+                        key={tpl.id}
+                        onClick={() => setEditingTemplateId(tpl.id)}
+                        className={`group rounded-xl border p-3 transition-all cursor-pointer flex flex-col justify-between gap-2.5 ${
+                          isPinned
+                            ? 'border-emerald-500/70 bg-emerald-500/5 shadow-xs'
+                            : isEditing
+                              ? 'border-primary bg-primary/5 shadow-xs'
+                              : 'border-border bg-background hover:border-primary/40 hover:bg-muted/20'
+                        }`}
+                      >
+                        <div className="space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <h4 className="text-xs font-bold text-foreground truncate flex items-center gap-1.5">
+                                {isPinned && (
+                                  <Pin className="h-3.5 w-3.5 text-emerald-600 shrink-0 fill-emerald-600/20" />
+                                )}
+                                <span className="truncate">{tpl.name}</span>
+                              </h4>
+                              {tpl.description && (
+                                <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                  {tpl.description}
+                                </p>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-1 shrink-0">
+                              {isPinned && (
+                                <Badge variant="success" className="text-[10px] px-1.5 py-0">
+                                  Fixado na Loja
+                                </Badge>
+                              )}
+                              {isEditing && !isPinned && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  Editando
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5 text-[10px] font-mono text-muted-foreground line-clamp-2 whitespace-pre-line">
+                            {tpl.content}
+                          </div>
+                        </div>
+
+                        <div
+                          className="flex items-center justify-between gap-1.5 pt-2 border-t border-border/50"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={isPinned ? 'secondary' : 'default'}
+                            onClick={() => handlePinWhatsAppTemplate(tpl.id)}
+                            className={`h-7 text-[11px] gap-1 px-2.5 cursor-pointer ${
+                              isPinned
+                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25'
+                                : ''
+                            }`}
+                          >
+                            <Pin className="h-3 w-3" />
+                            {isPinned ? 'Fixado na Loja' : 'Fixar na Loja'}
+                          </Button>
+
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={isEditing ? 'secondary' : 'outline'}
+                              onClick={() => {
+                                setEditingTemplateId(tpl.id)
+                                requestAnimationFrame(() => {
+                                  whatsappTemplateTextareaRef.current?.focus()
+                                })
+                              }}
+                              title="Editar nome, descrição e mensagem deste template"
+                              className="h-7 text-[11px] gap-1 px-2 cursor-pointer"
+                            >
+                              <Edit3 className="h-3 w-3" /> Editar
+                            </Button>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDuplicateWhatsAppTemplate(tpl)}
+                              title="Duplicar este template"
+                              className="h-7 w-7 p-0 cursor-pointer"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </Button>
+
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleDeleteWhatsAppTemplate(tpl.id)}
+                              title="Deletar este template"
+                              className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 cursor-pointer"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* Editor + Prévia ao Vivo Lado a Lado */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div className="space-y-1.5 flex flex-col">
-                  <label
-                    htmlFor="whatsapp-order-template-editor"
-                    className="text-xs font-bold text-foreground flex items-center justify-between"
-                  >
-                    <span>Modelo da Mensagem Personalizada</span>
-                    <span className="text-[10px] font-normal text-muted-foreground">
-                      Suporta negrito do WhatsApp (*texto*) e emojis
+              {/* Editor do Template Selecionado */}
+              <div className="p-3.5 rounded-xl border border-border bg-muted/10 space-y-3.5">
+                <div className="flex items-center justify-between gap-2 flex-wrap pb-2.5 border-b border-border/60">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Edit3 className="h-3.5 w-3.5 text-primary" />
+                      Editando Template:
                     </span>
-                  </label>
-                  <textarea
-                    id="whatsapp-order-template-editor"
-                    ref={whatsappTemplateTextareaRef}
-                    rows={15}
-                    value={formData.whatsappOrderMessage}
-                    onChange={(e) =>
-                      setFormData({ ...formData, whatsappOrderMessage: e.target.value })
-                    }
-                    placeholder={DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE}
-                    className="w-full flex-1 rounded-xl border border-input bg-background p-3 text-xs font-mono text-foreground leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring resize-y"
-                  />
+                    <Badge variant="secondary" className="text-xs font-bold">
+                      {editingTemplate.name || 'Sem nome'}
+                    </Badge>
+                    {editingTemplate.id === pinnedTemplateId ? (
+                      <Badge variant="success" className="text-[10px] gap-1">
+                        <Pin className="h-2.5 w-2.5" /> Fixado como Padrão da Loja
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px]">
+                        Não fixado no momento
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {editingTemplate.id !== pinnedTemplateId && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handlePinWhatsAppTemplate(editingTemplate.id)}
+                        className="h-7 text-[11px] gap-1.5 px-2.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10 cursor-pointer"
+                      >
+                        <Pin className="h-3 w-3" /> Fixar este Template na Loja
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={() =>
+                        void persistWhatsAppTemplates(
+                          whatsappTemplates,
+                          pinnedTemplateId,
+                          `Template "${editingTemplate.name}" salvo na loja!`
+                        )
+                      }
+                      className="h-7 text-[11px] gap-1.5 px-3 cursor-pointer"
+                    >
+                      <Save className="h-3 w-3" /> Salvar Template
+                    </Button>
+                  </div>
                 </div>
 
-                <div className="space-y-1.5 flex flex-col">
-                  <div className="text-xs font-bold text-foreground flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
-                      Prévia em Tempo Real no WhatsApp
-                    </span>
-                    <Badge variant="success" className="text-[10px]">
-                      Simulação com Carrinho de Exemplo
-                    </Badge>
+                {/* Campos de Nome e Descrição do Template */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="whatsapp-tpl-name"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Nome do Template *
+                    </label>
+                    <Input
+                      id="whatsapp-tpl-name"
+                      value={editingTemplate.name}
+                      onChange={(e) => handleUpdateEditingTemplate({ name: e.target.value })}
+                      placeholder="Ex: Modelo Completo (Produtos + Preços)"
+                      className="h-8 text-xs font-semibold"
+                    />
                   </div>
-                  <div className="flex-1 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 overflow-y-auto max-h-96">
-                    <pre className="text-xs font-sans whitespace-pre-wrap break-words text-foreground leading-relaxed">
-                      {whatsappPreviewText}
-                    </pre>
+                  <div className="space-y-1">
+                    <label
+                      htmlFor="whatsapp-tpl-description"
+                      className="text-xs font-medium text-muted-foreground"
+                    >
+                      Descrição / Finalidade do Template
+                    </label>
+                    <Input
+                      id="whatsapp-tpl-description"
+                      value={editingTemplate.description || ''}
+                      onChange={(e) =>
+                        handleUpdateEditingTemplate({ description: e.target.value })
+                      }
+                      placeholder="Ex: Usado para entregas com link de rastreio e observações"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+
+                {/* Painel das Principais Tags Clicáveis */}
+                <div className="p-3 rounded-xl border border-border bg-background space-y-2">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                      <Tag className="h-3.5 w-3.5 text-primary" />
+                      Principais Tags do Carrinho Público (Clique para inserir no template)
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      As tags são substituídas automaticamente pelos dados reais do pedido
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {PUBLIC_WHATSAPP_TEMPLATE_TAGS.map((item) => (
+                      <button
+                        key={item.tag}
+                        type="button"
+                        onClick={() => handleInsertWhatsAppTag(item.tag)}
+                        title={`${item.description} (Exemplo: ${item.example})`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-primary/30 bg-primary/5 hover:bg-primary/15 text-foreground text-[11px] transition-colors cursor-pointer group"
+                      >
+                        <code className="font-mono font-bold text-primary">{item.tag}</code>
+                        <span className="text-muted-foreground group-hover:text-foreground">
+                          {item.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Editor + Prévia ao Vivo Lado a Lado */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <div className="space-y-1.5 flex flex-col">
+                    <label
+                      htmlFor="whatsapp-order-template-editor"
+                      className="text-xs font-bold text-foreground flex items-center justify-between"
+                    >
+                      <span>Conteúdo da Mensagem ({editingTemplate.name})</span>
+                      <span className="text-[10px] font-normal text-muted-foreground">
+                        Suporta negrito do WhatsApp (*texto*) e emojis
+                      </span>
+                    </label>
+                    <textarea
+                      id="whatsapp-order-template-editor"
+                      ref={whatsappTemplateTextareaRef}
+                      rows={15}
+                      value={editingTemplate.content}
+                      onChange={(e) =>
+                        handleUpdateEditingTemplate({ content: e.target.value })
+                      }
+                      placeholder={DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE}
+                      className="w-full flex-1 rounded-xl border border-input bg-background p-3 text-xs font-mono text-foreground leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring resize-y"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5 flex flex-col">
+                    <div className="text-xs font-bold text-foreground flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                        Prévia em Tempo Real no WhatsApp
+                      </span>
+                      <Badge variant="success" className="text-[10px]">
+                        Simulação com Carrinho de Exemplo
+                      </Badge>
+                    </div>
+                    <div className="flex-1 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3.5 overflow-y-auto max-h-96">
+                      <pre className="text-xs font-sans whitespace-pre-wrap break-words text-foreground leading-relaxed">
+                        {whatsappPreviewText}
+                      </pre>
+                    </div>
                   </div>
                 </div>
               </div>

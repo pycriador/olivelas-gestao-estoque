@@ -1,6 +1,6 @@
 import type { OrderStatus } from '@/types/database.types'
 import type { OrderStatusHistoryEntry } from '@/types/order.types'
-import type { OrderStatusAliasesMap } from '@/types/store.types'
+import type { OrderStatusAliasesMap, WhatsAppOrderTemplateItem } from '@/types/store.types'
 import { formatCurrency } from '@/utils/currency'
 
 export const ORDER_STATUS_FLOW: OrderStatus[] = [
@@ -506,7 +506,64 @@ export const PUBLIC_WHATSAPP_TEMPLATE_TAGS: WhatsAppTemplateTagDefinition[] = [
   },
 ]
 
+export const DEFAULT_WHATSAPP_TEMPLATE_PRESETS: WhatsAppOrderTemplateItem[] = [
+  {
+    id: 'tpl-complete-default',
+    name: 'Modelo Completo (Produtos + Preços + Rastreio)',
+    description: 'Inclui todos os itens, tabela de preços, observações do cliente e link em tempo real.',
+    content: DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE,
+    isPinned: true,
+    updatedAt: '2026-11-11T00:00:00.000Z',
+  },
+  {
+    id: 'tpl-compact-delivery',
+    name: 'Modelo Compacto & Direto (Delivery Rápido)',
+    description: 'Formato enxuto ideal para atendimento ágil no WhatsApp.',
+    content: `🛒 *PEDIDO #{{numero_pedido}} — {{nome_loja}}*
+
+👤 *Cliente:* {{nome_cliente}} ({{telefone_cliente}})
+📍 *Entrega:* {{endereco_cliente}}
+💳 *Pagamento:* {{forma_pagamento}}
+📝 *Obs:* {{observacoes}}
+
+📦 *Itens ({{quantidade_itens}}):*
+{{produtos}}
+
+💰 *TOTAL: {{total}}*
+
+🔴 *Acompanhe seu pedido em tempo real:*
+{{link_rastreio}}`,
+    isPinned: false,
+    updatedAt: '2026-11-11T00:00:00.000Z',
+  },
+  {
+    id: 'tpl-pickup-separation',
+    name: 'Modelo Foco em Separação & Pesagem',
+    description: 'Destaca a lista de produtos e o detalhamento de preços por KG/unidade.',
+    content: `*{{nome_loja}} — Pedido Online #{{numero_pedido}}*
+📅 {{data_hora}}
+
+*Itens para Separação ({{quantidade_itens}}):*
+{{produtos_simples}}
+
+*Conferência de Preços:*
+{{precos}}
+
+*Observações do Cliente:*
+{{observacoes}}
+
+*Cliente:* {{nome_cliente}} | *Tel:* {{telefone_cliente}}
+*Endereço / Retirada:* {{endereco_cliente}}
+*Pagamento:* {{forma_pagamento}} | *Total:* {{total}}
+
+🔗 *Status ao vivo:* {{link_rastreio}}`,
+    isPinned: false,
+    updatedAt: '2026-11-11T00:00:00.000Z',
+  },
+]
+
 const LOCAL_STORAGE_WA_TEMPLATE_PREFIX = 'olivelas_whatsapp_order_template_'
+const LOCAL_STORAGE_WA_TEMPLATES_LIST_PREFIX = 'olivelas_whatsapp_templates_list_'
 
 export function saveLocalWhatsAppOrderTemplate(
   storeId: string | null | undefined,
@@ -526,31 +583,141 @@ export function saveLocalWhatsAppOrderTemplate(
   }
 }
 
+export function saveLocalStoreWhatsAppTemplates(
+  storeId: string | null | undefined,
+  storeSlug: string | null | undefined,
+  templates: WhatsAppOrderTemplateItem[],
+  pinnedTemplateId: string
+): void {
+  if (typeof window === 'undefined') return
+  try {
+    const payload = JSON.stringify({ templates, pinnedTemplateId })
+    if (storeId) {
+      window.localStorage.setItem(`${LOCAL_STORAGE_WA_TEMPLATES_LIST_PREFIX}${storeId}`, payload)
+    }
+    if (storeSlug) {
+      window.localStorage.setItem(
+        `${LOCAL_STORAGE_WA_TEMPLATES_LIST_PREFIX}slug_${storeSlug}`,
+        payload
+      )
+    }
+    const pinned = templates.find((t) => t.id === pinnedTemplateId) || templates[0]
+    if (pinned?.content) {
+      saveLocalWhatsAppOrderTemplate(storeId, storeSlug, pinned.content)
+    }
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function getStoreWhatsAppTemplates(
+  themeConfig?: unknown,
+  storeId?: string | null,
+  storeSlug?: string | null
+): {
+  templates: WhatsAppOrderTemplateItem[]
+  pinnedTemplateId: string
+} {
+  const rec =
+    themeConfig && typeof themeConfig === 'object' && !Array.isArray(themeConfig)
+      ? (themeConfig as Record<string, unknown>)
+      : {}
+
+  // 1. Tenta ler da lista de templates salva no theme_config do banco
+  if (Array.isArray(rec.whatsappOrderTemplates) && rec.whatsappOrderTemplates.length > 0) {
+    const validList = (rec.whatsappOrderTemplates as WhatsAppOrderTemplateItem[]).filter(
+      (item) => item && typeof item.id === 'string' && typeof item.content === 'string'
+    )
+    if (validList.length > 0) {
+      const configuredPin =
+        typeof rec.pinnedWhatsappTemplateId === 'string' ? rec.pinnedWhatsappTemplateId : ''
+      const pinnedItem =
+        validList.find((t) => t.id === configuredPin) ||
+        validList.find((t) => t.isPinned) ||
+        validList[0]
+      return {
+        templates: validList.map((t) => ({
+          ...t,
+          isPinned: t.id === pinnedItem.id,
+        })),
+        pinnedTemplateId: pinnedItem.id,
+      }
+    }
+  }
+
+  // 2. Fallback no localStorage
+  if (typeof window !== 'undefined') {
+    try {
+      const rawById = storeId
+        ? window.localStorage.getItem(`${LOCAL_STORAGE_WA_TEMPLATES_LIST_PREFIX}${storeId}`)
+        : null
+      const rawBySlug =
+        !rawById && storeSlug
+          ? window.localStorage.getItem(`${LOCAL_STORAGE_WA_TEMPLATES_LIST_PREFIX}slug_${storeSlug}`)
+          : null
+      const raw = rawById || rawBySlug
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && Array.isArray(parsed.templates) && parsed.templates.length > 0) {
+          const pinnedItem =
+            parsed.templates.find((t: WhatsAppOrderTemplateItem) => t.id === parsed.pinnedTemplateId) ||
+            parsed.templates.find((t: WhatsAppOrderTemplateItem) => t.isPinned) ||
+            parsed.templates[0]
+          return {
+            templates: parsed.templates.map((t: WhatsAppOrderTemplateItem) => ({
+              ...t,
+              isPinned: t.id === pinnedItem.id,
+            })),
+            pinnedTemplateId: pinnedItem.id,
+          }
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }
+
+  // 3. Se havia uma mensagem customizada única anterior em whatsappOrderMessage, preserva como 1º template
+  const legacyMessage =
+    typeof rec.whatsappOrderMessage === 'string' && rec.whatsappOrderMessage.trim()
+      ? rec.whatsappOrderMessage
+      : null
+
+  const initialPresets = DEFAULT_WHATSAPP_TEMPLATE_PRESETS.map((preset, idx) =>
+    idx === 0 && legacyMessage
+      ? {
+          ...preset,
+          content: legacyMessage,
+          isPinned: true,
+        }
+      : { ...preset }
+  )
+
+  return {
+    templates: initialPresets,
+    pinnedTemplateId: initialPresets[0].id,
+  }
+}
+
 export function getResolvedWhatsAppOrderTemplate(
   themeConfig?: unknown,
   storeId?: string | null,
   storeSlug?: string | null
 ): string {
+  const { templates, pinnedTemplateId } = getStoreWhatsAppTemplates(
+    themeConfig,
+    storeId,
+    storeSlug
+  )
+  const pinned = templates.find((t) => t.id === pinnedTemplateId) || templates[0]
+  if (pinned && pinned.content.trim().length > 0) {
+    return pinned.content
+  }
+
   if (themeConfig && typeof themeConfig === 'object' && !Array.isArray(themeConfig)) {
     const configured = (themeConfig as Record<string, unknown>).whatsappOrderMessage
     if (typeof configured === 'string' && configured.trim().length > 0) {
       return configured
-    }
-  }
-  if (typeof window !== 'undefined') {
-    try {
-      if (storeId) {
-        const byId = window.localStorage.getItem(`${LOCAL_STORAGE_WA_TEMPLATE_PREFIX}${storeId}`)
-        if (byId && byId.trim().length > 0) return byId
-      }
-      if (storeSlug) {
-        const bySlug = window.localStorage.getItem(
-          `${LOCAL_STORAGE_WA_TEMPLATE_PREFIX}slug_${storeSlug}`
-        )
-        if (bySlug && bySlug.trim().length > 0) return bySlug
-      }
-    } catch {
-      // ignore storage errors
     }
   }
   return DEFAULT_PUBLIC_WHATSAPP_ORDER_TEMPLATE

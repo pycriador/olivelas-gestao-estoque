@@ -82,7 +82,7 @@ source:
 | `/team/:employeeId` | `StoreEmployeeEditPage` | Edição de funcionário da loja ativa (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/team/stores/:storeId/employees/:employeeId` | `StoreEmployeeEditPage` | Edição de funcionário com identificação explícita de loja e funcionário na URL (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `/integrations` | `ApiIntegrationsPage` | API Studio & Conector de Serviços estilo Postman (De → Para, Dry-Run, Upsert e cURL); `PermissionGate` (`moduleCode="MOD_API_INTEGRATIONS"`) |
-| `/settings` | `SettingsPage` | Organizada em 5 abas sincronizadas por URL de filtro (`?tab=store` Dados & Endereço, `?tab=catalog` Vitrine Pública `/store/:slug`, `?tab=whatsapp` Mensagem WhatsApp personalizada com tags do carrinho `{{produtos}}`, `{{precos}}`, `{{total}}`, `{{observacoes}}`, etc., `?tab=pos` Regras de Cliente no PDV `/sales` e `?tab=theme` Tema do Painel Interno); `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
+| `/settings` | `SettingsPage` | Organizada em 5 abas sincronizadas por URL de filtro (`?tab=store` Dados & Endereço, `?tab=catalog` Vitrine Pública `/store/:slug`, `?tab=whatsapp` Gerenciador de Templates de Mensagem WhatsApp para criar, editar, duplicar, deletar e fixar na loja com tags do carrinho `{{produtos}}`, `{{precos}}`, `{{total}}`, `{{observacoes}}`, etc., `?tab=pos` Regras de Cliente no PDV `/sales` e `?tab=theme` Tema do Painel Interno); `PermissionGate` (`moduleCode="MOD_TEAM_AUDIT"`) |
 | `*` | `NotFoundPage` | fora dos layouts acima |
 
 ## Navegação do `AppLayout`
