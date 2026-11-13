@@ -229,6 +229,270 @@ Cada loja ou filial cadastrada possui uma URL exclusiva (`/store/{slug}`) acess�
 
 ---
 
-## 📄 7. Licença
+## 🗺️ 7. Mapa Completo de Rotas, Telas & Módulos da Plataforma
+
+A aplicação possui roteamento completo (`src/routes/AppRoutes.tsx`) dividido entre páginas públicas institucionais, vitrine pública com rastreio em tempo real, autenticação, operação multi-loja e administração global SaaS:
+
+### 7.1. Páginas Públicas, Institucionais & Evidências (`PublicLayout`)
+| Rota | Componente | Funcionalidades Detalhadas |
+| :--- | :--- | :--- |
+| `/` | `LandingPage` | Apresentação executiva da plataforma, vitrine de recursos, planos comerciais dinâmicos vinculados pelo Global Admin (`show_on_landing_page`), **Configurador Interativo de Planos + Adicionais Avulsos (`InteractivePlanBuilderSection`)** com pré-cadastro comercial e acesso rápido às evidências. |
+| `/features` | `FeaturesPage` | Detalhamento técnico e operacional de todos os módulos (Estoque, FEFO, PDV, Filiais, IA, BI, API Studio e Segurança RLS). |
+| `/pricing` | `PricingPage` | Comparativo de planos mensais/anuais, tabela de módulos inclusos, simulador interativo de assinatura e envio de proposta comercial (`submit_commercial_proposal`). |
+| `/contact` | `ContactPage` | Canais de atendimento comercial, suporte técnico e formulário de contato direto. |
+| `/evidence` | `TestEvidencePage` | Galeria executiva interativa de homologação com 50 capturas de tela (Desktop 1440×900 e Mobile 390×844), filtros por módulo e resultados E2E. |
+
+### 7.2. Catálogo Digital Público & Rastreio de Pedidos em Tempo Real
+| Rota | Componente | Funcionalidades Detalhadas |
+| :--- | :--- | :--- |
+| `/store/:slug` | `CatalogPublicPage` | Vitrine pública da loja ou filial com busca instantânea, filtro por categoria e faixa de preço, suporte a itens unitários (`UN`) e pesáveis (`KG`/gramas), carrinho com campo de **Observações do Pedido**, checkout online integrado com `/orders` (`create_public_catalog_order`) e disparo de mensagem formatada para o WhatsApp da loja com tags dinâmicas. |
+| `/store/:slug/order/:orderId` | `OrderTrackingPublicPage` | Página exclusiva de acompanhamento do pedido em tempo real via **Supabase Realtime**, exibindo linha do tempo visual (`PENDING` → `CONFIRMED` → `PROCESSING` → `READY` → `SHIPPED` → `DELIVERED` / `COMPLETED`), apelidos personalizados de status da loja, itens do pedido e botão direto para o WhatsApp. |
+| `/order-status/:orderId` | `OrderTrackingPublicPage` | Rota curta alternativa para rastreamento direto do pedido em tempo real pelo ID. |
+
+### 7.3. Autenticação & Recuperação de Acesso (`AuthLayout`)
+| Rota | Componente | Funcionalidades Detalhadas |
+| :--- | :--- | :--- |
+| `/login` | `LoginPage` | Login por e-mail/senha, autenticação social via **Google OAuth**, validação de sessão e detecção automática de **Reset Obrigatório de PIN (`EmployeePinResetModal`)** para funcionários. |
+| `/register` | `RegisterPage` | Criação de nova conta de usuário com provisionamento automático de perfil (`handle_new_user`). |
+| `/forgot-password` | `ForgotPasswordPage` | Solicitação de link seguro de recuperação de senha via Supabase Auth. |
+| `/reset-password` | `ResetPasswordPage` | Redefinição de senha autenticada por token de recuperação. |
+
+### 7.4. Operação da Loja, BI, IA & Gestão Multi-Filial (`AppLayout` + `ProtectedRoute` + `PermissionGate`)
+| Rota | Módulo SaaS | Componente | Funcionalidades Detalhadas |
+| :--- | :--- | :--- | :--- |
+| `/dashboard` | *Core* | `DashboardPage` | Painel executivo multi-loja (`Matriz`, `Filial` ou `Todas as Lojas Consolidado`), 8 KPIs com variação `%` vs. período anterior, gráficos de **Vendas Mensais (12 Meses)** e **Evolução no Período**, comparativo **Matriz vs. Filiais** com filtro em 1 clique, **Ranking Top Produtos Mais Vendidos**, Donut SVG de categorias, canais, meios de pagamento, card de insight de IA e exportação CSV/JSON/PDF. |
+| `/ai-copilot` | `MOD_AI_COPILOT_CHAT` | `AiCopilotPage` | Central Copiloto de IA & Chatbot Executivo da Loja com radar operacional em tempo real, seletor de Persona (`CFO`, `Comercial`, `Auditor FEFO`, `Copiloto Prático`), simulador *"E Se?"*, análises em 1 clique e histórico persistente de sessões (`ai_chat_sessions`). |
+| `/products` | `MOD_CATALOG_WA` | `ProductsPage` | Catálogo mestre de produtos com código SKU, código de barras (EAN), unidade (`UN`, `KG`, `L`, `CX`, `PCT`), preço de custo, preço de venda, margem/markup automático, estoque mínimo/máximo, galeria multi-fotos (`ProductGalleryModal`), entrada de estoque em lote (`BulkStockEntryModal`) e publicação no catálogo online. |
+| `/categories` | `MOD_CATALOG_WA` | `CategoriesPage` | Gestão de categorias mercadológicas da loja com ordenação, busca e contagem de SKUs vinculados. |
+| `/inventory` | `MOD_INVENTORY` | `InventoryPage` | Controle completo de estoque: KPIs de valorização financeira (a custo e a venda), abas de **Saldos Físicos**, **Movimentações (Kardex)**, **Fila de Aprovação de Baixas (`stock_writeoff_requests`)** e **Remessas para Filiais Sem Venda (`stock_transfers`)**, além de modais de ajuste, baixa unitária/em lote, importação de planilha CSV e limpeza de saldos zerados. |
+| `/expiration` | `MOD_EXPIRATION` | `ExpirationPage` | Semáforo FEFO (*First-Expire, First-Out*) com KPIs de lotes Vencidos, Críticos (`<= 7 dias`), Atenção (`<= 30 dias`) e No Prazo, registro de tratativas auditáveis (`PURCHASED`, `RETURNED`, `WRITTEN_OFF`, `DISCARDED`, `KEPT`, `ON_HOLD`) e plano de ação anti-perdas com IA. |
+| `/sales` | `MOD_POS_SALES` | `SalesPage` | PDV Frente de Caixa com busca rápida por código de barras/SKU/nome, suporte a itens pesáveis (`WeightInputModal` por peso em `KG`/`g` ou valor em `R$`), regra configurável de **Cliente Obrigatório vs. Cliente Genérico**, descontos, múltiplos pagamentos, edição de pedidos existentes (`/sales?editOrder=:id`), botão **"Atualizar do Banco"** e envio do link de rastreio por WhatsApp. |
+| `/orders` | `MOD_CATALOG_WA` | `OrdersPage` | Central de pedidos (PDV, WhatsApp, Catálogo Público e API) com mudança rápida de status (incluindo `COMPLETED` / *"Finalizado"* e `CANCELLED` com estorno atômico de estoque), **Histórico de Atualizações de Status por Usuário**, apelidos customizáveis de status por loja, botão **"Atualizar do Banco"**, disparo de WhatsApp com link de acompanhamento ao vivo e reabertura no PDV. |
+| `/customers` | `MOD_CUSTOMERS` | `CustomersPage` | CRM de clientes com histórico completo de pedidos e itens, **deep-link clicável na URL (`/customers?customerId=...&orderId=...`)**, seletor **Multi-Status** (status do pedido e status do cliente), filtro de datas, **Visões Salvas no Banco por Loja/Filial (`store_saved_views`)**, recomendações comerciais por IA e botão **Exportar Visíveis**. |
+| `/suppliers` | `MOD_SUPPLIERS` | `SuppliersPage` | Gestão de fornecedores (Razão Social, Nome Fantasia, CNPJ/CPF, contatos comerciais, e-mail, telefone e status). |
+| `/purchases` | `MOD_PURCHASING` | `PurchasingPage` | Emissão e gestão de Ordens de Compra (`DRAFT`, `ISSUED`, `RECEIVED`, `CANCELLED`), cálculo dinâmico de custo unitário, markup e margem, recebimento atômico de mercadorias (`receive_purchase_order_stock`) que alimenta lotes/saldos e atualiza custos, além de análise de tendências de compra com IA. |
+| `/reports` | `MOD_REPORTS` | `ReportsPage` | Central de **9 Relatórios Analíticos de Varejo**, seletor de loja ou visão consolidada (`storeId === 'all'`), filtros de período sincronizados na URL, registros com data e hora exatas (`DD/MM/YYYY HH:mm`), deep-link para pedidos de clientes, diagnóstico executivo por IA e exportação CSV dos registros visíveis (`Exportar Visíveis`). |
+| `/stores` | `MOD_TEAM_AUDIT` | `StoresPage` | Gestão hierárquica de **Lojas & Filiais (`Matriz -> └─ Filial`)**, filtros por tipo de unidade, criação de filiais vinculadas à Matriz, **Criação de Lojas em Lote com IA (`BulkStoreAiBuilderModal`)** e transferência de estoque para filiais sem venda. |
+| `/team` | `MOD_TEAM_AUDIT` | `TeamPage` | Gestão de funcionários da loja, aprovadores de baixa de estoque (`STOCK_APPROVER`), papéis customizados (`StoreCustomRolesModal`), acompanhamento da franquia de **10 funcionários ativos grátis por loja** e acesso rápido às fichas de permissões. |
+| `/team/new` e `/team/:employeeId` | `MOD_TEAM_AUDIT` | `StoreEmployeeEditPage` | Página dedicada em tela cheia para cadastro e edição de funcionário, matrícula, cargo, alçada financeira máxima de baixa (`max_writeoff_value`), **Reset Obrigatório de PIN no Próximo Login (`require_pin_reset`)**, **Política de Complexidade de PIN (`pin_requirements`)** e matriz de **47 permissões granulares** (também acessível via `/team/stores/:storeId/employees/:employeeId`). |
+| `/integrations` | `MOD_API_INTEGRATIONS` | `ApiIntegrationsPage` | **API Studio & Conector de Serviços Estilo Postman**: Request Builder HTTP (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`), autenticação Bearer/API Key/Basic, importador e gerador de comandos `cURL`, detecção automática de arrays JSON, mapeamento visual **De → Para** com Auto-Map, simulação *Dry-Run* e sincronização *Upsert* em lote para Clientes, Categorias, Produtos, Fornecedores e Estoque. |
+| `/notifications` | *Core* | `NotificationsPage` | Central de alertas operacionais da loja (ruptura de estoque, estoque baixo, lotes próximos ao vencimento, novos pedidos online) com geração sob demanda (`generate_stock_alerts`) e marcação de leitura. |
+| `/audit` | `MOD_TEAM_AUDIT` | `AuditLogsPage` | Trilha de auditoria completa da loja com filtros por ação, entidade, operador e data/hora, permitindo inspecionar payloads de criação, alteração, exclusão e mudanças de status. |
+| `/settings` | `MOD_TEAM_AUDIT` | `SettingsPage` | Configurações da loja organizadas em **5 abas sincronizadas na URL**: `?tab=store` (Dados Cadastrais, CNPJ, WhatsApp e Endereço), `?tab=catalog` (Personalização da Vitrine Pública `/store/:slug`, logo, capa, cores, colunas, paginação e apelidos de status de pedidos), `?tab=whatsapp` (Gerenciador de Templates de Mensagem WhatsApp com tags dinâmicas do carrinho), `?tab=pos` (Regra de Cadastro de Cliente Obrigatório vs. Cliente Genérico no PDV) e `?tab=theme` (Temas visuais do painel interno). |
+
+### 7.5. Administração Global SaaS (`/global-admin*` — Exclusivo `GLOBAL_ADMIN`)
+| Rota | Componente | Funcionalidades Detalhadas |
+| :--- | :--- | :--- |
+| `/global-admin?tab=stores` | `GlobalAdminDashboardPage` | Visão global de todas as redes de lojas em árvore (`Matriz -> └─ Filial`), métricas globais da plataforma, criação em lote com IA e menu de ações rápidas por unidade. |
+| `/global-admin/stores/new` e `/global-admin/stores/:storeId/edit` | `GlobalAdminStoreEditPage` | Criação e edição avançada de Loja Matriz ou Filial (`parent_store_id`, `branch_code`), vínculo de administradores `STORE_ADMIN`, gestão de equipe da unidade, regras de cliente no PDV e **Exclusão Definitiva Segura (`global_admin_hard_delete_store`)**. |
+| `/global-admin/stores/:storeId/employees/new` e `:employeeId` | `StoreEmployeeEditPage` | Gestão global de funcionários de qualquer loja ou filial com controle completo de PIN, alçada de baixa e 47 permissões granulares. |
+| `/global-admin?tab=users` | `GlobalAdminDashboardPage` | Gestão de titulares e administradores de loja (`STORE_ADMIN` / `GLOBAL_ADMIN`), dropdown de lojas administradas com cotas de equipe, status de assinatura SaaS e atalhos para permissões e faturamento. |
+| `/global-admin/users/:userId/edit` | `GlobalAdminUserEditPage` | Edição de dados cadastrais, credenciais, status global e vínculo de lojas administradas pelo usuário titular. |
+| `/global-admin/users/:userId/permissions` | `GlobalAdminUserPermissionsPage` | Configuração em tela cheia do plano comercial SaaS do usuário, ativação/desativação individual dos 15 módulos (incluindo add-ons de IA), flag `enforce_over_store_admin`, cálculo automático de mensalidade e **análise ao vivo do Grafo de Dependências entre Telas**. |
+| `/global-admin/users/:userId/billing` | `GlobalAdminUserBillingPage` | Controle financeiro individual do assinante: mensalidade acordada, cálculo automático de licenças extras de funcionários (acima dos 10 grátis por loja), geração de faturas, baixa de pagamentos (`record_subscription_payment`) e histórico auditado. |
+| `/global-admin?tab=finance` | `GlobalAdminDashboardPage` | Hub financeiro executivo do SaaS com indicadores de MRR, adimplência, faturas em aberto e acesso rápido às sub-rotas financeiras. |
+| `/global-admin/finance/rules` | `GlobalAdminFinanceRulesPage` | Configuração das regras globais de licenciamento (`global_billing_rules`): franquia padrão de **10 funcionários grátis por loja**, preço por licença excedente, dias de tolerância e exceções individuais por loja. |
+| `/global-admin/finance/plans` | `GlobalAdminFinancePlansPage` | Gestão do catálogo de Planos Comerciais (`permission_groups`) e preços individuais dos 15 módulos (`permission_modules`), com flags para publicar planos na Landing Page (`show_on_landing_page`) e destacar o plano principal (`is_highlighted_on_landing`). |
+| `/global-admin/finance/payments` | `GlobalAdminFinancePaymentsPage` | Livro-razão consolidado de todas as faturas e pagamentos de assinaturas da plataforma (`subscription_payments`). |
+| `/global-admin/contracts` | `GlobalAdminContractsPage` | **Fila Comercial "Novos Contratos"** (propostas enviadas pela Landing Page com protocolo `PROP-...` e contato em 1 clique via WhatsApp) + **Gerenciador de Contratos (`platform_contracts`)** com editor de minutas, variáveis dinâmicas, exportação em **HTML**, **DOCX** e **PDF**, upload no **Supabase Storage** e sincronização com o **Google Drive** do Global Admin. |
+| `/global-admin/ai/:tab` | `GlobalAdminAiSettingsPage` | Central de Governança de IA do Super Admin dividida em 5 rotas de abas dedicadas: `/providers` (Cofre de Chaves API `pgcrypto`, descoberta dinâmica de modelos da chave e fixação de modelo por seção do site), `/personas` (Personas globais e Context Prompt Injection), `/security-fallback` (Escudo Anti-Prompt Injection, cadeia de fallback e simulador de ataque/contingência), `/commercial-modules` (Precificação dos 5 add-ons comerciais de IA) e `/telemetry` (Logs de consumo, tokens, latência, filtros multi-dimensionais e exportação CSV). |
+| `/global-admin?tab=backups` | `GlobalBackupPanel` | Central de Backups Multi-Loja: geração de **Dump SQL Relacional (`.sql`)**, **Pacote de Imagens de Produtos (`.zip` com `manifest.json`)** e **Backup Estruturado (`.json`)** por loja ou de toda a plataforma. |
+| `/global-admin?tab=db-explorer` | `GlobalDbExplorerPanel` | Explorador CRUD direto no navegador para inspeção, criação, edição e exclusão de registros em 12 tabelas do banco de dados. |
+| `/global-admin?tab=api-hbac` | `GlobalApiKeyHbacPanel` | Gerenciador de Tokens de API (`olv_live_...`), atribuição dos **23 escopos HBAC**, validade/expiração, revogação instantânea e playground interativo de relatórios para IA externa (`/rpc/get_ai_report`). |
+| `/global-admin?tab=delete` | `GlobalDeletePanel` | Painel de exclusão definitiva segura (`global_admin_delete` e `global_admin_hard_delete_store`) com validação de integridade referencial e auditoria. |
+
+---
+
+## 🧠 8. Detalhamento Completo da Plataforma de Inteligência Artificial Multi-Provedor
+
+A arquitetura de Inteligência Artificial (`src/services/aiOrchestratorService.ts` e migration `20261103000028_ai_platform_and_modules.sql`) opera de forma nativa, segura e resiliente em toda a plataforma:
+
+1. **Multi-Provedor com Descoberta Dinâmica de Modelos & Fixação por Seção (`AI_SITE_SECTIONS`):**
+   - Suporte nativo a **Google Gemini** (`gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`), **OpenAI** (`gpt-4o-mini`, `gpt-4o`, `o3-mini`), **Anthropic Claude** (`claude-3-7-sonnet`, `claude-3-5-haiku`) e **Endpoints Customizados OpenAI-Compatible** (Grok/xAI, DeepSeek, OpenRouter, Groq, Ollama).
+   - Ao inserir uma chave de API em `/global-admin/ai/providers`, o administrador pode consultar em tempo real os modelos disponíveis naquela conta (`fetchModelsFromProviderKey`) e fixar qual modelo atende cada parte específica do sistema (`COPILOT_CHAT`, `DASHBOARD_BI`, `REPORTS_9_TABS`, `INVENTORY_EXPIRATION`, `SALES_CRM_POS`, `PURCHASING_TRENDS`, `BULK_STORE_BUILDER`).
+2. **Cofre Criptografado no Banco (`pgcrypto`):**
+   - As chaves são criptografadas no PostgreSQL com `pgp_sym_encrypt` na coluna `encrypted_api_key` (`BYTEA`). O frontend nunca recebe a chave em listagens (`list_ai_provider_configs_safe` retorna apenas `masked_api_key`).
+   - Apenas a RPC `SECURITY DEFINER` `resolve_ai_execution_runtime` descriptografa a credencial em memória após confirmar que o usuário pertence à loja e que o módulo comercial `MOD_AI_*` correspondente está ativo.
+3. **Context Prompt Injection Verificado (`StoreAiContextSnapshot`):**
+   - Antes de cada chamada ao modelo, o orquestrador coleta indicadores reais e atualizados da loja ativa (faturamento, margem, produtos Curva A, itens em ruptura, lotes vencendo no FEFO, top clientes e ordens de compra) e os injeta de forma estruturada no System Prompt, evitando alucinações e respostas genéricas.
+4. **Escudo Anti-Prompt Injection (`inspectPromptSecurity`):**
+   - Inspeciona todas as entradas do usuário contra padrões de *jailbreak*, tentativas de ignorar instruções do sistema, extração de chaves de API, injeção de SQL ou acesso cruzado a outro `store_id`. Tentativas maliciosas são bloqueadas antes de chamar a API externa e auditadas em `public.ai_usage_logs` com `status = 'BLOCKED_INJECTION'`.
+5. **Cadeia de Fallback em 4 Níveis (Zero-Downtime):**
+   - Caso o modelo principal sofra timeout, limite de cota (`HTTP 429`) ou indisponibilidade, o orquestrador executa automaticamente:
+     `1º Modelo Principal do Provedor Primário (ex.: Gemini)` → `2º Modelo Rápido (Fast Model)` → `3º Provedor Secundário de Backup (ex.: OpenAI/Claude)` → `4º Motor Analítico Determinístico Local (generateAnalyticalFallbackResponse)`, que calcula diagnósticos reais diretamente sobre os dados da loja mesmo sem internet ou sem créditos de API.
+
+---
+
+## 📦 9. Catálogo de Módulos Comerciais SaaS, Planos & Grafo de Dependências
+
+O controle comercial SaaS (`src/constants/screenDependencies.ts`) permite comercializar a plataforma em planos modulares ou pacotes personalizados:
+
+### 9.1. Os 15 Módulos Comerciais (`PermissionModule`)
+| Código do Módulo | Nome Comercial | Categoria | Rotas Controladas | Preço Base Mensal |
+| :--- | :--- | :--- | :--- | :--- |
+| `MOD_CATALOG_WA` | Catálogo de Produtos & Vendas WhatsApp | `VENDAS` | `/products`, `/categories`, `/orders`, `/store/:slug` | R$ 49,90 |
+| `MOD_POS_SALES` | Vendas PDV (Frente de Caixa Presencial) | `VENDAS` | `/sales` | R$ 59,90 |
+| `MOD_CUSTOMERS` | Cadastro de Clientes & CRM | `VENDAS` | `/customers` | R$ 24,90 |
+| `MOD_INVENTORY` | Controle de Estoque (Saldos, Kardex e Baixas) | `CATALOGO_ESTOQUE` | `/inventory` | R$ 49,90 |
+| `MOD_EXPIRATION` | Controle de Lotes & Validades (FEFO) | `CATALOGO_ESTOQUE` | `/expiration` | R$ 29,90 |
+| `MOD_PURCHASING` | Gestão de Compras (Ordens de Compra) | `COMPRAS_SUPRIMENTOS` | `/purchases` | R$ 39,90 |
+| `MOD_SUPPLIERS` | Cadastro & Gestão de Fornecedores | `COMPRAS_SUPRIMENTOS` | `/suppliers` | R$ 19,90 |
+| `MOD_REPORTS` | Gestão de Relatórios & BI (9 Relatórios + CSV) | `GESTAO_BI` | `/reports` | R$ 49,90 |
+| `MOD_TEAM_AUDIT` | Gestão de Equipe, Configurações & Auditoria | `GESTAO_BI` | `/team`, `/audit`, `/settings`, `/stores` | R$ 29,90 |
+| `MOD_API_INTEGRATIONS` | Integrações Externas API (Conector REST & HBAC) | `TECNOLOGIA` | `/integrations` | R$ 79,90 |
+| `MOD_AI_COPILOT_CHAT` | IA Copiloto & Chatbot Executivo da Loja | `INTELIGENCIA_ARTIFICIAL` | `/ai-copilot` + Gaveta Global | + R$ 49,90 |
+| `MOD_AI_SALES_CRM` | IA Comercial: Sugestão de Produtos & Cross-Sell PDV | `INTELIGENCIA_ARTIFICIAL` | Cards IA em `/customers` e `/sales` | + R$ 39,90 |
+| `MOD_AI_INVENTORY_EXPIRATION` | IA de Estoque, Alertas de Validade FEFO & Anti-Perdas | `INTELIGENCIA_ARTIFICIAL` | Cards IA em `/expiration` e `/inventory` | + R$ 39,90 |
+| `MOD_AI_PURCHASING_TRENDS` | IA de Tendências de Compras, Giro & Reposição | `INTELIGENCIA_ARTIFICIAL` | Cards IA em `/purchases` | + R$ 39,90 |
+| `MOD_AI_BI_INSIGHTS` | IA Executiva: Resumos Mensais de Vendas & BI | `INTELIGENCIA_ARTIFICIAL` | Cards IA em `/dashboard` e `/reports` | + R$ 44,90 |
+
+### 9.2. Planos Comerciais Padrão (`PermissionGroup`)
+1. **`PLAN_WHATSAPP_ONLY` (Catálogo de Venda Somente por WhatsApp — R$ 59,90/mês):** inclui `MOD_CATALOG_WA` + `MOD_CUSTOMERS`.
+2. **`PLAN_INVENTORY_CONTROL` (Controle de Estoque, Validades & Compras — R$ 119,90/mês):** inclui `MOD_CATALOG_WA`, `MOD_INVENTORY`, `MOD_EXPIRATION`, `MOD_PURCHASING` e `MOD_SUPPLIERS`.
+3. **`PLAN_POS_AND_STOCK` (Comercial PDV + Estoque + Catálogo WhatsApp — R$ 149,90/mês):** inclui `MOD_CATALOG_WA`, `MOD_POS_SALES`, `MOD_INVENTORY`, `MOD_EXPIRATION` e `MOD_CUSTOMERS`.
+4. **`PLAN_PRO_MANAGEMENT` (Gestão Completa Pro — R$ 199,90/mês — *Mais Popular*):** inclui todos os 9 módulos operacionais e gerenciais (`MOD_CATALOG_WA` até `MOD_TEAM_AUDIT`).
+5. **`PLAN_ENTERPRISE_FULL` (Enterprise Full + Integrações API + Suíte IA — R$ 269,90/mês):** acesso irrestrito a todos os 15 módulos da plataforma.
+
+### 9.3. Motor de Grafo de Dependências entre Telas (`analyzeScreenDependencies`)
+Sempre que o Global Admin personaliza os módulos de um plano ou usuário (`/global-admin/users/:userId/permissions` ou `/global-admin/finance/plans`), o motor analisa impactos cruzados em tempo real e exibe alertas classificados como `CRITICAL`, `WARNING` ou `INFO` com botão **Quick-Fix** de 1 clique:
+- **Compras ativo sem Fornecedores (`CRITICAL`):** avisa que `supplier_id` é obrigatório para emitir Ordens de Compra em `/purchases` e oferece botão para reativar `MOD_SUPPLIERS`.
+- **Validades FEFO ativo sem Controle de Estoque (`CRITICAL`):** alerta que os lotes serão visíveis em `/expiration`, mas sem ajuste de saldo no Kardex em `/inventory`.
+- **Catálogo de Produtos desmarcado com outros módulos ativos (`CRITICAL`):** alerta que PDV, Estoque e Compras dependem da base mestre de produtos (`/products`).
+- **PDV ou Catálogo ativo sem Clientes (`WARNING`):** explica que as vendas operarão exclusivamente com o `"Cliente Genérico"`, sem histórico nominal em `/customers`.
+
+---
+
+## 🛡️ 10. Papéis de Usuário (`UserRole`), Alçadas & Matriz das 47 Permissões Granulares
+
+O sistema combina **7 papéis nativos** (`user_role_enum`), **papéis customizados por loja** (`store_custom_roles`) e **47 permissões granulares** (`src/constants/granularPermissions.ts`) com concessão (`granted_permissions`) e revogação (`revoked_permissions`) individual por funcionário:
+
+### 10.1. Os 7 Papéis do Sistema (`UserRole`)
+| Papel (`UserRole`) | Nome Exibido | Alçada de Baixa Padrão | Escopo Principal |
+| :--- | :--- | :--- | :--- |
+| `GLOBAL_ADMIN` | Global Admin | Sim (Irrestrita) | Governança total do SaaS, todas as lojas, filiais, cofre de IA, planos, contratos, backups e banco de dados. |
+| `STORE_ADMIN` | Admin Loja | Sim | Gestão completa da loja e suas filiais, equipe, aprovadores, estoque, compras, vendas e relatórios (respeitando módulos do plano SaaS quando `enforce_over_store_admin = true`). |
+| `STOCK_APPROVER` | Aprovador de Baixa de Estoque | Sim (Até `max_writeoff_value`) | Supervisor habilitado para autorizar baixas de estoque presenciais ou na fila pendente (`stock_writeoff_requests`), validades e remessas entre filiais. |
+| `FINANCE` | Gerente / Financeiro | Não | Acesso a custos, margens, reajuste de preços, ordens de compra, fornecedores, auditoria e todos os 9 relatórios financeiros/BI. |
+| `SELLER` | Vendedor / Operador de Caixa | Não | Operação do PDV (`/sales`), atendimento e despacho de pedidos (`/orders`), catálogo WhatsApp e cadastro/edição de clientes (`/customers`). |
+| `INVENTORY` | Estoquista Operacional | Não (Solicita aprovação) | Lançamento de entradas, contagens, lotes/validades, recebimento de compras/transferências e abertura de solicitações de baixa (`inventory.writeoff_request`). |
+| `VIEWER` | Visualizador / Auditoria Leitura | Não | Acesso estritamente de leitura ao catálogo, saldos de estoque, filiais, vendas, pedidos, clientes e relatórios básicos. |
+
+### 10.2. Matriz Completa das 47 Permissões Granulares (por Grupo de Recurso)
+1. **Estoque, Lotes & Aprovação de Baixas (`inventory` — 8 permissões):**
+   `inventory.read`, `inventory.receive`, `inventory.adjust`, `inventory.writeoff_request`, `inventory.approve_writeoff` *(Autorizador Exclusivo)*, `inventory.batches`, `inventory.cost_centers`, `inventory.import`.
+2. **Filiais & Remessas Sem Venda (`branches` — 4 permissões):**
+   `branches.read`, `branches.manage`, `branches.transfer_send` *(Enviar produtos p/ filial sem venda)*, `branches.transfer_receive`.
+3. **Produtos, Preços & Catálogo (`products` — 8 permissões):**
+   `products.read`, `products.view_cost` *(Ver preço de custo e margem)*, `products.create`, `products.update`, `products.change_price`, `products.delete`, `categories.manage`, `catalog.whatsapp`.
+4. **Vendas PDV & Pedidos (`sales` — 7 permissões):**
+   `sales.pos`, `sales.read`, `sales.apply_discount`, `sales.cancel` *(Cancelar venda e estornar estoque)*, `orders.read`, `orders.manage`, `orders.delete`.
+5. **Compras & Fornecedores (`purchasing` — 8 permissões):**
+   `purchase_orders.read`, `purchase_orders.create`, `purchase_orders.approve`, `purchase_orders.receive`, `purchase_orders.cancel`, `suppliers.read`, `suppliers.create`, `suppliers.delete`.
+6. **Clientes & CRM (`customers` — 5 permissões):**
+   `customers.read`, `customers.create`, `customers.update`, `customers.delete`, `customers.export`.
+7. **Relatórios & Inteligência (`reports` — 6 permissões):**
+   `reports.sales`, `reports.inventory`, `reports.financial`, `reports.customers`, `reports.suppliers`, `reports.export`.
+8. **Administração da Loja, Equipe & Auditoria (`stores` — 5 permissões):**
+   `users.manage`, `roles.manage`, `stores.manage`, `audit.view`, `integrations.manage`.
+
+---
+
+## 📊 11. Os 9 Relatórios Analíticos de Varejo, BI & RPC para IA Externa (`/reports` & `/rpc/get_ai_report`)
+
+A Central de Relatórios (`/reports`, `src/services/reportService.ts`) e a RPC `public.get_ai_report(p_report, p_store_id)` processam indicadores avançados de varejo em tempo real:
+
+| # | Aba em `/reports` | Alias na RPC `get_ai_report` | Indicadores e Cálculos Entregues |
+| :--- | :--- | :--- | :--- |
+| **KPIs** | Barra Executiva Topo | `retail_summary_kpis` / `kpis` | Produtos ativos, unidades físicas totais, valorização a custo, valorização a venda, lucro potencial, margem média `%`, itens em ruptura, estoque baixo, vendas no mês e perdas totais. |
+| **1** | **Valorização & Lucro (`valuation`)** | `stock_valuation` / `valuation` | Custo unitário e total, preço de venda e total, lucro potencial em `R$`, margem bruta `%`, markup e status de cobertura por SKU. |
+| **2** | **Curva ABC & Pareto (`abc`)** | `abc_curve_pareto` / `abc` | Classificação de Pareto **80/15/5** (`Classe A` até 80% do valor, `Classe B` próximos 15%, `Classe C` últimos 5%), percentual individual/acumulado e diretriz estratégica automática por item. |
+| **3** | **Giro & Compra por Consumo (`demand`)** | `demand_purchasing` / `demand` | Consumo médio diário, vendas no período, **cobertura de estoque em dias (*runout*)**, quantidade sugerida de compra para meta de 30 dias, investimento necessário e nível de urgência (`URGENT`, `ATTENTION`, `NORMAL`, `OVERSTOCK`). |
+| **4** | **Ticket Médio & Clientes (`customers`)** | `customer_ticket_ltv` / `customers` | **Lifetime Value (LTV)**, total gasto, quantidade de pedidos, ticket médio, recência em dias, canal preferido, segmentação (`VIP`, `FREQUENT`, `OCCASIONAL`, `INACTIVE`) e lista expansível de **todos os pedidos com data/hora e deep-link para `/customers?customerId=...&orderId=...`**. |
+| **5** | **Capital de Giro & GMROI (`investment`)** | `capital_investment` / `capital` | Capital imobilizado a custo por categoria mercadológica, potencial de venda na gôndola, lucro projetado, participação `%` no estoque total e índice **GMROI** (*Gross Margin Return on Inventory Investment*). |
+| **6** | **Ruptura & Reposição (`stockouts`)** | `stockout_replenishment` / `stockouts` | SKUs com saldo zerado (`CRITICAL`) ou abaixo do estoque mínimo (`WARNING`), déficit em unidades e orçamento exato de reposição a preço de custo. |
+| **7** | **Compras & Fornecedores (`purchasing`)** | `purchasing_history` / `purchases` | Histórico de ordens de compra com **data e hora exatas (`DD/MM/YYYY HH:mm`)**, fornecedor, resumo detalhado dos itens comprados, custo total, valor de venda projetado e margem de entrada. |
+| **8** | **Perdas & Baixas (`losses`)** | `operational_losses` / `losses` | Auditoria financeira de quebras, avarias, vencimentos e ajustes negativos com motivo de perda (`loss_reasons`), centro de custo (`cost_centers`), operador responsável e valor total perdido. |
+| **9** | **Vendas & Desempenho (`sales`)** | `sales_performance` / `sales` | Registro transacional de vendas com **data e hora exatas (`DD/MM/YYYY HH:mm`)**, cliente (com link direto), canal (`IN_STORE`, `WHATSAPP`, `CATALOG`, `API`), meio de pagamento, subtotal, descontos, total líquido e detalhamento dos itens vendidos. |
+
+---
+
+## 🔌 12. API Studio (Estilo Postman), Tokens HBAC & Integração com Agentes Externos
+
+### 12.1. API Studio Interno (`/integrations`)
+- **Request Builder Completo:** suporta métodos `GET`, `POST`, `PUT`, `PATCH` e `DELETE`, cabeçalhos customizados, query params, corpo JSON e autenticação (`NONE`, `BEARER`, `API_KEY`, `BASIC`).
+- **Importação e Exportação `cURL`:** converte qualquer comando `cURL` colado pelo usuário em configuração estruturada e vice-versa (`parseCurlCommand` / `generateCurlCommand`).
+- **Service Binding Visual (De → Para):** detecta automaticamente arrays de objetos na resposta JSON (`detectJsonArrays`), mapeia campos externos para as colunas do Olivelas com **Auto-Map Inteligente** (`autoMapFields`), executa **Simulação Dry-Run** sem gravar no banco e realiza sincronização **Upsert em Lote** para `CUSTOMERS`, `CATEGORIES`, `PRODUCTS`, `SUPPLIERS` e `INVENTORY`, registrando logs auditáveis em `public.api_integration_logs`.
+
+### 12.2. Tokens HBAC (`olv_live_...`) & 23 Escopos de Acesso (`/global-admin?tab=api-hbac`)
+Agentes de IA externos (LangChain, n8n, ChatGPT Actions, Claude MCP, scripts Python/Node) e o `spa_portal` autenticam-se diretamente no PostgREST enviando os cabeçalhos `X-HBAC-Token: olv_live_<32_hex>` e `X-Store-ID: <uuid>`.
+- **Defesa em 3 Camadas no PostgreSQL:**
+  1. **Interceptação Pré-Request (`public.check_hbac_pre_request`):** valida existência, status ativo (`is_active`), data de expiração (`expires_at`), vínculo exato com a loja (`X-Store-ID`) e escopo exigido para a tabela/método antes de qualquer query rodar.
+  2. **RLS por Linha (`public.has_hbac_scope`):** garante isolamento estrito por `store_id` em cada registro lido ou modificado.
+  3. **Trigger de Sincronização de Estoque via API (`trg_api_stock_movement_sync`):** ao inserir um movimento em `POST /rest/v1/stock_movements`, calcula automaticamente `previous_quantity` e `new_quantity` e atualiza `public.stock_balances` em tempo real.
+- **23 Escopos HBAC Suportados:** `*` (Full Admin), `products:read`, `products:write`, `products:delete`, `inventory:read`, `inventory:write`, `inventory:adjust`, `orders:read`, `orders:write`, `orders:cancel`, `purchases:read`, `purchases:write`, `customers:read`, `customers:write`, `reports:read`, `reports:export`, `reports:list`, `reports:kpis`, `reports:valuation`, `reports:abc`, `reports:stockouts`, `reports:purchases`, `reports:losses`, `reports:sales` e `audit:read`.
+
+---
+
+## 🗄️ 13. Arquitetura Completa do Banco de Dados (30 Migrations SQL, Tabelas & RPCs)
+
+O banco de dados PostgreSQL no Supabase é gerenciado por **30 migrations incrementais** (`supabase/migrations/20260925000001_initial_schema.sql` até `20261111000030_public_catalog_orders_and_realtime_tracking.sql`):
+
+### 13.1. Inventário Completo de Tabelas (`public.*`)
+| Domínio | Tabelas no PostgreSQL | Finalidade Principal |
+| :--- | :--- | :--- |
+| **Identidade, Lojas & Equipe** | `profiles`, `stores`, `store_users`, `store_custom_roles`, `roles`, `permissions`, `role_permissions` | Perfis de usuários (`is_global_admin`), lojas e filiais (`parent_store_id`, `is_branch`, `branch_code`, `theme_config`), vínculo de funcionários com PIN/alçadas/permissões granulares e papéis customizados por loja. |
+| **Comercial SaaS, Planos & Contratos** | `permission_modules`, `permission_groups`, `user_permission_profiles`, `subscription_payments`, `global_billing_rules`, `permission_billing_audit_logs`, `commercial_plan_proposals`, `platform_contracts` | Catálogo de 15 módulos e planos SaaS, assinaturas por titular, livro-razão de pagamentos, regra dos 10 funcionários grátis, propostas da Landing Page (`PROP-...`) e contratos gerados (HTML/DOCX/PDF + Storage + Google Drive). |
+| **Inteligência Artificial & Copiloto** | `ai_provider_configs`, `ai_personas`, `ai_store_configs`, `ai_chat_sessions`, `ai_chat_messages`, `ai_usage_logs` | Cofre criptografado de chaves de API (`pgcrypto`), personas de IA, configuração e contexto por loja, sessões/mensagens do Copiloto e telemetria/auditoria de uso e bloqueios de Prompt Injection. |
+| **Cadastros & Mídia** | `categories`, `brands`, `manufacturers`, `suppliers`, `supplier_contacts`, `customers`, `customer_addresses`, `products`, `product_images`, `media_library` | Dados mestres de produtos, galeria de fotos isolada por loja, fornecedores, clientes e endereços. |
+| **Estoque, Lotes FEFO & Filiais** | `stock_balances`, `stock_batches`, `stock_movements`, `stock_writeoff_requests`, `stock_transfers`, `stock_transfer_items`, `inventory_counts`, `inventory_count_items`, `cost_centers`, `loss_reasons`, `batch_dispositions` | Saldos físicos (`available_quantity` gerada), lotes com validade, Kardex de movimentações, fila de aprovação de baixas, remessas entre Matriz e Filiais sem venda, centros de custo, motivos de perda e tratativas de vencimento. |
+| **Vendas, PDV, Catálogo & Compras** | `orders`, `order_items`, `payments`, `shipments`, `catalogs`, `purchase_orders`, `purchase_order_items` | Pedidos de venda presenciais e online, itens pesáveis/unitários, pagamentos, entregas e ordens de compra. |
+| **Operação, Visões, Auditoria & API** | `store_saved_views`, `notifications`, `audit_logs`, `security_logs`, `api_tokens`, `api_integrations`, `api_integration_logs` | Visões de filtros salvas por loja/filial, alertas em tempo real, trilha de auditoria imutável, tokens HBAC e conectores do API Studio. |
+
+### 13.2. Inventário Completo de Stored Procedures (RPCs no PostgreSQL)
+| Função RPC (`public.*`) | Descrição Técnica & Segurança |
+| :--- | :--- |
+| `create_order_with_stock` | Cria venda no PDV com itens e pagamento, trava linhas (`FOR UPDATE`), deduz saldo e lotes FEFO atomicamente e associa `"Cliente Genérico"` quando aplicável. |
+| `create_public_catalog_order` | Registra pedido online feito no catálogo público (`/store/:slug` ou `spa_portal`), valida preços no servidor, baixa estoque atomicamente, vincula/cria cliente pelo WhatsApp e dispara alerta para `/orders`. |
+| `get_public_order_tracking` | Retorna dados seguros de acompanhamento em tempo real do pedido, itens e `theme_config` da loja para `/store/:slug/order/:orderId` e `spa_portal`. |
+| `restore_sale_stock` | Estorna atomicamente os saldos de estoque e lotes ao cancelar um pedido de venda (`status = 'CANCELLED'`). |
+| `receive_purchase_order_stock` | Efetiva o recebimento de uma Ordem de Compra, criando/atualizando lotes (`stock_batches`), somando saldos (`stock_balances`) e atualizando preços de custo/venda no catálogo. |
+| `apply_stock_movement` | Registra movimentações manuais de estoque com validação estrita de `can_user_approve_writeoff` e limite financeiro `max_writeoff_value` para baixas (`LOSS` / `ADJUSTMENT` negativo). |
+| `can_user_approve_writeoff` | Verifica no banco se o usuário possui papel `STOCK_APPROVER`, flag `can_approve_writeoff` ou permissão `inventory.approve_writeoff` e alçada financeira suficiente. |
+| `review_stock_writeoff_request` | Aprova ou rejeita solicitações pendentes na fila `stock_writeoff_requests`, aplicando a baixa atomicamente quando aprovada. |
+| `execute_stock_transfer_to_branch` | Transfere produtos e lotes da Matriz para uma Filial sem registrar venda, sincronizando categoria, produto mestre, fotos e saldos na filial destino. |
+| `upsert_store_employee` | Cria ou atualiza funcionário na loja (`auth.users` + `profiles` + `store_users`) com cargo, matrícula, PIN, política de complexidade de PIN e permissões granulares sem encerrar a sessão do administrador logado. |
+| `complete_employee_pin_reset` | Valida e grava o novo PIN do funcionário no login quando `require_pin_reset = true`, verificando conformidade com `pin_requirements`. |
+| `assign_user_permission_group` | Atribui grupo de permissões SaaS, módulos customizados e mensalidade acordada ao usuário titular, registrando trilha em `permission_billing_audit_logs`. |
+| `record_subscription_payment` | Lança e baixa pagamentos de faturas SaaS (`subscription_payments`) e atualiza o status de adimplência do assinante. |
+| `submit_commercial_proposal` | Recebe propostas do configurador interativo da Landing Page (`/` e `/pricing`) e gera protocolo único `PROP-YYYYMMDD-XXXXXX` em `commercial_plan_proposals`. |
+| `upsert_ai_provider_config` | Criptografa chaves de API de IA com `pgp_sym_encrypt` (`pgcrypto`) e salva modelos padrões, modelos por seção do site e prioridades de fallback (exclusivo `is_global_admin()`). |
+| `list_ai_provider_configs_safe` | Lista provedores de IA configurados retornando apenas chaves mascaradas (`masked_api_key`). |
+| `resolve_ai_execution_runtime` | Valida acesso ao tenant e módulo comercial `MOD_AI_*` antes de descriptografar a credencial de IA em memória para execução. |
+| `get_ai_report` | Gera os 10 relatórios analíticos consolidados via API REST (`GET`/`POST /rest/v1/rpc/get_ai_report`) para consumo por agentes de IA externos. |
+| `set_batch_disposition` / `clear_batch_disposition` | Registra ou limpa tratativas auditáveis de lotes próximos do vencimento ou vencidos em `/expiration`. |
+| `generate_stock_alerts` | Varre saldos e lotes da loja para gerar notificações automáticas de ruptura, estoque mínimo e vencimento próximo. |
+| `global_admin_delete` | Exclusão administrativa segura de registros com verificação de histórico comercial e restauração de saldo (`restore_stock_after_delete`). |
+| `global_admin_hard_delete_store` | Exclusão definitiva e cascata segura de Loja Matriz ou Filial pelo Global Admin, limpando vínculos restritivos e gravando auditoria `GLOBAL_HARD_DELETE_STORE`. |
+| `global_admin_delete_platform_user` | Remove usuário da plataforma (`public.profiles` e `auth.users`) com verificação de segurança pelo Global Admin. |
+
+---
+
+## 🖥️ 14. Experiência de Usuário (UX/UI) Desktop & Mobile, Atalhos e Acessibilidade
+
+- **Layout Viewport-Fitted & Tabelas Responsivas (`ResponsiveTable`):**
+  - No **Desktop (`≥ 768px`)**, as páginas utilizam densidade executiva com KPIs compactos em pílulas de 1 linha, tabelas com cabeçalho fixo (`sticky top-0`), rolagem interna suave e barra de paginação sempre fixa no rodapé do card.
+  - No **Mobile (`< 768px`)**, as tabelas convertem-se automaticamente em cards estruturados de 2 colunas com rótulos dinâmicos (`data-mobile-label`) e barra de ordenação mobile dedicada.
+- **Modais Inteligentes Sincronizados com o Teclado Virtual (`modal.tsx` e `WeightInputModal.tsx`):**
+  - Em dispositivos móveis, todos os modais monitoram `window.visualViewport` (`height` e `offsetTop`), posicionando-se no topo da área visível (`items-start pt-2`) com `scrollIntoView` automático para que o teclado virtual nunca cubra campos de digitação ou botões de confirmação.
+- **Menus Dropdown via Portal (`DropdownMenu`):**
+  - Renderizados via `createPortal(..., document.body)` com cálculo geométrico em tempo real (`getBoundingClientRect` + `ResizeObserver`), garantindo que menus de **Ações Rápidas** nunca sejam cortados por containers com `overflow-hidden` nem ultrapassem as bordas da tela.
+- **Paleta de Comandos Global (`Ctrl+K` / `Cmd+K` — `GlobalCommandK`):**
+  - Navegação instantânea por teclado para qualquer tela, busca rápida de funcionalidades e atalhos operacionais (Nova Venda PDV, Novo Produto, Relatórios, Copiloto IA).
+- **Internacionalização (i18n) & Temas Multi-Loja:**
+  - Suporte completo a **Português (`pt-BR`)**, **Inglês (`en-US`)** e **Espanhol (`es-ES`)**, além de modo Claro, Escuro e Sistema combinados com paletas de cores exclusivas por loja (`storeThemes.ts`).
+
+---
+
+## 📄 15. Licença
 
 Desenvolvido para uso comercial enterprise. Todos os direitos reservados.
